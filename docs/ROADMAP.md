@@ -65,21 +65,33 @@ Notes:
   (ADR 0008) using raw generated calls plus hand-written adapters.
 - `BalanceSummary`/`MarginSummary`/`FundSummary` carry into Phase 2.
 
-## Phase 2 — Portfolio, trading, market data
+## Phase 2 — Portfolio, trading, market data *(complete)*
 
 Deliverables:
 
-- `pkg/ibkr/portfolio.go` — accounts, positions (incl. pagination), ledger, allocation.
-- `pkg/ibkr/trade.go` — orders (submit/modify/cancel/what-if), status, trades,
-  and the reply/confirmation flow ([design/09](./design/09-orders-and-confirmation.md)).
-- `pkg/ibkr/contract.go` — secdef search, contract info/rules, strikes.
-- `pkg/ibkr/marketdata.go` — snapshot, history, unsubscribe.
+- [x] `pkg/ibkr/portfolio.go` — `PortfolioManager` (accounts, positions incl.
+  pagination, ledger, allocation, summary, meta, invalidate).
+- [x] `pkg/ibkr/trade.go` — `TradeManager` orders (submit/confirm/modify/cancel,
+  what-if, status, open orders, trades) and the reply/confirmation flow
+  ([design/09](./design/09-orders-and-confirmation.md)).
+- [x] `pkg/ibkr/contract.go` — secdef search, contract info/rules, strikes.
+- [x] `pkg/ibkr/marketdata.go` — `MarketDataManager` (snapshot, history,
+  unsubscribe, unsubscribe-all).
 
 Exit criteria:
 
-- Order mutations are provably **not** auto-retried (test asserts single attempt).
-- Money/quantity fields use `string`/`json.Number` (lint/ADR check).
-- Pagination is exercised by tests.
+- [x] Order mutations are provably **not** auto-retried
+  (`TestOrders_MutationsAreSingleAttempt` asserts a single outbound request).
+- [x] Money/quantity fields use `string`/`json.Number`
+  (`scripts/check_money.py`, run by `make check`).
+- [x] Pagination is exercised by tests (`TestPortfolio` walks pages until empty).
+
+Notes:
+
+- Order submissions are sent as hand-built JSON with string money/quantity so
+  precision is preserved on the wire (the generated request type uses `float32`).
+- Ambiguous mutation timeouts surface as an `*Error` with `Code: "ambiguous"`,
+  directing callers to reconcile via `Trade().OpenOrders`.
 
 ## Phase 3 — Streaming
 

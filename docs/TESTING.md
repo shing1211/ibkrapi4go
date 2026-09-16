@@ -8,7 +8,7 @@ Testing strategy for ibkrapi4go.
 |------|----------|-----------|---------------|------------|
 | Unit | `*_test.go` next to source | — | No | ✅ |
 | Session | `internal/session_test.go` | — | No (fakeAPI) | ✅ |
-| Manager e2e | `pkg/ibkr/endtoend_test.go` | — | No (httptest) | ✅ |
+| Manager e2e | `pkg/ibkr/*_test.go` | — | No (httptest) | ✅ |
 | Codegen | `scripts/validate_codegen.sh` | — | No | ✅ (scheduled too) |
 | Integration | `test/` | `integration` | Yes (paper) | On demand |
 
@@ -52,6 +52,16 @@ Fixtures:
 - Read `IBKR_GATEWAY`, `IBKR_USERNAME`, `IBKR_PASSWORD` from the environment.
 - Never run write operations (orders/transfers) against a live account.
 - Skipped automatically when `IBKR_GATEWAY` is unset.
+
+## Money and ADR checks
+
+- `scripts/check_money.py` (run by `make check`) fails if any exported struct
+  field under `pkg/ibkr` is `float32`/`float64` (ADR 0008). Money and quantities
+  are `string`/`json.Number`.
+- Order mutation safety is tested by asserting the outbound request count:
+  `TestOrders_MutationsAreSingleAttempt` verifies exactly one request on a 5xx
+  for submit, modify, and cancel (ADR 0009).
+- Order submissions are asserted to serialize money/quantity as JSON strings.
 
 ## Codegen validation
 

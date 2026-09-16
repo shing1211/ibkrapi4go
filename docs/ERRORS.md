@@ -69,6 +69,14 @@ See [design/06-errors-retries.md](./design/06-errors-retries.md) and
 - Retries use exponential backoff with full jitter; default budget 3 attempts
   for safe methods only.
 
+## Ambiguous outcomes
+
+When an order mutation (submit/modify/cancel) times out, the request may or may
+not have reached IBKR. The SDK never resubmits. It returns an `*Error` with
+`Code == "ambiguous"` and a message directing the caller to reconcile via
+`Trade().OpenOrders` / `Trade().OrderStatus` before retrying. See
+[design/09](./design/09-orders-and-confirmation.md).
+
 ## IBKR error envelope
 
 IBKR returns errors in a few shapes; the SDK normalizes them:

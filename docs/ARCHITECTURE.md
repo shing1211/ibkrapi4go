@@ -62,9 +62,13 @@ ibkrapi4go/
 │   ├── auth.go        # SessionManager
 │   ├── account.go     # AccountManager
 │   ├── portfolio.go   # PortfolioManager
-│   ├── trade.go       # TradeManager
+│   ├── contract.go    # contract lookups (on TradeManager)
+│   ├── trade.go       # TradeManager (orders)
 │   ├── marketdata.go  # MarketDataManager
-│   ├── ws.go          # streaming
+│   ├── response.go    # netDo + json.Number decoding helpers
+│   ├── ids.go         # ConID, Field, Side, OrderType, TimeInForce
+│   ├── pagination.go  # PositionIterator
+│   ├── ws.go          # streaming (Phase 3)
 │   └── doc.go
 ├── internal/
 │   ├── transport.go   # http.RoundTripper middleware chain

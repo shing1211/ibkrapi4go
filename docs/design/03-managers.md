@@ -5,12 +5,15 @@ client and returns stable public types.
 
 ## Managers (v1, CPAPI)
 
-| Manager | Scope | Representative calls |
-|---------|-------|----------------------|
-| `AccountManager` | accounts & summaries | `List`, `Summary`, `BalanceSummary`, `MarginSummary`, `PnL` |
-| `PortfolioManager` | positions & ledger | `Accounts`, `Positions`, `Position`, `Ledger`, `Allocation`, `Invalidate` |
-| `TradeManager` | orders & contracts | `Submit`, `Modify`, `Cancel`, `OpenOrders`, `OrderStatus`, `Trades`, `SearchContracts`, `ContractInfo` |
-| `MarketDataManager` | quotes & history | `Snapshot`, `History`, `Unsubscribe`, `UnsubscribeAll`, `Subscribe` |
+| Manager | Scope | Methods (implemented) |
+|---------|-------|-----------------------|
+| `AccountManager` | accounts & summaries | `List`, `Summary`, `PnL` |
+| `PortfolioManager` | positions & ledger | `Accounts`, `Subaccounts`, `Positions`, `PositionsPaginated`, `Position`, `Ledger`, `Allocation`, `Summary`, `Meta`, `Invalidate` |
+| `TradeManager` | orders & contracts | `Submit`, `Confirm`, `WhatIf`, `Modify`, `Cancel`, `OpenOrders`, `OrderStatus`, `Trades`, `SearchContracts`, `ContractInfo`, `ContractRules`, `Strikes` |
+| `MarketDataManager` | quotes & history | `Snapshot`, `History`, `Unsubscribe`, `UnsubscribeAll` |
+
+Pending: `AccountManager.BalanceSummary`/`MarginSummary`; `MarketDataManager.Subscribe`
+(WebSocket, Phase 3).
 
 ## Method conventions
 

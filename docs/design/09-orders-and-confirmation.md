@@ -74,11 +74,16 @@ The SDK may provide a helper `Trade().Reconcile(ctx, account, fingerprint)`.
 
 ## Error mapping
 
+Implemented in `pkg/ibkr/trade.go`:
+
 | Outcome | Error |
 |---------|-------|
-| Rejected by IBKR | `ErrOrderRejected` (with code/message) |
+| Rejected by IBKR | `*ibkr.Error` wrapping `ErrOrderRejected` (with code/message) |
 | Requires confirmation | returned in `SubmitResult.Replies` (not an error) |
-| Ambiguous timeout | `*ibkr.Error` flagged ambiguous; reconcile |
+| Ambiguous timeout | `*ibkr.Error` with `Code == "ambiguous"`; reconcile via `OpenOrders` |
+
+The wire body is built by hand (`orderTicketJSON`) with money/quantity as
+strings, because the generated request type marshals them as `float32`.
 
 ## Tests
 

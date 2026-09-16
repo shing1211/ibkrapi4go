@@ -51,6 +51,7 @@ insufficient.
   `x-go-type` override to `string` (recorded in `scripts/patch_spec.py` or
   `oapi-codegen.yaml`).
 - A review checklist item: any `float64` on a money/price/quantity field is a bug.
+- `scripts/check_money.py` (run by `make check`) enforces this on `pkg/ibkr`.
 
 ## Formatting vs. value
 
