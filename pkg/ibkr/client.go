@@ -58,6 +58,7 @@ type config struct {
 	rateLimit          float64
 	rateBurst          int
 	globalRateLimit    float64
+	retry              internal.RetryPolicy
 }
 
 // Rate-limit defaults (see docs/RATE-LIMITING.md).
@@ -156,6 +157,22 @@ func WithRateLimit(rps float64, burst int) Option {
 	}
 }
 
+// RetryPolicy controls automatic retries for safe (idempotent) requests. Order
+// and other unsafe mutations are never retried (ADR 0009).
+type RetryPolicy = internal.RetryPolicy
+
+// DefaultRetryPolicy returns the SDK's default retry policy.
+func DefaultRetryPolicy() RetryPolicy { return internal.DefaultRetryPolicy() }
+
+// WithRetryPolicy overrides the retry policy. Set MaxAttempts to 1 to disable
+// retries.
+func WithRetryPolicy(p RetryPolicy) Option {
+	return func(c *config) error {
+		c.retry = p
+		return nil
+	}
+}
+
 // WithGlobalRateLimit sets the client-wide request rate (requests/second).
 // rps<=0 disables the global bucket.
 func WithGlobalRateLimit(rps float64) Option {
@@ -227,6 +244,9 @@ func NewClient(opts ...Option) (*Client, error) {
 	if cfg.globalRateLimit < 0 {
 		cfg.globalRateLimit = DefaultGlobalRPS
 	}
+	if cfg.retry.MaxAttempts == 0 {
+		cfg.retry = internal.DefaultRetryPolicy()
+	}
 	cfg.streamingLimits = cfg.streamingLimits.withDefaults()
 
 	base, jar := baseTransport(cfg)
@@ -251,6 +271,7 @@ func NewClient(opts ...Option) (*Client, error) {
 			}
 			return session.Token()
 		},
+		Retry:   cfg.retry,
 		Limiter: limiter,
 		Timeout: cfg.requestTimeout,
 	})
