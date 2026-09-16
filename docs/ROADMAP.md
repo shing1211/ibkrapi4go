@@ -93,18 +93,30 @@ Notes:
 - Ambiguous mutation timeouts surface as an `*Error` with `Code: "ambiguous"`,
   directing callers to reconcile via `Trade().OpenOrders`.
 
-## Phase 3 — Streaming
+## Phase 3 — Streaming *(complete)*
 
 Deliverables:
 
-- `internal/ws.go`, `pkg/ibkr/ws.go` — connect, subscribe, dispatch.
-- Channel-based subscriptions with cancellation ([STREAMING.md](./STREAMING.md)).
-- Auto-reconnect with backoff and re-subscription.
+- [x] `internal/ws.go`, `pkg/ibkr/ws.go` — connect, subscribe, dispatch
+  (`coder/websocket`).
+- [x] Channel-based `Subscription` with `Updates()`/`Errors()` and
+  cancellation ([STREAMING.md](./STREAMING.md)).
+- [x] Auto-reconnect with backoff and re-subscription.
 
 Exit criteria:
 
-- Local WebSocket server test: subscribe, receive, cancel, reconnect.
-- No goroutine leaks after unsubscribe/close.
+- [x] Local WebSocket server test: subscribe, receive, cancel, reconnect
+  (`pkg/ibkr/ws_test.go`).
+- [x] No goroutine leaks after unsubscribe/close (`goleak`).
+
+Notes:
+
+- The transport passes `101 Switching Protocols` through untouched so the
+  upgrade connection reaches `coder/websocket`.
+- Updates are emitted one value per field code; a conid's updates are delivered
+  to every subscription that requested it.
+- Backpressure drops the oldest buffered update and increments `Dropped()`.
+- Streaming is marked **pending live verification** against a real gateway.
 
 ## Phase 4 — Hardening
 

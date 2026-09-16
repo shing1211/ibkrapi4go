@@ -29,20 +29,22 @@ JSON objects keyed by `conid` and field code.
 
 ### Field codes (common)
 
-| Code | Meaning | Code | Meaning |
-|-----:|---------|-----:|---------|
-| 31 | Last price | 84 | Bid |
-| 86 | Ask | 83 / 88 | Bid / ask size |
-| 70 | High | 71 | Low |
-| 87 | Volume | 6509 | Company name |
+| Code | Constant | Meaning | Code | Constant | Meaning |
+|-----:|----------|---------|-----:|----------|---------|
+| 31 | `FieldLastPrice` | Last price | 84 | `FieldBidPrice` | Bid |
+| 86 | `FieldAskPrice` | Ask | 88 / 85 | `FieldBidSize`/`FieldAskSize` | Bid / ask size |
+| 70 | `FieldHigh` | High | 71 | `FieldLow` | Low |
+| 87 | `FieldVolume` | Volume | 82 / 83 | `FieldChange`/`FieldChangePercent` | Change / % |
+| 55 | `FieldSymbol` | Symbol | | | |
 
 Field codes are IBKR-defined; the SDK exposes them as typed constants but does
 not reinterpret values.
 
-## Channel API (planned)
+## Channel API
 
 ```go
-sub, err := cli.MarketData().Subscribe(ctx, []ibkr.ConID{265598}, ibkr.Fields{ibkr.FieldLast, ibkr.FieldBid, ibkr.FieldAsk})
+sub, err := cli.MarketData().Subscribe(ctx, []ibkr.ConID{265598},
+    []ibkr.Field{ibkr.FieldLastPrice, ibkr.FieldBidPrice, ibkr.FieldAskPrice})
 if err != nil { return err }
 defer sub.Close()
 
@@ -52,8 +54,10 @@ for {
         return ctx.Err()
     case u, ok := <-sub.Updates():
         if !ok { return nil } // stream closed
-        fmt.Printf("%d %s\n", u.ConID, u.Field)
+        fmt.Printf("%d %s=%s\n", u.ConID, u.Field, u.Value)
     case err := <-sub.Errors():
+        // connection-level event; use errors.Is(err, ibkr.ErrStreamReconnected)
+        // or ibkr.ErrStreamDisconnected to distinguish reconnect notices.
         log.Println("stream error:", err)
     }
 }
@@ -62,9 +66,12 @@ for {
 Design rules:
 
 - `Subscribe` returns a `*Subscription` with `Updates()` and `Errors()` channels.
+- One `Update` is emitted per field code in a frame; a conid's updates are
+  delivered to every subscription that requested it.
 - Channels are closed (not just abandoned) on close/error.
 - `Subscription.Close()` is idempotent and unsubscribes server-side.
 - `ctx` cancellation closes the subscription.
+- `Subscription.Dropped()` reports updates dropped under backpressure.
 
 ## Connection management
 
@@ -77,10 +84,11 @@ Design rules:
 
 On unexpected disconnect:
 
-1. Backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s, with jitter.
-2. Re-establish the connection.
-3. Re-send active subscriptions with new request ids.
-4. Emit a notice on `Errors()` so callers can react.
+1. Emit `ErrStreamDisconnected` on every subscription's `Errors()` channel.
+2. Backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s, with full jitter.
+3. Re-establish the connection.
+4. Re-send active subscriptions with new request ids.
+5. Emit `ErrStreamReconnected` on each `Errors()` channel so callers can react.
 
 Reconnect does **not** guarantee gap-free data; consumers needing continuity must
 resubscribe to snapshots.
@@ -88,9 +96,18 @@ resubscribe to snapshots.
 ## Limits
 
 IBKR limits conids/fields per subscription and total subscriptions per session.
-The SDK batches large requests and returns a typed error when a limit is
-exceeded. Exact ceilings are account/entitlement dependent and are configurable
-via `WithStreamingLimits`.
+The SDK enforces configurable ceilings and returns an `*Error` wrapping
+`ErrStreamingLimit` when exceeded. Configure with `WithStreamingLimits`:
+
+| Limit | Default |
+|-------|--------:|
+| `MaxConIDsPerRequest` | 100 |
+| `MaxFieldsPerRequest` | 50 |
+| `MaxSubscriptions` | 10 |
+| `BufferSize` | 256 |
+| `ReconnectBase` / `ReconnectMax` | 1s / 30s |
+
+Exact IBKR ceilings are account/entitlement dependent.
 
 ## Backpressure
 

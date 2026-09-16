@@ -9,6 +9,7 @@ Testing strategy for ibkrapi4go.
 | Unit | `*_test.go` next to source | — | No | ✅ |
 | Session | `internal/session_test.go` | — | No (fakeAPI) | ✅ |
 | Manager e2e | `pkg/ibkr/*_test.go` | — | No (httptest) | ✅ |
+| WebSocket | `pkg/ibkr/ws_test.go` | — | No (local WS server) | ✅ |
 | Codegen | `scripts/validate_codegen.sh` | — | No | ✅ (scheduled too) |
 | Integration | `test/` | `integration` | Yes (paper) | On demand |
 
@@ -88,7 +89,8 @@ on a schedule, because the upstream spec can change without a commit here.
 - No tests that require network access in CI.
 - No golden-file tests over generated code (use `codegen-verify` instead).
 - No live-account tests.
-- WebSocket streaming not yet implemented (pending).
+- Streaming is unit-tested against a local WebSocket server; live-gateway
+  verification is pending.
 
 ## Required cases (minimum)
 

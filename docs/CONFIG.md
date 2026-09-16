@@ -25,6 +25,11 @@ ibkr.NewClient(
     ibkr.WithLogger(slog.Default()),
     ibkr.WithHTTPClient(custom *http.Client),
     ibkr.WithUserAgent("my-app/1.0"),
+    ibkr.WithStreamingLimits(ibkr.StreamingLimits{
+        MaxConIDsPerRequest: 100,
+        MaxSubscriptions:    10,
+        BufferSize:          256,
+    }), // see STREAMING.md
 )
 ```
 

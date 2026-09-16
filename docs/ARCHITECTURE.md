@@ -68,7 +68,7 @@ ibkrapi4go/
 │   ├── response.go    # netDo + json.Number decoding helpers
 │   ├── ids.go         # ConID, Field, Side, OrderType, TimeInForce
 │   ├── pagination.go  # PositionIterator
-│   ├── ws.go          # streaming (Phase 3)
+│   ├── ws.go          # streaming Subscription (coder/websocket)
 │   └── doc.go
 ├── internal/
 │   ├── transport.go   # http.RoundTripper middleware chain

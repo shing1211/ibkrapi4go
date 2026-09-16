@@ -32,8 +32,15 @@ var (
     ErrInvalidRequest   = errors.New("ibkr: invalid request")
     ErrOrderRejected    = errors.New("ibkr: order rejected")
     ErrClosed           = errors.New("ibkr: client closed")
+    ErrStreamingLimit   = errors.New("ibkr: streaming limit exceeded")
+    ErrStreamDisconnected = errors.New("ibkr: ws: disconnected")
+    ErrStreamReconnected  = errors.New("ibkr: ws: reconnected")
 )
 ```
+
+`ErrStreamDisconnected` and `ErrStreamReconnected` are delivered on a streaming
+subscription's `Errors()` channel to signal a dropped connection and a
+subsequent successful reconnect (see [STREAMING.md](./STREAMING.md)).
 
 Match with `errors.Is` / `errors.As`:
 
