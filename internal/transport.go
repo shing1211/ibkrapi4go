@@ -59,7 +59,10 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		return resp, err
 	}
 
-	if !isSuccess(resp.StatusCode) {
+	// Only 4xx/5xx are errors. 1xx (e.g. 101 Switching Protocols for a
+	// WebSocket upgrade) and 3xx must pass through untouched: the 101 response
+	// body is the hijacked connection.
+	if resp.StatusCode >= 400 {
 		// Prefer response X-request-id (set by upstream server); fall back to our request ID.
 		respReqID := resp.Header.Get("X-request-id")
 		if respReqID == "" {
@@ -71,6 +74,9 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func isSuccess(code int) bool { return code >= 200 && code < 300 }
+
+// isErrorStatus reports whether a status code should be decoded as an error.
+func isErrorStatus(code int) bool { return code >= 400 }
 
 var headerRedact = regexp.MustCompile(`(?i)(Authorization|Cookie|Set-Cookie)\s*:`)
 
@@ -123,7 +129,7 @@ func errorResponse(resp *http.Response, reqID, msg, code string, serr error) *ht
 // It returns nil if the response is not an error response (2xx).
 // The caller must not have read the body yet.
 func ResponseError(resp *http.Response) *Error {
-	if isSuccess(resp.StatusCode) {
+	if !isErrorStatus(resp.StatusCode) {
 		return nil
 	}
 	errMsg := resp.Header.Get("X-ibkr-error")
@@ -167,6 +173,8 @@ func sentinelByName(name string) error {
 		return ErrOrderRejected
 	case ErrClosed.Error():
 		return ErrClosed
+	case ErrStreamingLimit.Error():
+		return ErrStreamingLimit
 	default:
 		return nil
 	}

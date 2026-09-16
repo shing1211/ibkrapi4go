@@ -11,12 +11,44 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"go.uber.org/goleak"
 )
+
+func TestTransport_PassthroughSwitchingProtocols(t *testing.T) {
+	base := RoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusSwitchingProtocols,
+			Header:     http.Header{},
+			Body:       io.NopCloser(strings.NewReader("upgraded")),
+		}, nil
+	})
+	tp := NewTransport(base)
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.test/ws", nil)
+	resp, err := tp.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("RoundTrip: %v", err)
+	}
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		t.Fatalf("status = %d; want 101", resp.StatusCode)
+	}
+	if resp.Header.Get("X-ibkr-error") != "" {
+		t.Errorf("101 was treated as an error: %q", resp.Header.Get("X-ibkr-error"))
+	}
+	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if string(body) != "upgraded" {
+		t.Errorf("body = %q; want %q (upgrade connection was mangled)", body, "upgraded")
+	}
+}
 
 func TestMain(m *testing.M) {
 	code := m.Run()
