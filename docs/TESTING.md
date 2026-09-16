@@ -77,6 +77,14 @@ Fixtures:
   (`internal/breaker_test.go`).
 - Runnable `Example*` functions in `pkg/ibkr/example_test.go`.
 
+## OAuth2 / REST surface tests
+
+- Token source: client-credentials acquisition, refresh-before-expiry,
+  single-flight, refresh-token rotation, error mapping
+  (`internal/oauth_test.go`).
+- REST surface: bearer injection against the REST base URL and account-details
+  mapping (`pkg/ibkr/rest_test.go`).
+
 ## Codegen validation
 
 ```bash

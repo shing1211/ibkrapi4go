@@ -69,6 +69,8 @@ ibkrapi4go/
 │   ├── ids.go         # ConID, Field, Side, OrderType, TimeInForce
 │   ├── pagination.go  # PositionIterator
 │   ├── ws.go          # streaming Subscription (coder/websocket)
+│   ├── oauth.go       # OAuth2 options for the REST surface
+│   ├── rest.go        # RESTSurface (/gw/api/*, oauth2Bearer)
 │   └── doc.go
 ├── internal/
 │   ├── transport.go     # middleware chain (request id, UA, auth, errors, timeout)
@@ -77,7 +79,8 @@ ibkrapi4go/
 │   ├── retry.go         # safe-method retry + Retry-After
 │   ├── observability.go # request logging, redaction, telemetry hooks
 │   ├── breaker.go       # optional circuit breaker
-│   └── ws.go            # WebSocket connection management
+│   ├── ws.go            # WebSocket connection management
+│   └── oauth.go         # OAuth2 token source (client credentials/refresh)
 ├── scripts/
 └── docs/
 ```

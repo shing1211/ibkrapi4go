@@ -142,16 +142,28 @@ Notes:
 - The circuit breaker is disabled by default; telemetry carries no OpenTelemetry
   dependency (ADR 0004).
 
-## Phase 5 — OAuth2 surface (post-v1)
+## Phase 5 — OAuth2 surface (post-v1) *(foundation complete; managers incremental)*
 
 Deliverables:
 
-- `oauth2Bearer` token acquisition/refresh; `/gw/api/v1` and `/gw/api/v2` managers.
+- [x] `internal/oauth.go` — OAuth2 token acquisition/refresh with single-flight
+  refresh and refresh-token rotation; `Client.REST()` surface bound to the IB
+  REST host with `Authorization: Bearer` injection.
+- [x] `pkg/ibkr/rest.go` — `RESTSurface` + `RESTAccounts` (`Details`).
+- [ ] Remaining `/gw/api/v1` and `/gw/api/v2` managers (incremental).
 
 Exit criteria:
 
-- Separate ADR accepted before implementation.
-- Token refresh and rotation tested.
+- [x] Separate ADR accepted ([ADR 0011](./adr/0011-oauth2-surface.md)).
+- [x] Token refresh and rotation tested.
+
+Notes:
+
+- No new runtime dependency: token acquisition uses `net/http` form encoding
+  (ADR 0004); no OAuth2 library or OpenTelemetry SDK is added.
+- Credentials may come from `WithOAuth2*` options or `IBKR_CLIENT_ID` /
+  `IBKR_CLIENT_SECRET` / `IBKR_CLIENT_REFRESH_TOKEN`.
+- Pending live-gateway verification.
 
 ## Non-goals
 

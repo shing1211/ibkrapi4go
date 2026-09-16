@@ -33,6 +33,9 @@ ibkr.NewClient(
     ibkr.WithRetryPolicy(ibkr.DefaultRetryPolicy()), // safe methods only
     ibkr.WithTelemetry(myTracer),               // optional request hooks
     ibkr.WithCircuitBreaker(5, 30*time.Second), // optional, off by default
+    // IB REST (oauth2Bearer) surface:
+    ibkr.WithRESTGateway("https://api.ibkr.com"),
+    ibkr.WithOAuth2ClientCredentials(clientID, clientSecret),
 )
 ```
 
@@ -56,6 +59,10 @@ Invalid configuration (for example a malformed gateway URL) is reported as a
 | `IBKR_GLOBAL_RATE_LIMIT` | Client-wide requests/second | `50` |
 | `IBKR_LOG_LEVEL` | `debug`/`info`/`warn`/`error` | `info` |
 | `IBKR_USER_AGENT` | Outbound User-Agent | module version |
+| `IBKR_REST_GATEWAY_URL` | IB REST API base URL | `https://api.ibkr.com` |
+| `IBKR_CLIENT_ID` | OAuth2 client id (REST surface) | — |
+| `IBKR_CLIENT_SECRET` | OAuth2 client secret (REST surface) | — |
+| `IBKR_CLIENT_REFRESH_TOKEN` | OAuth2 refresh token (REST surface) | — |
 
 Integration tests additionally read `IBKR_USERNAME` / `IBKR_PASSWORD` for the
 human login step; these are **never** read by the SDK itself.
