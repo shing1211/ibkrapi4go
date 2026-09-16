@@ -20,7 +20,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本文件是英文 [README](./README.md) 的社区翻译。**英文版本为准。**
-> 同步于 / Last synced: 5692cd9
+> 同步于 / Last synced: 36b57cf
 
 ## 目录
 
