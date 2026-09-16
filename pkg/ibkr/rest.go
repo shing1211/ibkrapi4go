@@ -152,6 +152,43 @@ func (r accountDetailsRaw) toPublic(id AccountID) *AccountDetails {
 // Statements returns the REST statements manager.
 func (s *RESTSurface) Statements() *RESTStatements { return &RESTStatements{surface: s} }
 
+// Requests returns the REST requests manager.
+func (s *RESTSurface) Requests() *RESTRequests { return &RESTRequests{surface: s} }
+
+// RESTRequests exposes request-status operations on the REST surface.
+type RESTRequests struct {
+	surface *RESTSurface
+}
+
+// RESTRequestInfo holds metadata about a submitted request.
+type RESTRequestInfo struct {
+	ID        int64
+	ExecutedAt *string
+}
+
+// GetStatus retrieves the current status of a submitted request.
+func (m *RESTRequests) GetStatus(ctx context.Context, requestID int64) (*RESTRequestInfo, error) {
+	const op = "Requests.GetStatus"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	resp, err := m.surface.generated.GetRequestsStatusWithResponse(ctx, requestID, nil)
+	if err != nil {
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		e := wrapOp(op, &Error{Code: "http_error", Message: fmt.Sprintf("GetRequestsStatus: %d", resp.HTTPResponse.StatusCode), HTTPStatus: resp.HTTPResponse.StatusCode})
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if j := resp.GetJSON200(); j != nil {
+		return &RESTRequestInfo{ID: requestID}, nil
+	}
+	return &RESTRequestInfo{ID: requestID}, nil
+}
+
 // TaxDocuments returns the REST tax-documents manager.
 func (s *RESTSurface) TaxDocuments() *RESTTaxDocuments { return &RESTTaxDocuments{surface: s} }
 
