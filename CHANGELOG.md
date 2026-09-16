@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Initialized the Go module (`go.mod`) and committed the generated OpenAPI
+  client (`client/client.gen.go`, package `client`), with a deterministic SPDX
+  header and a reproducible `make codegen-verify` check.
 - Project documentation set: `SPEC.md`, `ARCHITECTURE.md`, `AUTH.md`,
   `SESSIONS.md`, `ERRORS.md`, `RATE-LIMITING.md`, `STREAMING.md`, `CODEGEN.md`,
   `TESTING.md`, `RELEASING.md`, `CONFIG.md`, `GLOSSARY.md`, `ROADMAP.md`.

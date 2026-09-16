@@ -28,12 +28,15 @@ Deliverables:
 - [x] SPDX headers and `make license` / `make license-check`.
 - [x] Measured codegen validation; `scripts/patch_spec.py` generalized.
 - [x] Documentation set, ADRs, CI scaffolding.
+- [x] Module initialized (`go.mod`) and generated client committed
+  (`client/client.gen.go`), with a deterministic SPDX header.
 
 Exit criteria:
 
 - [x] Codegen succeeds and generated client compiles.
 - [x] Apache-2.0 detected by GitHub.
 - [x] Every count in docs derives from [SPEC.md](./SPEC.md).
+- [x] `make codegen-verify` passes against the committed client.
 
 ## Phase 1 — Core
 

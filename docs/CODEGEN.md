@@ -67,9 +67,12 @@ With `oapi-codegen` **v2.8.0** and the patched spec:
 
 ## Generated files
 
-- `client/client.gen.go` — schema types **and** the HTTP client. Marked
-  `DO NOT EDIT`.
+- `client/client.gen.go` — schema types **and** the HTTP client, package `client`.
+  Marked `DO NOT EDIT`.
 - Generated code is committed so consumers don't need `oapi-codegen`.
+- A deterministic SPDX header is prepended by `scripts/codegen.sh` (and by
+  `scripts/validate_codegen.sh` before diffing). `client/` is excluded from
+  `addlicense` so the two stay consistent.
 
 ## `oapi-codegen.yaml`
 

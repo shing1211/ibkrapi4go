@@ -7,6 +7,9 @@
 #
 # Usage:
 #   ./scripts/validate_codegen.sh [spec_file]
+#
+# Applies the same deterministic SPDX header as scripts/codegen.sh so the diff
+# is meaningful.
 
 set -euo pipefail
 
@@ -33,8 +36,14 @@ fi
 python3 "$SCRIPT_DIR/patch_spec.py" "$SPEC_FILE" > "$PATCHED_FILE"
 
 # Generate into a temp dir using a temp config that redirects output.
-sed "s#^output:.*#output: $TMP_DIR/client.gen.go#" "$CONFIG_FILE" > "$TMP_DIR/oapi-codegen.yaml"
+sed "s#^output:.*#output: $TMP_DIR/raw.gen.go#" "$CONFIG_FILE" > "$TMP_DIR/oapi-codegen.yaml"
 oapi-codegen -config "$TMP_DIR/oapi-codegen.yaml" "$PATCHED_FILE"
+
+{
+    printf '// Copyright 2026 shing1211\n'
+    printf '// SPDX-License-Identifier: Apache-2.0\n'
+    cat "$TMP_DIR/raw.gen.go"
+} > "$TMP_DIR/client.gen.go"
 
 if ! diff -q "$TMP_DIR/client.gen.go" "$COMMITTED" >/dev/null 2>&1; then
     echo "error: generated code differs from committed client/client.gen.go" >&2

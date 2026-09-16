@@ -52,7 +52,8 @@ git push gitee  main --tags
 ```
 
 Create the corresponding Gitee release from the same changelog section. Docs stay
-in English except `README.zh-CN.md` and this section for Gitee users.
+in English except the translated READMEs (`README.<locale>.md`); see
+[TRANSLATING.md](../TRANSLATING.md).
 
 ## Deprecation
 

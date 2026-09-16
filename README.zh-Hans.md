@@ -44,13 +44,13 @@
 |------|------|
 | 规划与文档 | ✅ 完成 |
 | OpenAPI 代码生成验证 | ✅ 已验证（见 [docs/CODEGEN.md](./docs/CODEGEN.md)） |
-| `client/` 生成代码 | 🚧 按需生成（`make codegen`） |
+| `client/` 生成代码 | ✅ 已提交（生成） |
 | `pkg/ibkr` 公开 API | 🚧 未实现 |
 | `internal/` 实现 | 🚧 未实现 |
 | 测试 / 示例 | 🚧 未实现 |
 
-当前仓库包含**文档与代码生成工具**，以及一套经过验证的代码生成方案。
-尚无公开 SDK 代码。构建计划见 [docs/ROADMAP.md](./docs/ROADMAP.md)。
+当前仓库包含**生成的 OpenAPI 客户端**、文档与代码生成工具。尚无手写的 SDK
+代码（`pkg/ibkr`、`internal/`）。构建计划见 [docs/ROADMAP.md](./docs/ROADMAP.md)。
 
 ## 两套 API
 

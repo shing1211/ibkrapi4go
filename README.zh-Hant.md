@@ -44,13 +44,13 @@
 |------|------|
 | 規劃與文件 | ✅ 完成 |
 | OpenAPI 程式碼產生驗證 | ✅ 已驗證（見 [docs/CODEGEN.md](./docs/CODEGEN.md)） |
-| `client/` 產生程式碼 | 🚧 依需求產生（`make codegen`） |
+| `client/` 產生程式碼 | ✅ 已提交（產生） |
 | `pkg/ibkr` 公開 API | 🚧 未實作 |
 | `internal/` 實作 | 🚧 未實作 |
 | 測試 / 範例 | 🚧 未實作 |
 
-目前倉庫包含**文件與程式碼產生工具**，以及一套經驗證的程式碼產生方案。
-尚無公開 SDK 程式碼。建置計畫見 [docs/ROADMAP.md](./docs/ROADMAP.md)。
+目前倉庫包含**產生的 OpenAPI 用戶端**、文件與程式碼產生工具。尚無手寫的 SDK
+程式碼（`pkg/ibkr`、`internal/`）。建置計畫見 [docs/ROADMAP.md](./docs/ROADMAP.md)。
 
 ## 兩套 API
 

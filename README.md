@@ -42,14 +42,14 @@
 |------|-------|
 | Planning & documentation | ✅ Complete |
 | OpenAPI codegen validation | ✅ Verified (see [docs/CODEGEN.md](./docs/CODEGEN.md)) |
-| `client/` generated code | 🚧 Generated on demand (`make codegen`) |
+| `client/` generated code | ✅ Committed (generated) |
 | `pkg/ibkr` public API | 🚧 Not implemented |
 | `internal/` implementation | 🚧 Not implemented |
 | Tests / examples | 🚧 Not implemented |
 
-This repository currently contains **documentation and codegen tooling**, plus a
-verified codegen recipe. No public SDK code exists yet. See
-[docs/ROADMAP.md](./docs/ROADMAP.md) for the build plan.
+This repository contains the **generated OpenAPI client**, documentation, and
+codegen tooling. No hand-written SDK code exists yet (`pkg/ibkr`, `internal/`).
+See [docs/ROADMAP.md](./docs/ROADMAP.md) for the build plan.
 
 ## The Two APIs
 

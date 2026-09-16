@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # oapi-codegen configuration. See docs/CODEGEN.md.
-package: ibkr
+package: client
 output: client/client.gen.go
 generate:
   models: true

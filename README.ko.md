@@ -45,13 +45,13 @@
 |------|------|
 | 기획 및 문서 | ✅ 완료 |
 | OpenAPI 코드 생성 검증 | ✅ 검증됨 ([docs/CODEGEN.md](./docs/CODEGEN.md)) |
-| `client/` 생성 코드 | 🚧 필요 시 생성 (`make codegen`) |
+| `client/` 생성 코드 | ✅ 커밋됨 (생성) |
 | `pkg/ibkr` 공개 API | 🚧 미구현 |
 | `internal/` 구현 | 🚧 미구현 |
 | 테스트 / 예제 | 🚧 미구현 |
 
-현재 저장소에는 **문서와 코드 생성 도구**, 그리고 검증된 코드 생성 절차가 포함되어
-있습니다. 아직 공개 SDK 코드는 없습니다. 계획은
+현재 저장소에는 **생성된 OpenAPI 클라이언트**, 문서, 코드 생성 도구가 포함되어
+있습니다. 아직 직접 작성한 SDK 코드(`pkg/ibkr`, `internal/`)는 없습니다. 계획은
 [docs/ROADMAP.md](./docs/ROADMAP.md)를 참고하세요.
 
 ## 두 개의 API

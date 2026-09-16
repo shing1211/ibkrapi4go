@@ -5,6 +5,7 @@ SHELL := /bin/bash
 GO ?= go
 LICENSE_HOLDER ?= shing1211
 LICENSE_YEAR ?= 2026
+OAPI_CODEGEN_VERSION ?= v2.8.0
 
 .DEFAULT_GOAL := help
 
@@ -17,7 +18,7 @@ help: ## List targets
 		| awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 tools: ## Install build/test tools
-	$(GO) install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+	$(GO) install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@$(OAPI_CODEGEN_VERSION)
 	$(GO) install github.com/google/addlicense@latest
 
 fmt: ## Format Go sources
@@ -56,13 +57,15 @@ docs-check: ## Check markdown links and README translations
 
 license: ## Apply SPDX headers to sources
 	@if [ -f go.mod ]; then \
-		$(GO) run github.com/google/addlicense -c "$(LICENSE_HOLDER)" -y "$(LICENSE_YEAR)" \
-			-l apache -s=only . ; \
+		dirs="$$(for d in scripts pkg internal cmd; do [ -d "$$d" ] && echo "$$d"; done)"; \
+		$(GO) run github.com/google/addlicense@latest -c "$(LICENSE_HOLDER)" -y "$(LICENSE_YEAR)" \
+			-l apache -s=only $$dirs ; \
 	else echo "no go.mod yet; run scripts manually"; fi
 
 license-check: ## Verify SPDX headers are present
 	@if [ -f go.mod ]; then \
-		$(GO) run github.com/google/addlicense -check . ; \
+		dirs="$$(for d in scripts pkg internal cmd; do [ -d "$$d" ] && echo "$$d"; done)"; \
+		$(GO) run github.com/google/addlicense@latest -check $$dirs ; \
 	else echo "no go.mod yet; skipping"; fi
 
 clean: ## Remove build artifacts

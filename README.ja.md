@@ -45,14 +45,14 @@
 |------|------|
 | 計画とドキュメント | ✅ 完了 |
 | OpenAPI コード生成の検証 | ✅ 検証済み（[docs/CODEGEN.md](./docs/CODEGEN.md)） |
-| `client/` 生成コード | 🚧 必要時に生成（`make codegen`） |
+| `client/` 生成コード | ✅ コミット済み（生成） |
 | `pkg/ibkr` 公開 API | 🚧 未実装 |
 | `internal/` 実装 | 🚧 未実装 |
 | テスト / サンプル | 🚧 未実装 |
 
-現在のリポジトリには**ドキュメントとコード生成ツール**、および検証済みの
-コード生成手順が含まれます。公開 SDK コードはまだありません。計画は
-[docs/ROADMAP.md](./docs/ROADMAP.md) を参照してください。
+現在のリポジトリには**生成済みの OpenAPI クライアント**、ドキュメント、
+コード生成ツールが含まれます。手書きの SDK コード（`pkg/ibkr`、`internal/`）は
+まだありません。計画は [docs/ROADMAP.md](./docs/ROADMAP.md) を参照してください。
 
 ## 2 つの API
 

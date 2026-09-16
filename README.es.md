@@ -45,14 +45,15 @@
 |----------|--------|
 | Planificación y documentación | ✅ Completo |
 | Validación de generación de código OpenAPI | ✅ Verificado ([docs/CODEGEN.md](./docs/CODEGEN.md)) |
-| Código generado en `client/` | 🚧 Generado bajo demanda (`make codegen`) |
+| Código generado en `client/` | ✅ Incluido en el repositorio (generado) |
 | API pública `pkg/ibkr` | 🚧 No implementada |
 | Implementación `internal/` | 🚧 No implementada |
 | Pruebas / ejemplos | 🚧 No implementados |
 
-Actualmente este repositorio contiene **documentación y herramientas de generación de
-código**, además de un procedimiento verificado. Todavía no existe código público del
-SDK. Consulta [docs/ROADMAP.md](./docs/ROADMAP.md) para el plan de construcción.
+Este repositorio contiene el **cliente OpenAPI generado**, documentación y
+herramientas de generación de código. Todavía no existe código SDK escrito a mano
+(`pkg/ibkr`, `internal/`). Consulta [docs/ROADMAP.md](./docs/ROADMAP.md) para el plan
+de construcción.
 
 ## Las dos API
 
