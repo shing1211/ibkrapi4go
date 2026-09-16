@@ -145,9 +145,9 @@ func NewSession(cfg SessionConfig) *Session {
 		cfg.HTTPClient = http.DefaultClient
 	}
 	return &Session{
-		api:             newHTTPAPI(cfg.HTTPClient, cfg.ServerURL),
-		tickleInterval:  cfg.TickleInterval,
-		requestTimeout:  cfg.RequestTimeout,
+		api:            newHTTPAPI(cfg.HTTPClient, cfg.ServerURL),
+		tickleInterval: cfg.TickleInterval,
+		requestTimeout: cfg.RequestTimeout,
 		logger:         cfg.Logger,
 		state:          int32(StateDisconnected),
 	}
@@ -171,6 +171,10 @@ func (s *Session) Token() (token string, ok bool) {
 		return "", false
 	}
 	return s.token, true
+}
+
+func (s *Session) HTTPClient() *http.Client {
+	return s.api.(*httpAPI).client
 }
 
 func (s *Session) Initialize(ctx context.Context) error {

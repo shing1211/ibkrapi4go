@@ -68,10 +68,10 @@ func TestSession_HappyPath(t *testing.T) {
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
 	s := &Session{
-		api:             api,
-		tickleInterval:  1 * time.Millisecond,
-		requestTimeout:  10 * time.Second,
-		state: int32(StateDisconnected),
+		api:            api,
+		tickleInterval: 1 * time.Millisecond,
+		requestTimeout: 10 * time.Second,
+		state:          int32(StateDisconnected),
 	}
 
 	ctx := context.Background()
@@ -110,7 +110,7 @@ func TestSession_Initialize_Idempotent(t *testing.T) {
 	}
 	s := &Session{api: api, state: int32(StateAuthenticated)}
 	ctx := context.Background()
-defer s.Close(ctx)
+	defer s.Close(ctx)
 
 	if err := s.Initialize(ctx); err != nil {
 		t.Fatalf("Initialize (idempotent): %v", err)
@@ -136,14 +136,14 @@ func TestSession_TickleFailure_Expires(t *testing.T) {
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
 	s := &Session{
-		api:             api,
-		tickleInterval:  50 * time.Millisecond,
-		requestTimeout:  10 * time.Second,
-		state: int32(StateDisconnected),
+		api:            api,
+		tickleInterval: 50 * time.Millisecond,
+		requestTimeout: 10 * time.Second,
+		state:          int32(StateDisconnected),
 	}
 
 	ctx := context.Background()
-defer s.Close(ctx)
+	defer s.Close(ctx)
 
 	if err := s.Initialize(ctx); err != nil {
 		t.Fatalf("Initialize: %v", err)
@@ -176,7 +176,7 @@ func TestSession_ReinitializeFromExpired(t *testing.T) {
 	}
 	s := &Session{api: api, requestTimeout: 10 * time.Second, state: int32(StateExpired)}
 	ctx := context.Background()
-defer s.Close(ctx)
+	defer s.Close(ctx)
 
 	if err := s.Initialize(ctx); err != nil {
 		t.Fatalf("Reinitialize from EXPIRED: %v", err)
@@ -266,7 +266,7 @@ func TestSession_InitError_AuthRejected(t *testing.T) {
 	}
 	s := &Session{api: api, requestTimeout: 1 * time.Second, state: int32(StateDisconnected)}
 	ctx := context.Background()
-defer s.Close(ctx)
+	defer s.Close(ctx)
 
 	err := s.Initialize(ctx)
 	if err == nil {
@@ -359,13 +359,13 @@ func TestSession_ReauthorizeAfterTickleFailure(t *testing.T) {
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
 	s := &Session{
-		api:             api,
-		tickleInterval:  50 * time.Millisecond,
-		requestTimeout:  10 * time.Second,
-		state: int32(StateDisconnected),
+		api:            api,
+		tickleInterval: 50 * time.Millisecond,
+		requestTimeout: 10 * time.Second,
+		state:          int32(StateDisconnected),
 	}
 	ctx := context.Background()
-defer s.Close(ctx)
+	defer s.Close(ctx)
 
 	if err := s.Initialize(ctx); err != nil {
 		t.Fatalf("Initialize: %v", err)
@@ -396,7 +396,7 @@ func TestSession_TokenCopy(t *testing.T) {
 	}
 	s := &Session{api: api, tickleInterval: 1 * time.Millisecond, requestTimeout: 10 * time.Second, state: int32(StateDisconnected)}
 	ctx := context.Background()
-defer s.Close(ctx)
+	defer s.Close(ctx)
 
 	if err := s.Initialize(ctx); err != nil {
 		t.Fatalf("Initialize: %v", err)
@@ -424,7 +424,7 @@ func TestSession_StartTickle_Idempotent(t *testing.T) {
 	}
 	s := &Session{api: api, state: int32(StateAuthenticated)}
 	ctx := context.Background()
-defer s.Close(ctx)
+	defer s.Close(ctx)
 
 	s.startTickle()
 	s.startTickle() // idempotent
