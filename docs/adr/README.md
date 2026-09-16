@@ -16,6 +16,8 @@ a new ADR, not editing the old one.
 | [0008](./0008-numeric-precision.md) | Money/quantity are never `float64` | Accepted |
 | [0009](./0009-no-auto-retry-orders.md) | Never auto-retry order mutations | Accepted |
 | [0010](./0010-naming.md) | Project naming and module path | Accepted |
+| [0010](./0010-test-dependencies.md) | Test-only dependencies (`goleak`) | Accepted |
+| [0011](./0011-oauth2-surface.md) | OAuth2 / IB REST surface | Accepted |
 
 Template:
 
