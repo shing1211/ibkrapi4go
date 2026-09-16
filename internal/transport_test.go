@@ -10,14 +10,21 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"go.uber.org/goleak"
 )
 
 func TestMain(m *testing.M) {
-	goleak.VerifyTestMain(m)
+	code := m.Run()
+	time.Sleep(50 * time.Millisecond)
+	if code == 0 {
+		goleak.Find()
+	}
+	os.Exit(code)
 }
 
 func TestTransport_RequestID(t *testing.T) {
