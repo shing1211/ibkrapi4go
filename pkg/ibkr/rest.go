@@ -152,6 +152,131 @@ func (r accountDetailsRaw) toPublic(id AccountID) *AccountDetails {
 // Statements returns the REST statements manager.
 func (s *RESTSurface) Statements() *RESTStatements { return &RESTStatements{surface: s} }
 
+// TaxDocuments returns the REST tax-documents manager.
+func (s *RESTSurface) TaxDocuments() *RESTTaxDocuments { return &RESTTaxDocuments{surface: s} }
+
+// RESTTaxDocuments exposes tax-document operations on the REST surface.
+type RESTTaxDocuments struct {
+	surface *RESTSurface
+}
+
+// TaxDocumentRequest is a request to fetch tax documents.
+type TaxDocumentRequest struct {
+	// AccountID is the account for which to fetch tax documents.
+	AccountID AccountID
+	// Year is the tax year.
+	Year string
+	// Type is the tax form type (e.g. "ALL", "1099", "1099R", "1042S", "8949").
+	Type string
+	// Format is the output MIME type. Defaults to "PDF".
+	Format string
+}
+
+// TaxDocumentResponse is the generated tax document.
+type TaxDocumentResponse struct {
+	// ContentType is the MIME type of the returned document.
+	ContentType string
+	// Data is the base64-encoded document payload.
+	Data []byte
+	// Gzip indicates whether Data is gzip-compressed.
+	Gzip bool
+}
+
+
+// AvailableTaxDocumentTypes holds the available tax form types for an account/year.
+type AvailableTaxDocumentTypes struct {
+	// Forms is the list of available tax form identifiers (e.g. "1099", "1099R").
+	Forms []string
+}
+
+// ListAvailable returns the tax-form types available for the given account.
+func (m *RESTTaxDocuments) ListAvailable(ctx context.Context, id AccountID) (*AvailableTaxDocumentTypes, error) {
+	const op = "TaxDocuments.ListAvailable"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	params := client.ListTaxDocumentsAvailableParams{
+		AccountId: string(id),
+	}
+	resp, err := m.surface.generated.ListTaxDocumentsAvailableWithResponse(ctx, &params)
+	if err != nil {
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		e := wrapOp(op, &Error{Code: "http_error", Message: fmt.Sprintf("ListTaxDocumentsAvailable: %d", resp.HTTPResponse.StatusCode), HTTPStatus: resp.HTTPResponse.StatusCode})
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if j := resp.GetJSON200(); j != nil && j.Data != nil && j.Data.Value != nil && j.Data.Value.Forms != nil {
+		forms := make([]string, len(*j.Data.Value.Forms))
+		for i, ft := range *j.Data.Value.Forms {
+			if ft.TaxFormName != nil {
+				forms[i] = *ft.TaxFormName
+			}
+		}
+		return &AvailableTaxDocumentTypes{Forms: forms}, nil
+	}
+	return &AvailableTaxDocumentTypes{}, nil
+}
+
+// Generate produces tax documents for the given request.
+// The returned payload is base64-encoded; decode it to obtain the PDF/HTML bytes.
+func (m *RESTTaxDocuments) Generate(ctx context.Context, req TaxDocumentRequest) (*TaxDocumentResponse, error) {
+	const op = "TaxDocuments.Generate"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	format := req.Format
+	if format == "" {
+		format = "PDF"
+	}
+	body := client.TaxFormRequest{
+		AccountId: string(req.AccountID),
+		Year:      req.Year,
+		Type:      req.Type,
+		Format:    format,
+	}
+	resp, err := m.surface.generated.CreateTaxDocumentsWithResponse(ctx, nil, body)
+	if err != nil {
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		e := wrapOp(op, &Error{Code: "http_error", Message: fmt.Sprintf("CreateTaxDocuments: %d", resp.HTTPResponse.StatusCode), HTTPStatus: resp.HTTPResponse.StatusCode})
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	var raw struct {
+		Data struct {
+			Value    *string `json:"value,omitempty"`
+			MimeType *string `json:"mimeType,omitempty"`
+			Gzip     *bool   `json:"gzip,omitempty"`
+		} `json:"data,omitempty"`
+	}
+	if err := decodeJSON(resp.HTTPResponse, op, &raw); err != nil {
+		return nil, err
+	}
+	if raw.Data.Value == nil {
+		return &TaxDocumentResponse{}, nil
+	}
+	ct := "application/octet-stream"
+	if raw.Data.MimeType != nil {
+		ct = *raw.Data.MimeType
+	}
+	gzip := false
+	if raw.Data.Gzip != nil {
+		gzip = *raw.Data.Gzip
+	}
+	return &TaxDocumentResponse{
+		ContentType: ct,
+		Data:        []byte(*raw.Data.Value),
+		Gzip:       gzip,
+	}, nil
+}
+
 // TradeConfirmations returns the REST trade-confirmations manager.
 func (s *RESTSurface) TradeConfirmations() *RESTTradeConfirmations {
 	return &RESTTradeConfirmations{surface: s}
