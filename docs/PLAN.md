@@ -87,11 +87,13 @@ oapi-codegen \
 
 ```bash
 go mod init github.com/shing1211/ibkrapi4go
-go get github.com/google/wire/...   # dependency injection
-go get github.com/gorilla/websocket  # WebSocket
+go get github.com/coder/websocket    # WebSocket (context-aware, idiomatic)
 go get golang.org/x/time/rate        # rate limiting
 go get github.com/stretchr/testify   # testing
 ```
+
+**Dependencies:** Minimal by design. Standard `net/http` for all HTTP client operations.
+No web frameworks, no DI frameworks — just stdlib + 3 focused libraries.
 
 ---
 

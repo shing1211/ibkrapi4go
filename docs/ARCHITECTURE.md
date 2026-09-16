@@ -3,6 +3,17 @@
 > Design decisions, tradeoffs, and implementation rationale.
 > Status: **Draft — Phase 0**
 
+## Dependencies
+
+| Library | Purpose |
+|---------|---------|
+| `github.com/coder/websocket` | WebSocket client — context-aware, idiomatic, actively maintained |
+| `golang.org/x/time/rate` | Rate limiting (token bucket) |
+| `github.com/stretchr/testify` | Test assertions |
+| `oapi-codegen` (CLI) | OpenAPI → Go codegen |
+
+No web frameworks. No DI frameworks. Standard `net/http` for all HTTP operations.
+
 ---
 
 ## Why This SDK Exists
@@ -41,6 +52,8 @@ session state directly.
 ### 5. WebSocket is Channel-Based
 Go's concurrency model maps perfectly to streaming data. Market data updates arrive
 as typed structs on Go channels. Subscribers use `for select` loops — familiar, natural Go.
+We use `coder/websocket` (formerly nhooyr.io/websocket) — it provides first-class
+`context.Context` support, safe concurrent writes, and zero dependencies.
 
 ---
 
@@ -152,18 +165,32 @@ All API errors are wrapped as `*ibkr.Error` with:
 ### Channel API Design
 
 ```go
-// Subscribe — returns a typed channel
-updates, cancel := cli.WS().SubscribeMarketData(ctx, conid, []string{"31","83","86"})
-defer cancel()
+// Subscribe — returns a typed channel (coder/websocket based)
+ctx, cancel := context.WithCancel(context.Background())
+c, _, err := websocket.Dial(ctx, "wss://localhost:5000/v1/api/ws", nil)
+if err != nil {
+    return err
+}
+defer c.CloseNow()
 
+// Send subscribe message
+subscribe := map[string]interface{}{
+    "id": 1, "method": "subscribe",
+    "params": map[string]interface{}{
+        "conids": []int{conid},
+        "fields": []string{"31", "83", "86"},
+    },
+}
+wsjson.Write(ctx, c, subscribe)
+
+// Read updates
 for {
-    select {
-    case <-ctx.Done():
-        return
-    case update := <-updates:
-        // update is *MarketDataUpdate, fully typed
-        fmt.Println(update)
+    var update MarketDataUpdate
+    err := wsjson.Read(ctx, c, &update)
+    if err != nil {
+        return // context cancelled or connection closed
     }
+    // dispatch to typed Go channel
 }
 ```
 

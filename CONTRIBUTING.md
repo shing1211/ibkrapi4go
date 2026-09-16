@@ -2,6 +2,9 @@
 
 Thank you for your interest in contributing!
 
+- [Code of Conduct](./CODE_OF_CONDUCT.md)
+- [Security Policy](./SECURITY.md)
+
 ---
 
 ## Getting Started
@@ -72,17 +75,13 @@ Branch naming: `feat/`, `fix/`, `docs/`, `test/` prefixes.
 ### 3. Run Checks
 
 ```bash
-# Format
-go fmt ./...
-
-# Lint
-go vet ./...
-
-# Unit tests
-go test ./...
-
-# All of the above
+# Using Makefile (recommended)
 make check
+
+# Or manually:
+go fmt ./...
+go vet ./...
+go test ./...
 ```
 
 ### 4. Commit

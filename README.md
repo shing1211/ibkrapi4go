@@ -105,7 +105,7 @@ func main() {
 - **185 endpoints** across Account, Portfolio, Trading, Market Data, FA, and more
 - **443 generated types** from official OpenAPI 3.0 spec
 - **Session management** — automatic tickle heartbeat (60s interval), token refresh
-- **WebSocket streaming** — channel-based market data, order updates, notifications
+- **WebSocket streaming** — channel-based market data, order updates, notifications (via `coder/websocket`)
 - **Fluent API** — `cli.Account().List()`, `cli.Portfolio().Positions()`, `cli.Trade().SubmitOrder()`
 - **FutuAPI-compatible design** — follows the same package layout as [futuapi4go](https://github.com/shing1211/futuapi4go)
 - **Rate limiting** — enforces 10 req/sec per-endpoint with exponential backoff on 429
@@ -165,7 +165,7 @@ ibkr-sdk/
 | WebSocket | 1 | ✅ |
 | **Total** | **185** | **✅** |
 
-Full endpoint list: [SPEC.md](./SPEC.md)
+Full endpoint list: [docs/SPEC.md](./docs/SPEC.md)
 
 ## Examples
 
@@ -198,7 +198,7 @@ go test ./test/... -tags=integration
 
 ## Architecture
 
-See [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for detailed design decisions.
+See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for detailed design decisions.
 
 ## Troubleshooting
 

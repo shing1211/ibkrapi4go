@@ -1,0 +1,40 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+ibkr-sdk
+*.test
+*.out
+
+# Go
+vendor/
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment / Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Test coverage
+coverage.out
+coverage.html
+cover.out
+
+# Downloaded specs (regenerate via scripts/codegen.sh)
+specs/*.json
+!specs/.gitkeep
