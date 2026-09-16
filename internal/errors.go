@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 )
 
 type Error struct {
@@ -55,24 +54,4 @@ type ibkrErrorEnvelope struct {
 	Message string `json:"message"`
 	Code    string `json:"code,omitempty"`
 	Details any    `json:"details,omitempty"`
-}
-
-// buildError constructs *Error from an HTTP response and a request ID.
-func buildError(op string, status int, requestID string, body []byte, underlying error) *Error {
-	code := ""
-	msg := strings.TrimSpace(string(body))
-	if len(msg) > 200 {
-		msg = msg[:200] + "..."
-	}
-	if se := statusSentinel[status]; se != nil {
-		code = se.Error()
-	}
-	return &Error{
-		Op:         op,
-		Code:       code,
-		Message:    msg,
-		HTTPStatus: status,
-		RequestID:  requestID,
-		Err:        underlying,
-	}
 }

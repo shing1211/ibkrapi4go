@@ -19,6 +19,15 @@ import (
 	"go.uber.org/goleak"
 )
 
+func TestMain(m *testing.M) {
+	code := m.Run()
+	time.Sleep(50 * time.Millisecond)
+	if code == 0 {
+		goleak.Find()
+	}
+	os.Exit(code)
+}
+
 func TestTransport_PassthroughSwitchingProtocols(t *testing.T) {
 	base := RoundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return &http.Response{
@@ -27,7 +36,7 @@ func TestTransport_PassthroughSwitchingProtocols(t *testing.T) {
 			Body:       io.NopCloser(strings.NewReader("upgraded")),
 		}, nil
 	})
-	tp := NewTransport(base)
+	tp := NewClientTransport(base, TransportConfig{})
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.test/ws", nil)
 	resp, err := tp.RoundTrip(req)
@@ -50,15 +59,6 @@ func TestTransport_PassthroughSwitchingProtocols(t *testing.T) {
 	}
 }
 
-func TestMain(m *testing.M) {
-	code := m.Run()
-	time.Sleep(50 * time.Millisecond)
-	if code == 0 {
-		goleak.Find()
-	}
-	os.Exit(code)
-}
-
 func TestTransport_RequestID(t *testing.T) {
 	var capturedID string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -68,11 +68,11 @@ func TestTransport_RequestID(t *testing.T) {
 	defer srv.Close()
 
 	var idCounter atomic.Int64
-	tp := NewTransport(srv.Client().Transport)
-	tp.reqID = func() string {
-		idCounter.Add(1)
-		return "req-" + string(rune('0'+idCounter.Load()))
-	}
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{
+		RequestID: func() string {
+			return "req-" + string(rune('0'+idCounter.Add(1)))
+		},
+	})
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	resp, err := tp.RoundTrip(req)
@@ -93,7 +93,7 @@ func TestTransport_UserAgent(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	tp := NewTransport(srv.Client().Transport, WithUserAgent("test-agent/1.0"))
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{UserAgent: "test-agent/1.0"})
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	resp, err := tp.RoundTrip(req)
@@ -114,9 +114,10 @@ func TestTransport_Auth(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	tp := NewTransport(srv.Client().Transport, WithToken("Authorization", func() (string, bool) {
-		return "Bearer secret-token", true
-	}))
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{
+		AuthHeader: "Authorization",
+		Token:      func() (string, bool) { return "Bearer secret-token", true },
+	})
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	resp, err := tp.RoundTrip(req)
@@ -130,18 +131,19 @@ func TestTransport_Auth(t *testing.T) {
 }
 
 func TestTransport_Auth_NotSet(t *testing.T) {
-	called := atomic.Bool{}
+	sent := atomic.Bool{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "" {
-			called.Store(true)
+			sent.Store(true)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
 
-	tp := NewTransport(srv.Client().Transport, WithToken("Authorization", func() (string, bool) {
-		return "", false
-	}))
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{
+		AuthHeader: "Authorization",
+		Token:      func() (string, bool) { return "", false },
+	})
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	resp, err := tp.RoundTrip(req)
@@ -149,7 +151,7 @@ func TestTransport_Auth_NotSet(t *testing.T) {
 		t.Fatalf("RoundTrip: %v", err)
 	}
 	resp.Body.Close()
-	if called.Load() {
+	if sent.Load() {
 		t.Error("Authorization header sent when token provider returned ok=false")
 	}
 }
@@ -160,14 +162,14 @@ func TestTransport_Success(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	tp := NewTransport(srv.Client().Transport)
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{})
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	resp, err := tp.RoundTrip(req)
 	if err != nil {
 		t.Fatalf("RoundTrip: %v", err)
 	}
 	defer resp.Body.Close()
-	if !isSuccess(resp.StatusCode) {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		t.Errorf("Status = %d; want 2xx", resp.StatusCode)
 	}
 }
@@ -180,7 +182,7 @@ func TestTransport_ErrorResponse(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	tp := NewTransport(srv.Client().Transport)
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{})
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	resp, err := tp.RoundTrip(req)
 	if err != nil {
@@ -210,7 +212,7 @@ func TestTransport_401_SessionExpired(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	tp := NewTransport(srv.Client().Transport)
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{})
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	resp, err := tp.RoundTrip(req)
 	if err != nil {
@@ -236,7 +238,7 @@ func TestTransport_429_RateLimited(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	tp := NewTransport(srv.Client().Transport)
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{})
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	resp, err := tp.RoundTrip(req)
 	if err != nil {
@@ -260,7 +262,7 @@ func TestTransport_ErrorResponse_UnknownEnvelope(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	tp := NewTransport(srv.Client().Transport)
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{})
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
 	resp, err := tp.RoundTrip(req)
 	if err != nil {
@@ -275,6 +277,39 @@ func TestTransport_ErrorResponse_UnknownEnvelope(t *testing.T) {
 	if err2.HTTPStatus != http.StatusInternalServerError {
 		t.Errorf("HTTPStatus = %d; want %d", err2.HTTPStatus, http.StatusInternalServerError)
 	}
+}
+
+func TestTransport_TimeoutAppliedWhenNoDeadline(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{Timeout: 20 * time.Millisecond})
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, srv.URL, nil)
+	_, err := tp.RoundTrip(req)
+	if err == nil {
+		t.Fatal("RoundTrip: want timeout error")
+	}
+}
+
+func TestTransport_TimeoutRespectsCallerDeadline(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	// Middleware timeout is shorter than the caller's, but must not override it.
+	tp := NewClientTransport(srv.Client().Transport, TransportConfig{Timeout: time.Nanosecond})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL, nil)
+	resp, err := tp.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("RoundTrip: %v", err)
+	}
+	resp.Body.Close()
 }
 
 func TestChain(t *testing.T) {

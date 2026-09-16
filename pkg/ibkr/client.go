@@ -195,16 +195,18 @@ func NewClient(opts ...Option) (*Client, error) {
 	}
 
 	var session *internal.Session
-	transport := internal.NewTransport(base,
-		internal.WithRequestID(newRequestID),
-		internal.WithUserAgent(cfg.userAgent),
-		internal.WithToken("Authorization", func() (string, bool) {
+	transport := internal.NewClientTransport(base, internal.TransportConfig{
+		RequestID:  newRequestID,
+		UserAgent:  cfg.userAgent,
+		AuthHeader: "Authorization",
+		Token: func() (string, bool) {
 			if session == nil {
 				return "", false
 			}
 			return session.Token()
-		}),
-	)
+		},
+		Timeout: cfg.requestTimeout,
+	})
 	httpClient := &http.Client{Transport: transport, Jar: jar}
 
 	session = internal.NewSession(internal.SessionConfig{
