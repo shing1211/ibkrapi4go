@@ -1,0 +1,8 @@
+ibkrapi4go
+Copyright 2026 shing1211
+
+This product is an unofficial, community-developed Go SDK for the Interactive
+Brokers Web API. It is not affiliated with, endorsed by, or sponsored by
+Interactive Brokers Group, Inc. or any of its affiliates.
+
+See DISCLAIMER.md for important legal and risk notices.

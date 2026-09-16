@@ -1,0 +1,43 @@
+# Copyright 2026 shing1211
+# SPDX-License-Identifier: Apache-2.0
+#
+# golangci-lint configuration. Run: golangci-lint run
+#
+# Note: the rule that client/*.gen.go must only be imported from pkg/ibkr and
+# internal/ is enforced by review (see docs/design/04-generated-wrapping.md),
+# not by a linter, to avoid false positives in tests.
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - misspell
+    - gofmt
+    - goimports
+    - bodyclose
+    - contextcheck
+    - errorlint
+    - nolintlint
+    - revive
+    - unconvert
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+
+issues:
+  exclude-dirs:
+    - client
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck

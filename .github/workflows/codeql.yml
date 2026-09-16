@@ -1,0 +1,39 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 2'
+
+permissions:
+  security-events: write
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Go module
+        id: hasmod
+        run: echo "present=$([ -f go.mod ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-go@v5
+        if: steps.hasmod.outputs.present == 'yes'
+        with:
+          go-version: '1.26'
+
+      - uses: github/codeql-action/init@v3
+        if: steps.hasmod.outputs.present == 'yes'
+        with:
+          languages: go
+
+      - uses: github/codeql-action/analyze@v3
+        if: steps.hasmod.outputs.present == 'yes'
+
+      - name: Skip notice
+        if: steps.hasmod.outputs.present == 'no'
+        run: echo "no go.mod yet; skipping CodeQL"

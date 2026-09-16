@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          check-latest: true
+
+      - name: Check for Go module
+        id: hasmod
+        run: echo "present=$([ -f go.mod ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+
+      - name: Format check
+        if: steps.hasmod.outputs.present == 'yes'
+        run: |
+          unformatted="$(gofmt -s -l . | grep -v '^client/' || true)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt needed on:"; echo "$unformatted"; exit 1
+          fi
+
+      - name: Vet
+        if: steps.hasmod.outputs.present == 'yes'
+        run: go vet ./...
+
+      - name: Test (race)
+        if: steps.hasmod.outputs.present == 'yes'
+        run: go test ./... -race -count=1
+
+      - name: Skip notice
+        if: steps.hasmod.outputs.present == 'no'
+        run: echo "No go.mod yet; public SDK not implemented. Skipping build/test."
+
+  docs:
+    name: docs guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Check markdown links
+        run: python3 scripts/check_links.py

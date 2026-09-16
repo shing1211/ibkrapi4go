@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a bug in ibkrapi4go
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. **Do not** include API keys,
+        tokens, account numbers, or other secrets. For security issues, see
+        SECURITY.md instead.
+  - type: input
+    id: version
+    attributes:
+      label: ibkrapi4go version
+      description: Commit SHA or tag
+    validations:
+      required: true
+  - type: input
+    id: gover
+    attributes:
+      label: Go version
+      description: Output of `go version`
+    validations:
+      required: true
+  - type: input
+    id: spec
+    attributes:
+      label: IBKR OpenAPI spec version
+      description: See the header of docs/SPEC.md
+    validations:
+      required: false
+  - type: dropdown
+    id: account
+    attributes:
+      label: Account type
+      options:
+        - Paper
+        - Live
+        - N/A
+    validations:
+      required: false
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Smallest code + exact command
+      render: go
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Error output
+      description: Full output, secrets redacted
+      render: shell
+    validations:
+      required: false

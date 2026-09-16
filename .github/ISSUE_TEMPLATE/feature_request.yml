@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an idea or new capability
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: input
+    id: endpoint
+    attributes:
+      label: Related endpoint / operation ID
+      description: From docs/SPEC.md, if applicable
+    validations:
+      required: false
+  - type: dropdown
+    id: surface
+    attributes:
+      label: API surface
+      options:
+        - CPAPI (/v1/api)
+        - IB REST (/gw/api)
+        - Not sure
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

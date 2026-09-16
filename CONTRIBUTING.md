@@ -1,9 +1,11 @@
-# Contributing to ibkr-sdk
+# Contributing to ibkrapi4go
 
 Thank you for your interest in contributing!
 
 - [Code of Conduct](./CODE_OF_CONDUCT.md)
 - [Security Policy](./SECURITY.md)
+- [Governance](./GOVERNANCE.md)
+- [Support](./SUPPORT.md)
 
 ---
 
@@ -12,27 +14,23 @@ Thank you for your interest in contributing!
 ### Prerequisites
 
 - Go 1.26+
-- [oapi-codegen](https://github.com/deepmap/oapi-codegen) for code generation
+- [`oapi-codegen`](https://github.com/oapi-codegen/oapi-codegen) v2 (for code generation)
 - A running IBKR Client Portal Gateway (for integration tests)
 
 ### Setup
 
 ```bash
 git clone https://github.com/shing1211/ibkrapi4go
-cd ibkr-sdk
-go mod download
+cd ibkrapi4go
 
-# Generate types from latest spec
-./scripts/codegen.sh
+# Install tools used by the Makefile
+make tools
 
-# Run unit tests
-go test ./...
+# Regenerate types from the OpenAPI spec (optional; generated code is committed)
+make codegen
 
-# Run integration tests (requires Client Portal Gateway)
-IBKR_GATEWAY=https://localhost:5000 \
-IBKR_USERNAME=your_username \
-IBKR_PASSWORD=your_password \
-go test ./test/... -tags=integration -v
+# Format, vet, test
+make check
 ```
 
 ---
@@ -42,14 +40,11 @@ go test ./test/... -tags=integration -v
 ```
 .
 ├── client/          # Generated code — DO NOT EDIT MANUALLY
-│   ├── client.gen.go
-│   └── types.gen.go
 ├── pkg/ibkr/        # Public SDK — edit here for API changes
 ├── internal/        # Internal implementation — breaking changes OK
-├── docs/            # Architecture docs
-├── scripts/         # Codegen + patching scripts
-├── test/            # Integration tests
-└── examples/        # Usage examples
+├── docs/            # Reference, design, ADRs
+├── scripts/         # Codegen + validation scripts
+└── specs/           # Cached OpenAPI spec (gitignored)
 ```
 
 ---
@@ -64,22 +59,23 @@ git checkout -b feat/your-feature-name
 git checkout -b fix/your-bug-fix-name
 ```
 
-Branch naming: `feat/`, `fix/`, `docs/`, `test/` prefixes.
+Branch naming: `feat/`, `fix/`, `docs/`, `test/`, `chore/` prefixes.
 
 ### 2. Make Changes
 
-- **New API endpoint**: Add to spec first, then regenerate types, then wrap in the appropriate `*Manager`
-- **Bug fix**: Add a failing test first, then fix
-- **Documentation**: Update relevant `.md` files and godoc comments
+- **New API endpoint**: update the spec handling if needed, regenerate types,
+  then wrap in the appropriate manager. Never hand-edit `client/*.gen.go`.
+- **Bug fix**: add a failing test first, then fix.
+- **Design change**: open an ADR under `docs/adr/` first (see GOVERNANCE.md).
+- **Documentation**: update the relevant `.md` files and godoc comments.
 
 ### 3. Run Checks
 
 ```bash
-# Using Makefile (recommended)
-make check
+make check        # gofmt + go vet + tests (recommended)
 
 # Or manually:
-go fmt ./...
+gofmt -s -w .
 go vet ./...
 go test ./...
 ```
@@ -95,45 +91,61 @@ docs(readme): add WebSocket example
 test(portfolio): add integration test for position snapshot
 ```
 
-### 5. Pull Request
+### 5. Sign your commits (DCO)
 
-- Fill out the PR template (appears automatically)
-- Reference the GitHub issue (if any)
-- For API changes: include the operation ID from [docs/SPEC.md](./docs/SPEC.md)
-- For new endpoints: add entry to [docs/SPEC.md](./docs/SPEC.md)
+All commits **must be signed off** under the
+[Developer Certificate of Origin 1.1](https://developercertificate.org/):
+
+```bash
+git commit -s -m "feat(account): add List with pagination support"
+```
+
+This adds a `Signed-off-by: Your Name <you@example.com>` trailer. By signing off
+you certify that you have the right to submit the contribution under the
+project's license ([Apache-2.0](./LICENSE)). Commits without a sign-off will not
+be merged.
+
+### 6. Pull Request
+
+- Fill out the pull-request template.
+- Reference the related issue (if any).
+- For API changes: include the operation ID from [docs/SPEC.md](./docs/SPEC.md).
+- Ensure CI is green, including `make codegen-verify` if you touched spec handling.
 
 ---
 
 ## Codegen Workflow
 
-When the IBKR OpenAPI spec is updated:
+When the IBKR OpenAPI spec changes:
 
 ```bash
-# 1. Fetch latest spec
-curl -s https://api.ibkr.com/gw/api/v3/api-docs -o specs/ibkr_v2_40.json
+# 1. Fetch + patch + generate (writes specs/ and client/)
+make codegen
 
-# 2. Patch spec bugs
-python3 scripts/patch_spec.py specs/ibkr_v2_40.json > specs/ibkr_patched.json
+# 2. Review the diff
+git diff client/
 
-# 3. Regenerate
-./scripts/codegen.sh specs/ibkr_patched.json
+# 3. Confirm reproducibility
+make codegen-verify
 
-# 4. Review generated diff
-git diff client/client.gen.go client/types.gen.go
-
-# 5. Update SPEC.md endpoint index
-# (re-run the analysis script from PLAN.md)
+# 4. Update the canonical endpoint index
+#    (regenerate docs/SPEC.md — see docs/CODEGEN.md)
 ```
+
+Known spec defects and how `scripts/patch_spec.py` addresses them are documented
+in [docs/CODEGEN.md](./docs/CODEGEN.md).
 
 ---
 
 ## Code Style
 
-- **Go formatting**: `gofmt` (auto-enforced by CI)
-- **Error handling**: Always handle `error`, never `_`
-- **Context**: All public functions accept `context.Context` as first arg
-- **No globals**: All state in `Client` struct, injected via options
-- **Minimal dependencies**: Prefer stdlib, add deps only when necessary
+- **Go formatting**: `gofmt` (enforced by CI).
+- **Error handling**: always handle `error`; never ignore it with `_`.
+- **Context**: all public functions accept `context.Context` as the first arg.
+- **No globals**: all state lives in `Client`, injected via options.
+- **Money**: never `float64`; use `string`/`json.Number`
+  ([ADR 0008](./docs/adr/0008-numeric-precision.md)).
+- **Minimal dependencies**: prefer the standard library; new deps need an ADR.
 
 ---
 
@@ -142,23 +154,27 @@ git diff client/client.gen.go client/types.gen.go
 | Test Type | Location | Runs In CI | Needs Account |
 |-----------|----------|------------|---------------|
 | Unit tests | `*_test.go` alongside source | ✅ | No |
-| Integration tests | `test/` | ✅ (with env vars) | Paper account |
-| Spec compliance | `scripts/` | On spec update | No |
+| Integration tests | `test/` (`-tags=integration`) | On demand | Paper account |
+| Codegen validation | `scripts/` | ✅ | No |
+
+See [docs/TESTING.md](./docs/TESTING.md).
 
 ---
 
 ## Reporting Issues
 
-Bug reports welcome! Please include:
+Bug reports welcome. Please include:
+
 - Go version (`go version`)
-- ibkr-sdk version (git commit or tag)
-- IBKR API spec version (check [docs/SPEC.md](./docs/SPEC.md) header)
+- ibkrapi4go version (git commit or tag)
+- IBKR OpenAPI spec version (check [docs/SPEC.md](./docs/SPEC.md) header)
+- Gateway version and paper/live designation
 - Minimal reproduction case
-- Full error output
+- Full error output, with secrets redacted
 
 ---
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the
-Apache License 2.0, same as the project. See [LICENSE](./LICENSE).
+By contributing, you agree that your contributions are licensed under the
+[Apache License 2.0](./LICENSE), and you certify the DCO sign-off above.

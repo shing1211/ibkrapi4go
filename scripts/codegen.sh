@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# codegen.sh — Regenerate Go types and client from IBKR OpenAPI spec
-# Usage: ./scripts/codegen.sh [spec_file]
+# Copyright 2026 shing1211
+# SPDX-License-Identifier: Apache-2.0
 #
-# The official spec has bugs that prevent oapi-codegen from generating cleanly.
-# This script patches the spec before codegen to work around those bugs.
+# codegen.sh — regenerate client/client.gen.go from the IBKR OpenAPI spec.
 #
-# Known issues:
-#   - /gw/api/v1/balances/query: path has 0 {param} but spec declares 1
+# Usage:
+#   ./scripts/codegen.sh [spec_file]
+#
+# If spec_file is omitted, the spec is fetched to specs/ibkr_spec.json.
+# The spec is patched by scripts/patch_spec.py before generation because the
+# published spec does not generate cleanly. See docs/CODEGEN.md.
 
 set -euo pipefail
 
@@ -14,41 +17,28 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 SPEC_URL="https://api.ibkr.com/gw/api/v3/api-docs"
 SPEC_FILE="${1:-$ROOT_DIR/specs/ibkr_spec.json}"
-OUTPUT_DIR="$ROOT_DIR/client"
-PATCH_SCRIPT="$SCRIPT_DIR/patch_spec.py"
+PATCHED_FILE="$ROOT_DIR/specs/ibkr_patched.json"
+CONFIG_FILE="$ROOT_DIR/oapi-codegen.yaml"
 
-# ---------------------------------------------------------------------------
-# Step 1: Fetch spec if not provided or --force-fetch flag passed
-# ---------------------------------------------------------------------------
-if [ ! -f "$SPEC_FILE" ] || [[ "${2:-}" == "--force-fetch" ]]; then
-    echo "Fetching latest IBKR API spec..."
-    mkdir -p "$(dirname "$SPEC_FILE")"
-    curl -s "$SPEC_URL" -o "$SPEC_FILE"
-    echo "Saved to $SPEC_FILE ($(wc -c < "$SPEC_FILE") bytes)"
+if ! command -v oapi-codegen >/dev/null 2>&1; then
+    echo "error: oapi-codegen not found; run 'make tools'" >&2
+    exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# Step 2: Patch spec bugs
-# ---------------------------------------------------------------------------
-echo "Patching spec..."
-python3 "$PATCH_SCRIPT" "$SPEC_FILE" > "$ROOT_DIR/specs/ibkr_patched.json"
+# 1. Fetch the spec if absent.
+if [ ! -f "$SPEC_FILE" ]; then
+    echo "fetching spec: $SPEC_URL"
+    mkdir -p "$(dirname "$SPEC_FILE")"
+    curl -fsSL "$SPEC_URL" -o "$SPEC_FILE"
+fi
+echo "spec: $SPEC_FILE ($(wc -c < "$SPEC_FILE") bytes)"
 
-# ---------------------------------------------------------------------------
-# Step 3: Generate Go code
-# ---------------------------------------------------------------------------
-echo "Generating Go types and client..."
-mkdir -p "$OUTPUT_DIR"
+# 2. Patch known spec defects.
+echo "patching spec..."
+python3 "$SCRIPT_DIR/patch_spec.py" "$SPEC_FILE" > "$PATCHED_FILE"
 
-oapi-codegen \
-    --package=ibkr \
-    --generate=types,client \
-    "$ROOT_DIR/specs/ibkr_patched.json" \
-    > "$OUTPUT_DIR/client.gen.go"
+# 3. Generate.
+echo "generating..."
+oapi-codegen -config "$CONFIG_FILE" "$PATCHED_FILE"
 
-# ---------------------------------------------------------------------------
-# Step 4: Report
-# ---------------------------------------------------------------------------
-echo
-echo "Generated: $OUTPUT_DIR/client.gen.go"
-echo "Lines: $(wc -l < "$OUTPUT_DIR/client.gen.go")"
-echo "Done."
+echo "wrote: client/client.gen.go ($(wc -l < "$ROOT_DIR/client/client.gen.go") lines)"

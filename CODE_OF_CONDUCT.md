@@ -29,9 +29,11 @@ Examples of unacceptable behavior:
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the project maintainer via GitHub Issues or at
-[INSERT CONTACT EMAIL]. All complaints will be reviewed and investigated and will result in
-a response that is deemed necessary and appropriate to the circumstances.
+reported confidentially to the project maintainer at
+**shing1211@users.noreply.github.com**. All complaints will be reviewed and
+investigated and will result in a response that is deemed necessary and
+appropriate to the circumstances. Maintainers are obligated to respect the
+privacy and security of the reporter of any incident.
 
 ## Attribution
 

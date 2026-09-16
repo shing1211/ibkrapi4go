@@ -1,0 +1,11 @@
+# Copyright 2026 shing1211
+# SPDX-License-Identifier: Apache-2.0
+#
+# oapi-codegen configuration. See docs/CODEGEN.md.
+package: ibkr
+output: client/client.gen.go
+generate:
+  models: true
+  client: true
+output-options:
+  skip-prune: false

@@ -1,51 +1,66 @@
-.PHONY: all build test lint fmt vet check clean codegen
+# Copyright 2026 shing1211
+# SPDX-License-Identifier: Apache-2.0
 
-# Default target
-all: check
+SHELL := /bin/bash
+GO ?= go
+LICENSE_HOLDER ?= shing1211
+LICENSE_YEAR ?= 2026
 
-# Build the SDK (verification only — library has no main)
-build:
-	go build ./...
+.DEFAULT_GOAL := help
 
-# Run all tests
-test:
-	go test ./... -count=1
+.PHONY: help tools fmt vet test test-race coverage check \
+        codegen codegen-verify docs-spec \
+        license license-check clean
 
-# Run tests with race detector
-test-race:
-	go test ./... -race -count=1
+help: ## List targets
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
-# Format code
-fmt:
-	gofmt -s -w .
+tools: ## Install build/test tools
+	$(GO) install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+	$(GO) install github.com/google/addlicense@latest
 
-# Vet code
-vet:
-	go vet ./...
+fmt: ## Format Go sources
+	@if [ -f go.mod ]; then gofmt -s -w .; else echo "no go.mod yet; skipping fmt"; fi
 
-# Lint (go vet + staticcheck if available)
-lint: vet
-	@which staticcheck > /dev/null 2>&1 && staticcheck ./... || echo "staticcheck not installed, skipping"
+vet: ## Run go vet
+	@if [ -f go.mod ]; then $(GO) vet ./...; else echo "no go.mod yet; skipping vet"; fi
 
-# Run all checks (CI target)
-check: fmt vet test
+test: ## Run unit tests
+	@if [ -f go.mod ]; then $(GO) test ./... -count=1; else echo "no go.mod yet; skipping tests"; fi
 
-# Generate types from OpenAPI spec
-codegen:
+test-race: ## Run tests with the race detector
+	@if [ -f go.mod ]; then $(GO) test ./... -race -count=1; else echo "no go.mod yet; skipping"; fi
+
+coverage: ## Write coverage.out and coverage.html
+	@if [ -f go.mod ]; then \
+		$(GO) test ./... -coverprofile=coverage.out -count=1 && \
+		$(GO) tool cover -html=coverage.out -o coverage.html && \
+		echo "wrote coverage.out and coverage.html"; \
+	else echo "no go.mod yet; skipping"; fi
+
+check: fmt vet test ## Format, vet, and test
+
+codegen: ## Regenerate client/ from the OpenAPI spec
 	./scripts/codegen.sh
 
-# Tidy dependencies
-tidy:
-	go mod tidy
+codegen-verify: ## Fail if generated code drifts from committed output
+	./scripts/validate_codegen.sh
 
-# Clean build artifacts
-clean:
-	rm -f *.test *.out coverage.out coverage.html
+docs-spec: ## Regenerate docs/SPEC.md from the spec
+	python3 scripts/gen_spec_index.py specs/ibkr_spec.json > docs/SPEC.md
 
-# Download dependencies
-deps:
-	go mod download
+license: ## Apply SPDX headers to sources
+	@if [ -f go.mod ]; then \
+		$(GO) run github.com/google/addlicense -c "$(LICENSE_HOLDER)" -y "$(LICENSE_YEAR)" \
+			-l apache -s=only . ; \
+	else echo "no go.mod yet; run scripts manually"; fi
 
-# Verify dependencies
-verify:
-	go mod verify
+license-check: ## Verify SPDX headers are present
+	@if [ -f go.mod ]; then \
+		$(GO) run github.com/google/addlicense -check . ; \
+	else echo "no go.mod yet; skipping"; fi
+
+clean: ## Remove build artifacts
+	rm -f coverage.out coverage.html
+	rm -rf "$(CURDIR)/client/client.gen.go.tmp"
