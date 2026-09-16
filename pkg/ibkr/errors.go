@@ -10,6 +10,20 @@ import (
 // Error is the SDK error type. All API failures surface as *Error.
 type Error = internal.Error
 
+// ConfigError reports invalid client configuration. It is returned from
+// NewClient, never as a panic.
+type ConfigError struct {
+	// Field names the offending configuration field.
+	Field string
+	// Message describes the problem.
+	Message string
+}
+
+// Error implements the error interface.
+func (e *ConfigError) Error() string {
+	return "ibkr: config: " + e.Field + ": " + e.Message
+}
+
 // Sentinel errors.
 var (
 	ErrNotAuthenticated = internal.ErrNotAuthenticated
@@ -19,4 +33,16 @@ var (
 	ErrInvalidRequest   = internal.ErrInvalidRequest
 	ErrOrderRejected    = internal.ErrOrderRejected
 	ErrClosed           = internal.ErrClosed
+)
+
+// SessionState is the lifecycle state of the gateway session.
+type SessionState = internal.SessionState
+
+// Session states. See docs/SESSIONS.md.
+const (
+	StateDisconnected  = internal.StateDisconnected
+	StateInitializing  = internal.StateInitializing
+	StateAuthenticated = internal.StateAuthenticated
+	StateExpired       = internal.StateExpired
+	StateClosed        = internal.StateClosed
 )
