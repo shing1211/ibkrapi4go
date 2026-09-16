@@ -19,10 +19,17 @@ how decisions are made so contributors know what to expect.
 | Role | Responsibility |
 |------|----------------|
 | Maintainer | final decisions, releases, security response, CODEOWNERS |
+| Translation maintainer | keeps one language's README in sync (see [TRANSLATING.md](./TRANSLATING.md)) |
 | Contributor | issues, pull requests, reviews (see CONTRIBUTING.md) |
 
 Contributors who make sustained, high-quality contributions may be invited to
-become reviewers or co-maintainers.
+become reviewers, translation maintainers, or co-maintainers.
+
+### Translations
+
+The English [README](./README.md) is canonical. Each translated README names its
+own maintainer in pull-request history. Translation changes are reviewed like any
+other contribution and must pass `scripts/check_i18n.py`.
 
 ## Bus factor
 

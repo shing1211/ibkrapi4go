@@ -9,7 +9,7 @@ LICENSE_YEAR ?= 2026
 .DEFAULT_GOAL := help
 
 .PHONY: help tools fmt vet test test-race coverage check \
-        codegen codegen-verify docs-spec \
+        codegen codegen-verify docs-spec docs-check \
         license license-check clean
 
 help: ## List targets
@@ -49,6 +49,10 @@ codegen-verify: ## Fail if generated code drifts from committed output
 
 docs-spec: ## Regenerate docs/SPEC.md from the spec
 	python3 scripts/gen_spec_index.py specs/ibkr_spec.json > docs/SPEC.md
+
+docs-check: ## Check markdown links and README translations
+	python3 scripts/check_links.py
+	python3 scripts/check_i18n.py
 
 license: ## Apply SPDX headers to sources
 	@if [ -f go.mod ]; then \

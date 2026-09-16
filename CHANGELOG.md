@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full Apache License 2.0 text, `NOTICE`, `THIRD_PARTY_NOTICES.md`,
   `DISCLAIMER.md`.
 - Code of Conduct, Security Policy, Support and Governance documents.
+- README translations: 简体中文 (`zh-Hans`), 繁體中文 (`zh-Hant`), 日本語 (`ja`),
+  한국어 (`ko`), Español (`es`), plus `TRANSLATING.md` and a CI consistency
+  check (`scripts/check_i18n.py`). `README.zh-CN.md` is now a redirect stub.
 
 ### Verified
 

@@ -1,0 +1,190 @@
+# ibkrapi4go
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
+  <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
+  <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
+  <img src="https://img.shields.io/badge/Status-pre--alpha-red?style=flat-square" alt="Status">
+</p>
+
+> **⚠️ 非公式 & プレアルファ版。** ibkrapi4go は Interactive Brokers Web API 向けの
+> コミュニティ製 Go SDK です。**Interactive Brokers とは一切関係ありません。**
+> 活発に開発中で、公開パッケージはまだ実装されていません。
+> [DISCLAIMER.md](./DISCLAIMER.md) と [docs/ROADMAP.md](./docs/ROADMAP.md) をご覧ください。
+
+> **Go ネイティブ · 型安全 · OpenAPI 駆動。** Interactive Brokers Web API 向けの
+> 慣用的な Go クライアント — アカウント管理、ポートフォリオ、取引、マーケットデータ、
+> リアルタイム WebSocket ストリーミング。
+
+[English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
+
+> 本書は英語版 [README](./README.md) のコミュニティ翻訳です。**英語版が正式です。**
+> 同期 / Last synced: 5692cd9
+
+## 目次
+
+- [ステータス](#ステータス)
+- [2 つの API](#2-つの-api)
+- [インストール](#インストール)
+- [使用例](#使用例)
+- [認証](#認証)
+- [パッケージ構成](#パッケージ構成)
+- [リポジトリのドキュメント](#リポジトリのドキュメント)
+- [ビルドとテスト](#ビルドとテスト)
+- [コントリビュート](#コントリビュート)
+- [セキュリティ](#セキュリティ)
+- [ライセンス](#ライセンス)
+
+---
+
+## ステータス
+
+| 項目 | 状態 |
+|------|------|
+| 計画とドキュメント | ✅ 完了 |
+| OpenAPI コード生成の検証 | ✅ 検証済み（[docs/CODEGEN.md](./docs/CODEGEN.md)） |
+| `client/` 生成コード | 🚧 必要時に生成（`make codegen`） |
+| `pkg/ibkr` 公開 API | 🚧 未実装 |
+| `internal/` 実装 | 🚧 未実装 |
+| テスト / サンプル | 🚧 未実装 |
+
+現在のリポジトリには**ドキュメントとコード生成ツール**、および検証済みの
+コード生成手順が含まれます。公開 SDK コードはまだありません。計画は
+[docs/ROADMAP.md](./docs/ROADMAP.md) を参照してください。
+
+## 2 つの API
+
+IBKR OpenAPI 仕様（v2.39.0）は、実際には**異なる認証方式を持つ 2 つの API
+サーフェス**を記述しています。両者は互換ではありません。
+
+| サーフェス | ベースパス | オペレーション数 | 認証 |
+|------------|-----------|----------------:|------|
+| Client Portal API (CPAPI) | `/v1/api/*` | 115 | `ssoBearer` |
+| IB REST API | `/gw/api/v1/*`、`/gw/api/v2/*`、`/oauth2/*` | 70 | `oauth2Bearer` |
+| **合計** | | **185** | |
+
+**SDK v1 は CPAPI（`ssoBearer`）のみを対象とします。** `oauth2Bearer` サーフェスは
+後続フェーズに延期されます。[ADR 0001](./docs/adr/0001-two-api-surfaces.md) と
+[ADR 0005](./docs/adr/0005-v1-scope.md) を参照してください。
+
+## インストール
+
+```bash
+go get github.com/shing1211/ibkrapi4go/pkg/ibkr
+```
+
+**Go 1.26+** と、稼働中の [IBKR Client Portal Gateway](https://www.interactivebrokers.com/api/) が必要です。
+
+## 使用例
+
+> 以下の API は**目標設計**であり、**未実装**です。想定される使い勝手を示すための
+> もので、現時点ではコンパイルできません。
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"os"
+
+	ibkr "github.com/shing1211/ibkrapi4go/pkg/ibkr"
+)
+
+func main() {
+	ctx := context.Background()
+
+	// Client Portal Gateway はブラウザで対話的に認証されます。
+	// SDK は認証済みのローカルゲートウェイと通信します。
+	cli, err := ibkr.NewClient(
+		ibkr.WithGatewayURL("https://localhost:5000"),
+		ibkr.WithInsecureSkipVerify(true), // ローカルゲートウェイは自己署名証明書を使用
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cli.Close()
+
+	if err := cli.Session().Initialize(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	accounts, err := cli.Account().List(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, acc := range accounts {
+		fmt.Fprintf(os.Stdout, "account: %s\n", acc.AccountID)
+	}
+}
+```
+
+## 認証
+
+Client Portal Gateway は**対話的に**認証されます（ブラウザログイン + 2FA）。SDK は
+ユーザー名とパスワードを受け取らず、IBKR 仕様にもパスワードグラントは定義されて
+いません。SDK は**認証済みのゲートウェイ**と通信し、結果として得られるセッション
+トークンを管理します。
+
+[docs/AUTH.md](./docs/AUTH.md) と [docs/SESSIONS.md](./docs/SESSIONS.md) を参照してください。
+
+## パッケージ構成
+
+```
+ibkrapi4go/
+├── client/          # 生成された OpenAPI 型 + HTTP クライアント（編集禁止）
+├── pkg/ibkr/        # 公開 SDK サーフェス（予定）
+├── internal/        # 内部実装（予定）
+├── docs/            # 設計、リファレンス、ADR
+├── scripts/         # コード生成 + 検証
+└── specs/           # キャッシュされた OpenAPI 仕様（gitignore 済み）
+```
+
+## リポジトリのドキュメント
+
+| ドキュメント | 内容 |
+|--------------|------|
+| [docs/SPEC.md](./docs/SPEC.md) | 正式なエンドポイント索引（サーフェス + 認証） |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | レイヤリング、構成、ミドルウェア |
+| [docs/ROADMAP.md](./docs/ROADMAP.md) | 終了条件付きの段階的計画 |
+| [docs/AUTH.md](./docs/AUTH.md) | 2 つの認証モデル |
+| [docs/CODEGEN.md](./docs/CODEGEN.md) | 仕様の取得、パッチ、生成、検証 |
+| [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 用語集 |
+| [docs/adr/](./docs/adr/) | アーキテクチャ決定記録 |
+| [docs/design/](./docs/design/) | モジュールごとの設計契約 |
+
+## ビルドとテスト
+
+```bash
+# 利用可能なターゲットを表示
+make help
+
+# フォーマット、vet、テスト
+make check
+
+# OpenAPI 仕様から client/ を再生成
+make codegen
+
+# コード生成が再現可能か検証（ドリフト検査）
+make codegen-verify
+```
+
+## コントリビュート
+
+[CONTRIBUTING.md](./CONTRIBUTING.md) を参照してください。すべてのコミットは DCO
+署名（`git commit -s`）が必要です。参加により
+[Code of Conduct](./CODE_OF_CONDUCT.md) に同意したものとみなされます。
+翻訳は [TRANSLATING.md](./TRANSLATING.md) に従います。
+
+## セキュリティ
+
+並行性とシークレットのモデルについては [SECURITY.md](./SECURITY.md) と
+[docs/design/08-concurrency.md](./docs/design/08-concurrency.md) を参照してください。
+
+## ライセンス
+
+[Apache License 2.0](./LICENSE)。[NOTICE](./NOTICE) と
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) も参照してください。

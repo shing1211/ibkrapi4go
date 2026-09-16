@@ -18,7 +18,7 @@
 > Interactive Brokers Web API — account management, portfolio, trading, market
 > data, and real-time WebSocket streaming.
 
-[English](./README.md) · [简体中文](./README.zh-CN.md)
+[English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 ## Table of Contents
 
@@ -173,7 +173,8 @@ make codegen-verify
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md). All commits must be DCO-signed
 (`git commit -s`). By contributing you agree to the
-[Code of Conduct](./CODE_OF_CONDUCT.md).
+[Code of Conduct](./CODE_OF_CONDUCT.md). Translations follow
+[TRANSLATING.md](./TRANSLATING.md).
 
 ## Security
 

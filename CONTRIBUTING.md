@@ -174,6 +174,21 @@ Bug reports welcome. Please include:
 
 ---
 
+## Translations
+
+Translations of the [README](./README.md) are welcome and follow
+[TRANSLATING.md](./TRANSLATING.md):
+
+- English is canonical; translations are best-effort.
+- Add/update the language switcher in **every** `README*.md`.
+- Keep the translation banner and its `Last synced:` commit current.
+- Do **not** translate legal text (`LICENSE`, `DISCLAIMER.md`).
+- Run `make docs-check`; CI enforces `scripts/check_i18n.py`.
+
+Current languages: English, 简体中文, 繁體中文, 日本語, 한국어, Español.
+
+---
+
 ## License
 
 By contributing, you agree that your contributions are licensed under the

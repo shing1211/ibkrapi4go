@@ -56,3 +56,6 @@ jobs:
 
       - name: Check markdown links
         run: python3 scripts/check_links.py
+
+      - name: Check README translations
+        run: python3 scripts/check_i18n.py

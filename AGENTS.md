@@ -24,6 +24,7 @@ make codegen         # fetch/patch spec, regenerate client/
 make codegen-verify  # fail if generated code differs from committed
 make license         # apply SPDX headers
 make license-check   # verify SPDX headers
+make docs-check      # check markdown links + README translations
 ```
 
 ## Hard rules
@@ -41,6 +42,9 @@ make license-check   # verify SPDX headers
 6. **One canonical count.** Endpoint/schema numbers come from
    `docs/SPEC.md`. Do not hand-edit counts elsewhere.
 7. **No dangling doc links.** If you add a reference to a doc, create it.
+8. **README translations stay in lockstep.** Update the switcher in **every**
+   `README*.md` and the `Last synced:` banner; run `make docs-check`. English is
+   canonical. See [TRANSLATING.md](./TRANSLATING.md).
 
 ## Where things live
 
@@ -51,6 +55,7 @@ make license-check   # verify SPDX headers
 | Module contracts | `docs/design/` |
 | Spec patching | `scripts/patch_spec.py` |
 | Codegen | `scripts/codegen.sh`, `oapi-codegen.yaml` |
+| Translations | `README.*.md`, `TRANSLATING.md`, `scripts/check_i18n.py` |
 
 ## Before opening a PR
 
