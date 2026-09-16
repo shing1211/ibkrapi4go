@@ -5,6 +5,7 @@ package ibkr
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/shing1211/ibkrapi4go/client"
@@ -150,6 +151,130 @@ func (r accountDetailsRaw) toPublic(id AccountID) *AccountDetails {
 
 // Statements returns the REST statements manager.
 func (s *RESTSurface) Statements() *RESTStatements { return &RESTStatements{surface: s} }
+
+// TradeConfirmations returns the REST trade-confirmations manager.
+func (s *RESTSurface) TradeConfirmations() *RESTTradeConfirmations {
+	return &RESTTradeConfirmations{surface: s}
+}
+
+// RESTTradeConfirmations exposes trade-confirmation operations on the REST surface.
+type RESTTradeConfirmations struct {
+	surface *RESTSurface
+}
+
+// TradeConfirmationRequest is a request to fetch trade confirmations.
+type TradeConfirmationRequest struct {
+	// AccountID is the account for which to fetch confirmations.
+	AccountID AccountID
+	// StartDate is the start of the reporting period (YYYY-MM-DD).
+	StartDate string
+	// EndDate is the end of the reporting period (YYYY-MM-DD).
+	EndDate string
+	// Format is the output MIME type. Defaults to application/pdf.
+	Format string
+	// Gzip compresses the response body.
+	Gzip bool
+}
+
+// TradeConfirmationResponse is the generated trade-confirmation document.
+type TradeConfirmationResponse struct {
+	// ContentType is the MIME type of the returned document.
+	ContentType string
+	// Data is the base64-encoded document payload.
+	Data []byte
+	// Gzip indicates whether Data is gzip-compressed.
+	Gzip bool
+}
+
+// AvailableTradeConfirmationDates holds the dates for which confirmations are available.
+type AvailableTradeConfirmationDates struct {
+	// Dates is the list of available confirmation date identifiers.
+	Dates []string
+}
+
+// ListAvailable returns the trade-confirmation dates available for the given account.
+func (m *RESTTradeConfirmations) ListAvailable(ctx context.Context, id AccountID) (*AvailableTradeConfirmationDates, error) {
+	const op = "TradeConfirmations.ListAvailable"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	auth, _ := m.surface.Token(ctx)
+	params := client.ListTradeConfirmationsAvailableParams{
+		AccountId:    string(id),
+		Authorization: auth,
+	}
+	resp, err := m.surface.generated.ListTradeConfirmationsAvailableWithResponse(ctx, &params)
+	if err != nil {
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		e := wrapOp(op, &Error{Code: "http_error", Message: fmt.Sprintf("ListTradeConfirmationsAvailable: %d", resp.HTTPResponse.StatusCode), HTTPStatus: resp.HTTPResponse.StatusCode})
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if j := resp.GetJSON200(); j != nil && j.Data != nil && j.Data.Value != nil {
+		return &AvailableTradeConfirmationDates{Dates: *j.Data.Value}, nil
+	}
+	return &AvailableTradeConfirmationDates{}, nil
+}
+
+// Generate produces trade confirmations for the given request.
+// The returned payload is base64-encoded; decode it to obtain the PDF/HTML bytes.
+func (m *RESTTradeConfirmations) Generate(ctx context.Context, req TradeConfirmationRequest) (*TradeConfirmationResponse, error) {
+	const op = "TradeConfirmations.Generate"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	type_ := req.Format
+	if type_ == "" {
+		type_ = "application/pdf"
+	}
+	body := client.TradeConfirmationRequest{
+		AccountId: string(req.AccountID),
+		EndDate:   req.EndDate,
+		StartDate: req.StartDate,
+		MimeType:  &type_,
+	}
+	resp, err := m.surface.generated.CreateTradeConfirmations(ctx, nil, body)
+	if err != nil {
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if e := m.surface.owner.errorFrom(resp, op); e != nil {
+		resp.Body.Close()
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	var raw struct {
+		Data struct {
+			Value    *string `json:"value,omitempty"`
+			MimeType *string `json:"mimeType,omitempty"`
+			Gzip     *bool   `json:"gzip,omitempty"`
+		} `json:"data,omitempty"`
+	}
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	if raw.Data.Value == nil {
+		return &TradeConfirmationResponse{}, nil
+	}
+	ct := "application/octet-stream"
+	if raw.Data.MimeType != nil {
+		ct = *raw.Data.MimeType
+	}
+	gzip := false
+	if raw.Data.Gzip != nil {
+		gzip = *raw.Data.Gzip
+	}
+	return &TradeConfirmationResponse{
+		ContentType: ct,
+		Data:        []byte(*raw.Data.Value),
+		Gzip:       gzip,
+	}, nil
+}
 
 // RESTStatements exposes statement operations on the REST surface.
 type RESTStatements struct {
