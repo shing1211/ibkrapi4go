@@ -15,6 +15,7 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -54,7 +55,16 @@ type config struct {
 	logger             *slog.Logger
 	insecureSkipVerify bool
 	streamingLimits    StreamingLimits
+	rateLimit          float64
+	rateBurst          int
+	globalRateLimit    float64
 }
+
+// Rate-limit defaults (see docs/RATE-LIMITING.md).
+const (
+	DefaultPerEndpointRPS = 10
+	DefaultGlobalRPS      = 50
+)
 
 // Option customizes a Client during construction. Options are applied in order;
 // later options override earlier ones and the environment.
@@ -133,6 +143,31 @@ func WithInsecureSkipVerify(skip bool) Option {
 	}
 }
 
+// WithRateLimit sets the per-endpoint request rate (requests/second) and burst.
+// rps<=0 disables per-endpoint limiting; burst<=0 defaults to 2*rps.
+func WithRateLimit(rps float64, burst int) Option {
+	return func(c *config) error {
+		if rps < 0 {
+			return &ConfigError{Field: "RateLimit", Message: "must not be negative"}
+		}
+		c.rateLimit = rps
+		c.rateBurst = burst
+		return nil
+	}
+}
+
+// WithGlobalRateLimit sets the client-wide request rate (requests/second).
+// rps<=0 disables the global bucket.
+func WithGlobalRateLimit(rps float64) Option {
+	return func(c *config) error {
+		if rps < 0 {
+			return &ConfigError{Field: "GlobalRateLimit", Message: "must not be negative"}
+		}
+		c.globalRateLimit = rps
+		return nil
+	}
+}
+
 // WithStreamingLimits overrides the streaming subscription limits. Zero fields
 // keep their defaults.
 func WithStreamingLimits(l StreamingLimits) Option {
@@ -166,7 +201,7 @@ type Client struct {
 // variables and then compiled-in defaults. It performs no I/O and does not
 // authenticate; call Session().Initialize to start the session.
 func NewClient(opts ...Option) (*Client, error) {
-	cfg := config{}
+	cfg := config{rateLimit: -1, globalRateLimit: -1}
 	for _, o := range opts {
 		if err := o(&cfg); err != nil {
 			return nil, err
@@ -186,12 +221,23 @@ func NewClient(opts ...Option) (*Client, error) {
 	if cfg.userAgent == "" {
 		cfg.userAgent = defaultUserAgent()
 	}
+	if cfg.rateLimit < 0 {
+		cfg.rateLimit = DefaultPerEndpointRPS
+	}
+	if cfg.globalRateLimit < 0 {
+		cfg.globalRateLimit = DefaultGlobalRPS
+	}
 	cfg.streamingLimits = cfg.streamingLimits.withDefaults()
 
 	base, jar := baseTransport(cfg)
 	if cfg.insecureSkipVerify && isNonLoopback(cfg.gatewayURL) && cfg.logger != nil {
 		cfg.logger.Warn("insecure TLS skip-verify enabled for non-loopback host",
 			"gateway", cfg.gatewayURL)
+	}
+
+	var limiter *internal.Limiter
+	if cfg.rateLimit > 0 || cfg.globalRateLimit > 0 {
+		limiter = internal.NewLimiter(cfg.rateLimit, cfg.rateBurst, cfg.globalRateLimit)
 	}
 
 	var session *internal.Session
@@ -205,6 +251,7 @@ func NewClient(opts ...Option) (*Client, error) {
 			}
 			return session.Token()
 		},
+		Limiter: limiter,
 		Timeout: cfg.requestTimeout,
 	})
 	httpClient := &http.Client{Transport: transport, Jar: jar}
@@ -377,6 +424,20 @@ func applyEnv(cfg *config) {
 	if !cfg.insecureSkipVerify {
 		if v := os.Getenv("IBKR_INSECURE_SKIP_VERIFY"); v == "true" || v == "1" {
 			cfg.insecureSkipVerify = true
+		}
+	}
+	if cfg.rateLimit < 0 {
+		if v := os.Getenv("IBKR_RATE_LIMIT"); v != "" {
+			if f, err := strconv.ParseFloat(v, 64); err == nil {
+				cfg.rateLimit = f
+			}
+		}
+	}
+	if cfg.globalRateLimit < 0 {
+		if v := os.Getenv("IBKR_GLOBAL_RATE_LIMIT"); v != "" {
+			if f, err := strconv.ParseFloat(v, 64); err == nil {
+				cfg.globalRateLimit = f
+			}
 		}
 	}
 	if cfg.logger == nil {

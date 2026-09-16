@@ -21,6 +21,7 @@ type TransportConfig struct {
 	UserAgent  string
 	AuthHeader string
 	Token      func() (string, bool)
+	Limiter    *Limiter
 	Timeout    time.Duration
 }
 
@@ -39,6 +40,9 @@ func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundT
 	}
 	if cfg.AuthHeader != "" && cfg.Token != nil {
 		ms = append(ms, Auth(cfg.AuthHeader, cfg.Token))
+	}
+	if cfg.Limiter != nil {
+		ms = append(ms, RateLimit(cfg.Limiter))
 	}
 	if cfg.Timeout > 0 {
 		ms = append(ms, Timeout(cfg.Timeout))
