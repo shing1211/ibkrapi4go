@@ -12,7 +12,9 @@ Highest wins:
 
 Environment variables are read once at construction. Options always override.
 
-## Options (planned)
+## Options
+
+Implemented in Phase 1:
 
 ```go
 ibkr.NewClient(
@@ -20,14 +22,17 @@ ibkr.NewClient(
     ibkr.WithInsecureSkipVerify(true),          // local self-signed cert
     ibkr.WithRequestTimeout(15*time.Second),
     ibkr.WithTickleInterval(60*time.Second),
-    ibkr.WithRateLimit(10, 20),                 // per-endpoint rps, burst
-    ibkr.WithGlobalRateLimit(50),               // client-wide rps
     ibkr.WithLogger(slog.Default()),
     ibkr.WithHTTPClient(custom *http.Client),
-    ibkr.WithRetryPolicy(ibkr.RetryPolicy{...}),
     ibkr.WithUserAgent("my-app/1.0"),
 )
 ```
+
+Planned for later phases: `WithRateLimit`, `WithGlobalRateLimit`
+([Phase 4](./ROADMAP.md)), and `WithRetryPolicy` ([design/06](./design/06-errors-retries.md)).
+
+Invalid configuration (for example a malformed gateway URL) is reported as a
+`*ibkr.ConfigError`.
 
 ## Environment variables
 

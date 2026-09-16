@@ -8,6 +8,7 @@ Testing strategy for ibkrapi4go.
 |------|----------|-----------|---------------|------------|
 | Unit | `*_test.go` next to source | — | No | ✅ |
 | Session | `internal/session_test.go` | — | No (fakeAPI) | ✅ |
+| Manager e2e | `pkg/ibkr/endtoend_test.go` | — | No (httptest) | ✅ |
 | Codegen | `scripts/validate_codegen.sh` | — | No | ✅ (scheduled too) |
 | Integration | `test/` | `integration` | Yes (paper) | On demand |
 
@@ -31,9 +32,13 @@ Fixtures:
 ## Concurrency & leaks
 
 - Every test that starts goroutines asserts no leak via `go.uber.org/goleak`.
-- Session tests: use a 50ms post-`m.Run()` sleep before `goleak.Find()` to allow
-  the scheduler to reap exited tickle goroutines before the leak check runs.
+- Session and manager e2e tests: use a 50ms post-`m.Run()` sleep before
+  `goleak.Find()` to allow the scheduler to reap exited tickle goroutines before
+  the leak check runs.
 - Transport tests: use `goleak.VerifyTestMain` directly.
+- `pkg/ibkr` e2e tests exercise the real transport + generated client against an
+  `httptest` gateway, asserting request headers, string-money precision, and
+  sentinel error mapping.
 - Run with `-race` in CI (`make test-race`).
 
 ## Integration tests

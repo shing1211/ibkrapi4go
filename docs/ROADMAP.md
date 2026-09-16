@@ -38,21 +38,32 @@ Exit criteria:
 - [x] Every count in docs derives from [SPEC.md](./SPEC.md).
 - [x] `make codegen-verify` passes against the committed client.
 
-## Phase 1 — Core
+## Phase 1 — Core *(complete)*
 
 Deliverables:
 
-- `pkg/ibkr/client.go` — `NewClient`, options, `Close`.
-- `internal/transport.go` — RoundTripper chain (request ID, auth, errors).
-- `internal/session.go` — state machine + tickle ([SESSIONS.md](./SESSIONS.md)).
-- `pkg/ibkr/auth.go` — `SessionManager`.
-- `pkg/ibkr/account.go` — account list, summary, P&L.
+- [x] `pkg/ibkr/client.go` — `NewClient`, functional options, `Close`.
+- [x] `internal/transport.go` — RoundTripper chain (request ID, auth, errors),
+  wired into the client's `*http.Client`.
+- [x] `internal/session.go` — state machine + tickle ([SESSIONS.md](./SESSIONS.md)).
+- [x] `pkg/ibkr/auth.go` — `SessionManager` (`Initialize`, `Close`, `State`, `Status`).
+- [x] `pkg/ibkr/account.go` — `AccountManager` (`List`, `Summary`, `PnL`).
 
 Exit criteria:
 
-- Unit tests cover the session state machine, including `goleak` after `Close`.
-- A request can be made against an `httptest` gateway end-to-end.
-- No exported symbol lacks a doc comment.
+- [x] Unit tests cover the session state machine, including `goleak` after `Close`.
+- [x] A request can be made against an `httptest` gateway end-to-end
+  (`pkg/ibkr/endtoend_test.go`).
+- [x] No exported symbol lacks a doc comment.
+
+Notes:
+
+- Account **details** (`/gw/api/v1/accounts/{id}/details`) belongs to the IB REST
+  surface and is deferred to Phase 5; CPAPI account data is served by `List`,
+  `Summary`, and `PnL`.
+- Money/quantity fields are decoded as `json.Number` and exposed as `string`
+  (ADR 0008) using raw generated calls plus hand-written adapters.
+- `BalanceSummary`/`MarginSummary`/`FundSummary` carry into Phase 2.
 
 ## Phase 2 — Portfolio, trading, market data
 

@@ -36,8 +36,8 @@ runs a tickle heartbeat and surfaces state transitions.
 
 - Endpoint: `POST /v1/api/tickle`.
 - Interval: 60 seconds, started on entering `AUTHENTICATED`.
-- The tickle goroutine is owned by the `Session`; it exits when the session
-  leaves `AUTHENTICATED` or the client closes.
+- The tickle goroutine is owned by the `Session`; `Close` signals it and waits
+  for it to exit, so no goroutine survives shutdown.
 - Consecutive tickle failures (default 2) transition to `EXPIRED`.
 - A successful tickle refreshes the session token held in memory.
 
@@ -52,6 +52,20 @@ const (
 )
 ```
 
+## Public surface
+
+`Client.Session()` returns a `*SessionManager` (`pkg/ibkr/auth.go`):
+
+```go
+func (m *SessionManager) Initialize(ctx context.Context) error
+func (m *SessionManager) Close(ctx context.Context) error
+func (m *SessionManager) State() SessionState
+func (m *SessionManager) Status(ctx context.Context) (*AuthStatus, error)
+```
+
+`State`/`AuthStatus` expose the `SessionState` values above. `Client.Close()` is
+the usual shutdown entry point.
+
 ## Concurrency contract
 
 - `Session` is safe for concurrent use; state is stored as `int32` and accessed
@@ -60,25 +74,26 @@ const (
   calling the API).
 - `Close` stops the tickle goroutine and sends `POST /v1/api/logout`. It is
   idempotent.
-- Current state is observable via `Session.State()` (returns `SessionState`).
+- Current state is observable via `SessionManager.State()` (returns `SessionState`).
 
 ## Timing
 
 | Parameter | Default | Configurable |
 |-----------|--------:|--------------|
-| Tickle interval | 60s | `SessionConfig.TickleInterval` |
-| Request timeout | 30s | `SessionConfig.RequestTimeout` |
+| Tickle interval | 60s | `WithTickleInterval` |
+| Request timeout | 15s | `WithRequestTimeout` |
 | Consecutive failures before EXPIRED | 2 | internal |
 
 ## Shutdown sequence
 
-`Client.Close()`:
+`Client.Close()` (no context; uses an internal 3s logout budget):
 
-1. Transition state to `CLOSED`.
-2. Signal tickle goroutine to stop; wait for it to exit.
-3. Best-effort `POST /v1/api/logout` with the session's request timeout.
+1. Mark the client closed; further manager calls return `ErrClosed`.
+2. Transition session state to `CLOSED`.
+3. Signal the tickle goroutine to stop and wait for it to exit.
+4. Best-effort `POST /v1/api/logout`.
 
-Step 3 is best-effort; `Close` returns the first non-nil error.
+Step 4 is best-effort; `Close` is idempotent and returns the first non-nil error.
 
 ## Testing
 
