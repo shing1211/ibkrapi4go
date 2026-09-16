@@ -147,3 +147,177 @@ func (r accountDetailsRaw) toPublic(id AccountID) *AccountDetails {
 		OrganizationType: r.OrgType,
 	}
 }
+
+// Statements returns the REST statements manager.
+func (s *RESTSurface) Statements() *RESTStatements { return &RESTStatements{surface: s} }
+
+// RESTStatements exposes statement operations on the REST surface.
+type RESTStatements struct {
+	surface *RESTSurface
+}
+
+// StatementRequest is a request to generate one or more statements.
+type StatementRequest struct {
+	// AccountID is the account for which to generate statements.
+	AccountID AccountID
+	// StartDate is the start of the reporting period (YYYY-MM-DD).
+	StartDate string
+	// EndDate is the end of the reporting period (YYYY-MM-DD).
+	EndDate string
+	// Format is the output MIME type. Defaults to application/pdf.
+	Format string
+	// Language is an ISO two-character language code. Defaults to "en".
+	Language string
+	// AccountIDs optionally specifies multiple accounts.
+	AccountIDs []AccountID
+	// Gzip compresses the response body.
+	Gzip bool
+}
+
+// StatementResponse is the generated statement data, including the encoded document.
+type StatementResponse struct {
+	// ContentType is the MIME type of the returned document (e.g. application/pdf).
+	ContentType string
+	// Data is the base64-encoded document payload.
+	Data []byte
+	// Gzip indicates whether Data is gzip-compressed.
+	Gzip bool
+}
+
+// AvailableStatementDates holds the dates for which statements are available.
+type AvailableStatementDates struct {
+	// Annual is the list of annual statement years.
+	Annual []string
+	// Monthly is the list of monthly statement identifiers (e.g. "2024-01").
+	Monthly []string
+	// DailyStart is the start date for daily statements.
+	DailyStart string
+	// DailyEnd is the end date for daily statements.
+	DailyEnd string
+}
+
+// Generate produces a statement for the given request.
+// The returned payload is base64-encoded; decode it to obtain the PDF/HTML/CSV bytes.
+func (m *RESTStatements) Generate(ctx context.Context, req StatementRequest) (*StatementResponse, error) {
+	const op = "Statements.Generate"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	type_ := req.Format
+	if type_ == "" {
+		type_ = "application/pdf"
+	}
+	lang := req.Language
+	if lang == "" {
+		lang = "en"
+	}
+	body := client.StmtRequest{
+		AccountId: string(req.AccountID),
+		EndDate:   req.EndDate,
+		StartDate: req.StartDate,
+		Language: &lang,
+		MimeType:  &type_,
+		Gzip:      &req.Gzip,
+	}
+	if len(req.AccountIDs) > 0 {
+		ids := make([]string, len(req.AccountIDs))
+		for i, id := range req.AccountIDs {
+			ids[i] = string(id)
+		}
+		body.AccountIds = &ids
+	}
+	resp, err := m.surface.generated.CreateStatements(ctx, nil, body)
+	if err != nil {
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if e := m.surface.owner.errorFrom(resp, op); e != nil {
+		resp.Body.Close()
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	var raw struct {
+		Data struct {
+			Value    *string `json:"value,omitempty"`
+			MimeType *string `json:"mimeType,omitempty"`
+			Encoding *string `json:"encoding,omitempty"`
+			Gzip     *bool   `json:"gzip,omitempty"`
+		} `json:"data,omitempty"`
+	}
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	if raw.Data.Value == nil {
+		return &StatementResponse{}, nil
+	}
+	encoded := *raw.Data.Value
+	ct := "application/octet-stream"
+	if raw.Data.MimeType != nil {
+		ct = *raw.Data.MimeType
+	}
+	gzip := false
+	if raw.Data.Gzip != nil {
+		gzip = *raw.Data.Gzip
+	}
+	return &StatementResponse{
+		ContentType: ct,
+		Data:        []byte(encoded),
+		Gzip:       gzip,
+	}, nil
+}
+
+// ListAvailable returns the statement dates available for the given account.
+func (m *RESTStatements) ListAvailable(ctx context.Context, id AccountID) (*AvailableStatementDates, error) {
+	const op = "Statements.ListAvailable"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	params := client.ListStatementsAvailableParams{
+		AccountId: string(id),
+	}
+	resp, err := m.surface.generated.ListStatementsAvailable(ctx, &params)
+	if err != nil {
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	if e := m.surface.owner.errorFrom(resp, op); e != nil {
+		resp.Body.Close()
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
+	}
+	var raw struct {
+		Data *struct {
+			Value *struct {
+				Annual  *[]string `json:"annual,omitempty"`
+				Monthly *[]string `json:"monthly,omitempty"`
+				Daily  *struct {
+					StartDate *string `json:"startDate,omitempty"`
+					EndDate   *string `json:"endDate,omitempty"`
+				} `json:"daily,omitempty"`
+			} `json:"value,omitempty"`
+		} `json:"data,omitempty"`
+	}
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	out := &AvailableStatementDates{}
+	if raw.Data != nil && raw.Data.Value != nil {
+		if v := raw.Data.Value.Annual; v != nil {
+			out.Annual = *v
+		}
+		if v := raw.Data.Value.Monthly; v != nil {
+			out.Monthly = *v
+		}
+		if d := raw.Data.Value.Daily; d != nil {
+			if d.StartDate != nil {
+				out.DailyStart = *d.StartDate
+			}
+			if d.EndDate != nil {
+				out.DailyEnd = *d.EndDate
+			}
+		}
+	}
+	return out, nil
+}
