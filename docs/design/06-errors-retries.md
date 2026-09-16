@@ -22,6 +22,9 @@ methods add `Op` (e.g. `"Account.List"`).
 
 ## Retry policy
 
+Implemented in `internal/retry.go` (`RetryPolicy`, `Retry` middleware), exposed
+as `ibkr.RetryPolicy` / `WithRetryPolicy`:
+
 ```go
 type RetryPolicy struct {
     MaxAttempts   int           // default 3

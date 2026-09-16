@@ -14,8 +14,6 @@ Environment variables are read once at construction. Options always override.
 
 ## Options
 
-Implemented in Phase 1:
-
 ```go
 ibkr.NewClient(
     ibkr.WithGatewayURL("https://localhost:5000"),
@@ -30,11 +28,18 @@ ibkr.NewClient(
         MaxSubscriptions:    10,
         BufferSize:          256,
     }), // see STREAMING.md
+    ibkr.WithRateLimit(10, 20),                 // per-endpoint rps, burst
+    ibkr.WithGlobalRateLimit(50),               // client-wide rps
+    ibkr.WithRetryPolicy(ibkr.DefaultRetryPolicy()), // safe methods only
+    ibkr.WithTelemetry(myTracer),               // optional request hooks
+    ibkr.WithCircuitBreaker(5, 30*time.Second), // optional, off by default
 )
 ```
 
-Planned for later phases: `WithRateLimit`, `WithGlobalRateLimit`
-([Phase 4](./ROADMAP.md)), and `WithRetryPolicy` ([design/06](./design/06-errors-retries.md)).
+Rate limiting defaults to 10 req/s per endpoint and 50 req/s client-wide
+([RATE-LIMITING.md](./RATE-LIMITING.md)). Retries apply to safe methods only and
+default to 3 attempts ([ERRORS.md](./ERRORS.md)); `WithRetryPolicy` with
+`MaxAttempts: 1` disables them. The circuit breaker is disabled by default.
 
 Invalid configuration (for example a malformed gateway URL) is reported as a
 `*ibkr.ConfigError`.
@@ -77,7 +82,9 @@ cookies, and `Authorization` headers are always redacted. See
 | Dial / TLS handshake | 10s | via the transport |
 | Logout (on Close) | 3s | best-effort |
 
-Per-call overrides use `context.WithTimeout` at the call site.
+Per-call overrides use `context.WithTimeout` at the call site. The SDK applies
+`WithRequestTimeout` as a middleware when the caller's context has no deadline;
+a caller-supplied deadline always wins.
 
 ## Validation
 

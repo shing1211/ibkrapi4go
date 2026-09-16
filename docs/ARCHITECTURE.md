@@ -71,11 +71,13 @@ ibkrapi4go/
 │   ├── ws.go          # streaming Subscription (coder/websocket)
 │   └── doc.go
 ├── internal/
-│   ├── transport.go   # http.RoundTripper middleware chain
-│   ├── session.go     # state machine + tickle
-│   ├── ratelimit.go   # token buckets
-│   ├── retry.go       # retry policy (safe methods only)
-│   └── ws.go          # connection management
+│   ├── transport.go     # middleware chain (request id, UA, auth, errors, timeout)
+│   ├── session.go       # state machine + tickle
+│   ├── ratelimit.go     # per-endpoint + global token buckets
+│   ├── retry.go         # safe-method retry + Retry-After
+│   ├── observability.go # request logging, redaction, telemetry hooks
+│   ├── breaker.go       # optional circuit breaker
+│   └── ws.go            # WebSocket connection management
 ├── scripts/
 └── docs/
 ```
@@ -104,11 +106,13 @@ All requests flow through a `http.RoundTripper` chain (see
 Request
   → request ID + User-Agent
   → auth header injection (bearer)
+  → logging + telemetry hooks
+  → circuit breaker (optional)
+  → retry (safe methods only; honors Retry-After)
   → per-endpoint rate limiter
   → global rate limiter
-  → HTTP call (with context deadline)
-  → 401 → mark session expired (no auto-login)
-  → 429/5xx → retry only for idempotent methods
+  → per-request timeout (when the caller sets none)
+  → HTTP call
   → error parsing (IBKR envelope → *ibkr.Error)
 Response
 ```

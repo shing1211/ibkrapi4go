@@ -35,6 +35,7 @@ var (
     ErrStreamingLimit   = errors.New("ibkr: streaming limit exceeded")
     ErrStreamDisconnected = errors.New("ibkr: ws: disconnected")
     ErrStreamReconnected  = errors.New("ibkr: ws: reconnected")
+    ErrCircuitOpen        = errors.New("ibkr: circuit breaker open")
 )
 ```
 

@@ -21,23 +21,20 @@ may be stricter; the backoff path handles that.
 Token bucket (`golang.org/x/time/rate`), one bucket per endpoint key plus one
 global bucket. A request waits for **both** buckets.
 
-```go
-type Limiter struct {
-    mu      sync.Mutex
-    buckets map[string]*rate.Limiter // key = "METHOD path"
-    global  *rate.Limiter
-    rps     rate.Limit
-    burst   int
-}
+Implemented in `internal/ratelimit.go` (`NewLimiter`, `Limiter.Wait`) and the
+`RateLimit` transport middleware; configured with `WithRateLimit` /
+`WithGlobalRateLimit` or `IBKR_RATE_LIMIT` / `IBKR_GLOBAL_RATE_LIMIT`.
 
-func (l *Limiter) Wait(ctx context.Context, method, path string) error
-```
-
-- Keys are **templated** paths (e.g. `GET /v1/api/portfolio/{accountId}/summary`),
-  so per-account calls share a bucket.
-- Buckets are created lazily and evicted when idle (LRU) to bound memory.
+- Keys are **normalized** paths (`METHOD /v1/api/portfolio/{}/summary`): numeric,
+  account-id, and UUID-shaped segments are replaced with `{}`, so per-account
+  calls share a bucket.
+- Buckets are created lazily and swept when idle to bound memory.
+- Auth/session paths (`/iserver/auth/*`, `/tickle`, `/logout`, `/sso/validate`)
+  use a fixed 1 req/s bucket.
 - `Wait` respects the caller's context; cancellation returns
   `context.Canceled`/`context.DeadlineExceeded`.
+- `WithRateLimit(0, …)` disables per-endpoint limiting; `WithGlobalRateLimit(0)`
+  disables the global bucket.
 
 ## Backoff on 429
 

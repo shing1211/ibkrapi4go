@@ -7,15 +7,16 @@ The transport is the single path through which every HTTP request flows. It is a
 
 ```
 request
-  └─ requestID → userAgent → auth → rateLimit(perEndpoint) → rateLimit(global)
+  └─ requestID → userAgent → auth → logging/telemetry → circuitBreaker
+       → retry (safe methods only) → rateLimit → timeout → errorDecode
        → http.Transport.Do
-       → retry (safe methods only)
-       → errorDecode
 response / *ibkr.Error
 ```
 
-Order matters: auth runs before rate limiting so a rate-limited retry reuses the
-same credential; error decoding runs last so it sees the final status.
+Order matters: auth runs before retry so every attempt reuses the same
+credential; retry runs before rate limiting so each attempt is paced; error
+decoding is innermost so it sees the final status (and preserves 101 upgrades).
+Assembled by `internal.NewClientTransport`, configured via `TransportConfig`.
 
 ## Interfaces
 

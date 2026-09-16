@@ -118,20 +118,29 @@ Notes:
 - Backpressure drops the oldest buffered update and increments `Dropped()`.
 - Streaming is marked **pending live verification** against a real gateway.
 
-## Phase 4 — Hardening
+## Phase 4 — Hardening *(complete)*
 
 Deliverables:
 
-- Rate limiting per endpoint + global ([RATE-LIMITING.md](./RATE-LIMITING.md)).
-- Retry budgets for idempotent methods; circuit breaker.
-- `slog` logging with redaction; optional OpenTelemetry hooks.
-- Testable `Example*` functions; complete godoc.
+- [x] Rate limiting per endpoint + global ([RATE-LIMITING.md](./RATE-LIMITING.md)).
+- [x] Retry budgets for idempotent methods; circuit breaker.
+- [x] `slog` logging with redaction; dependency-free telemetry hooks
+  (OTel-bridgeable).
+- [x] Testable `Example*` functions; godoc on exported symbols.
 
 Exit criteria:
 
-- Rate limiter unit-tested against burst/steady limits.
-- A `429` with `Retry-After` is honored.
-- CI green across the support matrix.
+- [x] Rate limiter unit-tested against burst/steady limits.
+- [x] A `429` with `Retry-After` is honored.
+- [x] CI green across the support matrix.
+
+Notes:
+
+- The transport is now a composable middleware chain
+  ([design/01](./design/01-transport.md)); the retry middleware retries only safe
+  methods, so order mutations remain single-attempt (ADR 0009).
+- The circuit breaker is disabled by default; telemetry carries no OpenTelemetry
+  dependency (ADR 0004).
 
 ## Phase 5 — OAuth2 surface (post-v1)
 

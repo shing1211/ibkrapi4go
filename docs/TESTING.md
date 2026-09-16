@@ -64,6 +64,19 @@ Fixtures:
   for submit, modify, and cancel (ADR 0009).
 - Order submissions are asserted to serialize money/quantity as JSON strings.
 
+## Hardening tests
+
+- Rate limiter: burst-then-throttle, steady-state, per-endpoint isolation,
+  context cancellation, auth pacing, endpoint-key normalization
+  (`internal/ratelimit_test.go`).
+- Retry: GET retries then succeeds, POST never retried, `Retry-After` honored,
+  401 not retried, context cancellation mid-backoff (`internal/retry_test.go`).
+- Observability: normalized logging, hook invocation, secret redaction
+  (`internal/observability_test.go`).
+- Circuit breaker: opens after threshold, half-open probe, short-circuit
+  (`internal/breaker_test.go`).
+- Runnable `Example*` functions in `pkg/ibkr/example_test.go`.
+
 ## Codegen validation
 
 ```bash
