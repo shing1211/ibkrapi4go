@@ -7,7 +7,7 @@ Testing strategy for ibkrapi4go.
 | Tier | Location | Build tag | Needs gateway | Runs in CI |
 |------|----------|-----------|---------------|------------|
 | Unit | `*_test.go` next to source | — | No | ✅ |
-| WebSocket | `internal/ws*_test.go` | — | No (local server) | ✅ |
+| Session | `internal/session_test.go` | — | No (fakeAPI) | ✅ |
 | Codegen | `scripts/validate_codegen.sh` | — | No | ✅ (scheduled too) |
 | Integration | `test/` | `integration` | Yes (paper) | On demand |
 
@@ -30,8 +30,10 @@ Fixtures:
 
 ## Concurrency & leaks
 
-- Every test that starts goroutines asserts no leak via `go.uber.org/goleak`
-  (`TestMain` with `goleak.VerifyTestMain`).
+- Every test that starts goroutines asserts no leak via `go.uber.org/goleak`.
+- Session tests: use a 50ms post-`m.Run()` sleep before `goleak.Find()` to allow
+  the scheduler to reap exited tickle goroutines before the leak check runs.
+- Transport tests: use `goleak.VerifyTestMain` directly.
 - Run with `-race` in CI (`make test-race`).
 
 ## Integration tests
@@ -71,6 +73,7 @@ on a schedule, because the upstream spec can change without a commit here.
 - No tests that require network access in CI.
 - No golden-file tests over generated code (use `codegen-verify` instead).
 - No live-account tests.
+- WebSocket streaming not yet implemented (pending).
 
 ## Required cases (minimum)
 
