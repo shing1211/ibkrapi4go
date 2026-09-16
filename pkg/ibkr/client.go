@@ -141,8 +141,11 @@ type Client struct {
 
 	closed atomic.Bool
 
-	sessionManager *SessionManager
-	accountManager *AccountManager
+	sessionManager    *SessionManager
+	accountManager    *AccountManager
+	portfolioManager  *PortfolioManager
+	tradeManager      *TradeManager
+	marketDataManager *MarketDataManager
 }
 
 // NewClient builds a Client from functional options, falling back to environment
@@ -213,6 +216,9 @@ func NewClient(opts ...Option) (*Client, error) {
 	}
 	c.sessionManager = &SessionManager{client: c}
 	c.accountManager = &AccountManager{client: c}
+	c.portfolioManager = &PortfolioManager{client: c}
+	c.tradeManager = &TradeManager{client: c}
+	c.marketDataManager = &MarketDataManager{client: c}
 	return c, nil
 }
 
@@ -221,6 +227,15 @@ func (c *Client) Session() *SessionManager { return c.sessionManager }
 
 // Account returns the account manager.
 func (c *Client) Account() *AccountManager { return c.accountManager }
+
+// Portfolio returns the portfolio manager.
+func (c *Client) Portfolio() *PortfolioManager { return c.portfolioManager }
+
+// Trade returns the trade manager, which also exposes contract lookups.
+func (c *Client) Trade() *TradeManager { return c.tradeManager }
+
+// MarketData returns the market-data manager.
+func (c *Client) MarketData() *MarketDataManager { return c.marketDataManager }
 
 // GatewayURL returns the configured gateway base URL.
 func (c *Client) GatewayURL() string { return c.cfg.gatewayURL }

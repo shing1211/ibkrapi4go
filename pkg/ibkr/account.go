@@ -4,10 +4,8 @@
 package ibkr
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"strings"
 )
@@ -103,7 +101,7 @@ type AccountManager struct {
 // List returns all accessible account ids with their aliases.
 func (m *AccountManager) List(ctx context.Context) ([]Account, error) {
 	const op = "Account.List"
-	resp, err := m.do(ctx, op, func() (*http.Response, error) {
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetBrokerageAccounts(ctx)
 	})
 	if err != nil {
@@ -123,7 +121,7 @@ func (m *AccountManager) List(ctx context.Context) ([]Account, error) {
 // Summary returns the account summary for the given account.
 func (m *AccountManager) Summary(ctx context.Context, id AccountID) (*AccountSummary, error) {
 	const op = "Account.Summary"
-	resp, err := m.do(ctx, op, func() (*http.Response, error) {
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAccountSummary(ctx, string(id))
 	})
 	if err != nil {
@@ -139,7 +137,7 @@ func (m *AccountManager) Summary(ctx context.Context, id AccountID) (*AccountSum
 // PnL returns the partitioned profit-and-loss for the session's accounts.
 func (m *AccountManager) PnL(ctx context.Context) ([]AccountPnLRow, error) {
 	const op = "Account.PnL"
-	resp, err := m.do(ctx, op, func() (*http.Response, error) {
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetPnl(ctx)
 	})
 	if err != nil {
@@ -163,40 +161,6 @@ func (m *AccountManager) PnL(ctx context.Context) ([]AccountPnLRow, error) {
 		})
 	}
 	return rows, nil
-}
-
-// do runs a raw generated call, guarding against a closed client and mapping
-// non-2xx responses and transport errors to *Error. The returned response body
-// is open and owned by the caller.
-func (m *AccountManager) do(ctx context.Context, op string, fn func() (*http.Response, error)) (*http.Response, error) {
-	if err := m.client.checkOpen(); err != nil {
-		return nil, err
-	}
-	resp, err := fn()
-	if err != nil {
-		return nil, wrapOp(op, err)
-	}
-	if e := m.client.errorFrom(resp, op); e != nil {
-		resp.Body.Close()
-		return nil, e
-	}
-	return resp, nil
-}
-
-// decodeJSON reads and closes resp.Body, decoding JSON with json.Number so
-// decimal values are preserved as strings rather than binary floats (ADR 0008).
-func decodeJSON(resp *http.Response, op string, v any) error {
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return &Error{Op: op, Message: "read response: " + err.Error(), Err: err}
-	}
-	dec := json.NewDecoder(bytes.NewReader(body))
-	dec.UseNumber()
-	if err := dec.Decode(v); err != nil {
-		return &Error{Op: op, Message: "decode response: " + err.Error(), Err: err}
-	}
-	return nil
 }
 
 // derefString returns *s or def when s is nil.
