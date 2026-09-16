@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -33,6 +34,11 @@ func TestMain(m *testing.M) {
 type gateway struct {
 	*httptest.Server
 	unauthorized atomic.Bool
+	failSubmit   atomic.Bool
+	failOrder    atomic.Bool
+	submitReply  atomic.Bool
+	submitCalls  atomic.Int64
+	orderCalls   atomic.Int64
 
 	mu      sync.Mutex
 	headers http.Header
@@ -47,24 +53,121 @@ func newGateway(t *testing.T) *gateway {
 		gw.mu.Unlock()
 
 		w.Header().Set("Content-Type", "application/json")
+		p := r.URL.Path
 		switch {
-		case r.URL.Path == "/v1/api/iserver/auth/ssodh/init":
+		// --- session ---
+		case p == "/v1/api/iserver/auth/ssodh/init":
 			fmt.Fprint(w, `{"authenticated":true,"established":true}`)
-		case r.URL.Path == "/v1/api/iserver/auth/status":
+		case p == "/v1/api/iserver/auth/status":
 			fmt.Fprint(w, `{"authenticated":true,"established":true,"connected":true}`)
-		case r.URL.Path == "/v1/api/tickle":
+		case p == "/v1/api/tickle":
 			fmt.Fprint(w, `{"session":"tok-123"}`)
-		case r.URL.Path == "/v1/api/iserver/accounts":
+		case p == "/v1/api/logout":
+			fmt.Fprint(w, `{}`)
+
+		// --- account ---
+		case p == "/v1/api/iserver/accounts":
 			fmt.Fprint(w, `{"accounts":["U1234567","U7654321"],"aliases":{"U1234567":"Main"}}`)
-		case r.URL.Path == "/v1/api/iserver/account/pnl/partitioned":
+		case p == "/v1/api/iserver/account/pnl/partitioned":
 			fmt.Fprint(w, `{"upnl":{"U1234567.Core":{"dpl":"1.5","el":"2","mv":"3","nl":"4","rowType":"1","upl":"5"}}}`)
-		case r.URL.Path == "/v1/api/iserver/account/U1234567/summary":
+		case p == "/v1/api/iserver/account/U1234567/summary":
 			if gw.unauthorized.Load() {
 				w.WriteHeader(http.StatusUnauthorized)
 				fmt.Fprint(w, `{"error":"not authenticated"}`)
 				return
 			}
 			fmt.Fprint(w, `{"accountType":"INDIVIDUAL","netLiquidationValue":"1234.5600","totalCashValue":"100.25","availableFunds":"900.10","SMA":"1200.0000","cashBalances":[{"currency":"USD","balance":"50.5","settledCash":"40.0"}]}`)
+
+		// --- contracts ---
+		case p == "/v1/api/iserver/secdef/search":
+			fmt.Fprint(w, `[{"conid":265598,"symbol":"AAPL","companyName":"Apple Inc","secType":"STK","description":"Apple Inc","exchange":"NASDAQ"}]`)
+		case p == "/v1/api/iserver/contract/265598/info":
+			fmt.Fprint(w, `{"con_id":265598,"symbol":"AAPL","company_name":"Apple Inc","currency":"USD","exchange":"NASDAQ","instrument_type":"STK","local_symbol":"AAPL","multiplier":1,"expiry_full":"","cusip":"037833100","category":"Technology","industry":"Consumer Electronics"}`)
+		case p == "/v1/api/iserver/contract/rules":
+			fmt.Fprint(w, `{"algoEligible":true,"allOrNoneEligible":true,"canTradeAcctIds":["U1234567"],"defaultSize":100,"limitPrice":0.01,"orderTypes":["MKT","LMT"],"tifTypes":["DAY","GTC"],"TIF":"DAY","negativeCapable":false,"preview":true}`)
+		case p == "/v1/api/iserver/secdef/strikes":
+			fmt.Fprint(w, `{"call":[150,155],"put":[145,140]}`)
+
+		// --- portfolio positions ---
+		case p == "/v1/api/portfolio/accounts":
+			fmt.Fprint(w, `[{"accountId":"U1234567","accountTitle":"Main","currency":"USD","accountAlias":"Main"},{"accountId":"U7654321","accountTitle":"Second","currency":"USD"}]`)
+		case p == "/v1/api/portfolio/subaccounts":
+			fmt.Fprint(w, `[{"accountId":"U1234567","accountTitle":"Main","currency":"USD"}]`)
+		case p == "/v1/api/portfolio2/U1234567/positions":
+			fmt.Fprint(w, `[{"acctId":"U1234567","conid":265598,"contractDesc":"AAPL","assetClass":"STK","currency":"USD","position":"10.5","avgCost":"145.25","mktPrice":"150.00","mktValue":"1575.00","unrealizedPnl":"49.875"}]`)
+		case p == "/v1/api/portfolio/U1234567/positions/invalidate" && r.Method == http.MethodPost:
+			fmt.Fprint(w, `{"status":"success"}`)
+		case strings.HasPrefix(p, "/v1/api/portfolio/U1234567/positions/"):
+			page := strings.TrimPrefix(p, "/v1/api/portfolio/U1234567/positions/")
+			switch page {
+			case "0":
+				fmt.Fprint(w, `[{"acctId":"U1234567","conid":265598,"contractDesc":"AAPL","assetClass":"STK","currency":"USD","position":"10.5","avgCost":"145.25","mktPrice":"150.00","mktValue":"1575.00","unrealizedPnl":"49.875"},{"acctId":"U1234567","conid":8314,"contractDesc":"MSFT","assetClass":"STK","currency":"USD","position":"5","avgCost":"300.10","mktPrice":"310.00","mktValue":"1550.00","unrealizedPnl":"49.5"}]`)
+			case "1":
+				fmt.Fprint(w, `[{"acctId":"U1234567","conid":1,"contractDesc":"SPY","assetClass":"STK","currency":"USD","position":"2","avgCost":"400.00","mktPrice":"410.00","mktValue":"820.00","unrealizedPnl":"20"}]`)
+			default:
+				fmt.Fprint(w, `[]`)
+			}
+		case p == "/v1/api/portfolio/U1234567/position/265598":
+			fmt.Fprint(w, `[{"acctId":"U1234567","conid":265598,"contractDesc":"AAPL","assetClass":"STK","currency":"USD","position":"10.5","avgCost":"145.25","mktPrice":"150.00","mktValue":"1575.00","unrealizedPnl":"49.875"}]`)
+		case p == "/v1/api/portfolio/U1234567/ledger":
+			fmt.Fprint(w, `{"USD":{"acctcode":"U1234567","currency":"USD","cashbalance":"100.25","netliquidationvalue":"1575.00","stockmarketvalue":"1575.00","unrealizedpnl":"49.875","realizedpnl":"0"}}`)
+		case p == "/v1/api/portfolio/U1234567/allocation":
+			fmt.Fprint(w, `{"assetClass":{"long":{"STK":1000.5},"short":{}},"sector":{"long":{"Technology":1000.5},"short":{}},"group":{"long":{},"short":{}}}`)
+		case p == "/v1/api/portfolio/U1234567/summary":
+			fmt.Fprint(w, `{"netliquidation":{"amount":1575.00,"currency":"USD"},"totalcashvalue":{"amount":100.25,"currency":"USD"}}`)
+		case p == "/v1/api/portfolio/U1234567/meta":
+			fmt.Fprint(w, `{"accountId":"U1234567","accountTitle":"Main","currency":"USD","accountAlias":"Main"}`)
+
+		// --- market data ---
+		case p == "/v1/api/iserver/marketdata/snapshot":
+			fmt.Fprint(w, `[{"conid":265598,"31":"150.25","84":"150.20","_updated":1564652478,"server_id":"q0"}]`)
+		case p == "/v1/api/iserver/marketdata/history":
+			fmt.Fprint(w, `{"symbol":"AAPL","data":[{"t":1564652478,"o":"150.1","h":"151.2","l":"149.9","c":"150.9","v":"1000"}]}`)
+		case p == "/v1/api/iserver/marketdata/unsubscribe" && r.Method == http.MethodPost:
+			fmt.Fprint(w, `{"status":"success"}`)
+		case p == "/v1/api/iserver/marketdata/unsubscribeall":
+			fmt.Fprint(w, `{}`)
+
+		// --- orders ---
+		case p == "/v1/api/iserver/account/U1234567/orders" && r.Method == http.MethodPost:
+			gw.submitCalls.Add(1)
+			if gw.failSubmit.Load() {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, `{"error":"internal error"}`)
+				return
+			}
+			if gw.submitReply.Load() {
+				fmt.Fprint(w, `[{"id":"reply-1","message":["Confirm this order"],"messageIds":["o354"]}]`)
+				return
+			}
+			fmt.Fprint(w, `[{"order_id":"999","order_status":"PreSubmitted"}]`)
+		case strings.HasPrefix(p, "/v1/api/iserver/reply/"):
+			fmt.Fprint(w, `[{"order_id":"999","order_status":"PreSubmitted"}]`)
+		case p == "/v1/api/iserver/account/U1234567/orders/whatif":
+			fmt.Fprint(w, `{"amount":{"initial":"1000.50","maintenance":"800.25"}}`)
+		case p == "/v1/api/iserver/account/U1234567/order/999" && r.Method == http.MethodPost:
+			gw.orderCalls.Add(1)
+			if gw.failOrder.Load() {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, `{"error":"internal error"}`)
+				return
+			}
+			fmt.Fprint(w, `[{"order_id":"999","order_status":"PreSubmitted"}]`)
+		case p == "/v1/api/iserver/account/U1234567/order/999" && r.Method == http.MethodDelete:
+			gw.orderCalls.Add(1)
+			if gw.failOrder.Load() {
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, `{"error":"internal error"}`)
+				return
+			}
+			fmt.Fprint(w, `{"order_id":"999","msg":"Request was submitted"}`)
+		case p == "/v1/api/iserver/account/orders":
+			fmt.Fprint(w, `{"orders":[{"orderId":"999","account":"U1234567","conid":265598,"ticker":"AAPL","orderType":"LMT","side":"BUY","status":"PreSubmitted","timeInForce":"DAY","totalSize":"10","filledQuantity":"0","remainingQuantity":"10","price":"150.00","avgPrice":"0"}]}`)
+		case strings.HasPrefix(p, "/v1/api/iserver/account/order/status/"):
+			fmt.Fprint(w, `{"order_id":"999","order_status":"PreSubmitted","conid":265598,"side":"BUY","filled_quantity":"0","remaining_quantity":"10","average_price":"0"}`)
+		case p == "/v1/api/iserver/account/trades":
+			fmt.Fprint(w, `[{"order_id":"999","execution_id":"exec-1","account":"U1234567","conid":265598,"symbol":"AAPL","side":"B","size":"10","price":"150.00","commission":"1.00","net_amount":"1499.00","trade_time_r":"1564652478000"}]`)
+
 		default:
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, `{"error":"unknown path"}`)
