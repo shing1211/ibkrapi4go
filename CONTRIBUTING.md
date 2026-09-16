@@ -99,8 +99,8 @@ test(portfolio): add integration test for position snapshot
 
 - Fill out the PR template (appears automatically)
 - Reference the GitHub issue (if any)
-- For API changes: include the operation ID from SPEC.md
-- For new endpoints: add entry to SPEC.md
+- For API changes: include the operation ID from [docs/SPEC.md](./docs/SPEC.md)
+- For new endpoints: add entry to [docs/SPEC.md](./docs/SPEC.md)
 
 ---
 
@@ -152,7 +152,7 @@ git diff client/client.gen.go client/types.gen.go
 Bug reports welcome! Please include:
 - Go version (`go version`)
 - ibkr-sdk version (git commit or tag)
-- IBKR API spec version (check SPEC.md header)
+- IBKR API spec version (check [docs/SPEC.md](./docs/SPEC.md) header)
 - Minimal reproduction case
 - Full error output
 

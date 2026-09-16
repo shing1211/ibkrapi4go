@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within ibkr-sdk, please send an email to the project maintainer. All security vulnerabilities will be promptly addressed.
+If you discover a security vulnerability within ibkr-sdk, please send an email to [INSERT CONTACT EMAIL] or open a private security advisory on GitHub. All security vulnerabilities will be promptly addressed.
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 

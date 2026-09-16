@@ -24,10 +24,10 @@
 
 ```
 ibkr-sdk/
-├── client/              # Generated OpenAPI types + HTTP client
+├── client/              # Generated OpenAPI types + HTTP client (not yet created)
 │   ├── client.gen.go    # Auto-generated from OpenAPI spec
 │   └── types.gen.go     # Auto-generated schema types
-├── pkg/ibkr/            # Public SDK surface
+├── pkg/ibkr/            # Public SDK surface (not yet created)
 │   ├── client.go        # Main client entry point
 │   ├── auth.go          # Authentication & session management
 │   ├── account.go       # Account operations
@@ -36,32 +36,27 @@ ibkr-sdk/
 │   ├── marketdata.go    # Market data
 │   ├── ws.go            # WebSocket client
 │   └── doc.go
-├── internal/
+├── internal/            # Private implementation (not yet created)
 │   ├── http.go          # HTTP client with middleware
 │   ├── session.go       # Session state machine
 │   ├── ratelimit.go     # Rate limiter
 │   └── retry.go         # Retry logic
-├── docs/
+├── docs/                # Project documentation
 │   ├── ARCHITECTURE.md
-│   └── SESSIONS.md
+│   ├── PLAN.md
+│   └── SPEC.md
 ├── scripts/
-│   └── codegen.sh       # OpenAPI → Go codegen
-├── test/
-│   └── integration_test.go
-├── examples/
-│   ├── account_list.go
-│   ├── portfolio_positions.go
-│   ├── place_order.go
-│   ├── market_data_snapshot.go
-│   └── ws_stream.go
-├── SPEC.md
-├── PLAN.md
-├── README.md
-├── ARCHITECTURE.md
+│   ├── codegen.sh       # OpenAPI → Go codegen
+│   └── patch_spec.py    # Fix spec bugs before codegen
+├── specs/               # Downloaded/patched OpenAPI specs
+├── examples/            # Usage examples (not yet created)
+├── .gitignore
+├── CODE_OF_CONDUCT.md
 ├── CONTRIBUTING.md
 ├── LICENSE
-├── go.mod
-└── go.sum
+├── Makefile
+├── README.md
+└── SECURITY.md
 ```
 
 ### 0.2 Codegen Infrastructure

@@ -8,10 +8,9 @@
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
 </p>
 
-> **⚠️ Under Active Development**
-> This SDK is under active development against the [IBKR Web API v2.39](https://api.ibkr.com/gw/api/v3/api-docs).
-> APIs and types are subject to change. Audit generated types against the official spec
-> before relying on any field for production use.
+> **⚠️ Under Active Development — Pre-Alpha**
+> This SDK is in early development. Core packages (`pkg/ibkr/`, `internal/`) are not yet implemented.
+> The API surface is planned but subject to change. Do not use in production.
 
 > **Go-native. Type-safe. OpenAPI-driven.** The most complete and ergonomic Go SDK for
 > [Interactive Brokers Web API](https://www.interactivebrokers.com/api/) — account management,
@@ -158,24 +157,18 @@ ibkr-sdk/
 
 | Category | Endpoints | Status |
 |----------|-----------|--------|
-| Account Management | 83 | ✅ |
-| Trading | 55 | ✅ |
-| Portfolio | 21 | ✅ |
-| Market Data | 4 | ✅ |
-| WebSocket | 1 | ✅ |
-| **Total** | **185** | **✅** |
+| Account Management | 83 | 🚧 Planned |
+| Trading | 55 | 🚧 Planned |
+| Portfolio | 21 | 🚧 Planned |
+| Market Data | 4 | 🚧 Planned |
+| WebSocket | 1 | 🚧 Planned |
+| **Total** | **185** | **Pre-Alpha** |
 
 Full endpoint list: [docs/SPEC.md](./docs/SPEC.md)
 
 ## Examples
 
-See the [examples](./examples/) directory:
-
-- `account_list.go` — List all accounts
-- `portfolio_positions.go` — Fetch positions
-- `place_order.go` — Submit an order
-- `market_data_snapshot.go` — Get real-time quote
-- `ws_stream.go` — Subscribe to WebSocket market data
+> Examples coming soon — see [docs/PLAN.md](./docs/PLAN.md) for planned examples.
 
 ## Build & Test
 
