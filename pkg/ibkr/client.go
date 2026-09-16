@@ -59,6 +59,7 @@ type config struct {
 	rateBurst          int
 	globalRateLimit    float64
 	retry              internal.RetryPolicy
+	telemetry          internal.Telemetry
 }
 
 // Rate-limit defaults (see docs/RATE-LIMITING.md).
@@ -163,6 +164,24 @@ type RetryPolicy = internal.RetryPolicy
 
 // DefaultRetryPolicy returns the SDK's default retry policy.
 func DefaultRetryPolicy() RetryPolicy { return internal.DefaultRetryPolicy() }
+
+// Telemetry receives request lifecycle callbacks. Implementations must be safe
+// for concurrent use. It is OTel-compatible but carries no OTel dependency.
+type Telemetry = internal.Telemetry
+
+// RequestInfo describes an outbound request for telemetry.
+type RequestInfo = internal.RequestInfo
+
+// ResponseInfo describes a request outcome for telemetry.
+type ResponseInfo = internal.ResponseInfo
+
+// WithTelemetry installs telemetry hooks invoked around each HTTP request.
+func WithTelemetry(t Telemetry) Option {
+	return func(c *config) error {
+		c.telemetry = t
+		return nil
+	}
+}
 
 // WithRetryPolicy overrides the retry policy. Set MaxAttempts to 1 to disable
 // retries.
@@ -271,9 +290,11 @@ func NewClient(opts ...Option) (*Client, error) {
 			}
 			return session.Token()
 		},
-		Retry:   cfg.retry,
-		Limiter: limiter,
-		Timeout: cfg.requestTimeout,
+		Logger:    cfg.logger,
+		Telemetry: cfg.telemetry,
+		Retry:     cfg.retry,
+		Limiter:   limiter,
+		Timeout:   cfg.requestTimeout,
 	})
 	httpClient := &http.Client{Transport: transport, Jar: jar}
 

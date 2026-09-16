@@ -109,13 +109,18 @@ func (l *Limiter) sweepLocked(now time.Time) {
 // EndpointKey normalizes a concrete path into a stable rate-limit key, replacing
 // dynamic segments (ids) with "{}" so per-resource calls share a bucket.
 func EndpointKey(method, path string) string {
+	return method + " " + normalizePath(path)
+}
+
+// normalizePath replaces dynamic path segments (ids) with "{}".
+func normalizePath(path string) string {
 	segs := strings.Split(strings.Trim(path, "/"), "/")
 	for i, s := range segs {
 		if isDynamicSegment(s) {
 			segs[i] = "{}"
 		}
 	}
-	return method + " /" + strings.Join(segs, "/")
+	return "/" + strings.Join(segs, "/")
 }
 
 // isDynamicSegment reports whether a path segment looks like an identifier

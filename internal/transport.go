@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -21,6 +22,8 @@ type TransportConfig struct {
 	UserAgent  string
 	AuthHeader string
 	Token      func() (string, bool)
+	Logger     *slog.Logger
+	Telemetry  Telemetry
 	Retry      RetryPolicy
 	Limiter    *Limiter
 	Timeout    time.Duration
@@ -41,6 +44,9 @@ func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundT
 	}
 	if cfg.AuthHeader != "" && cfg.Token != nil {
 		ms = append(ms, Auth(cfg.AuthHeader, cfg.Token))
+	}
+	if cfg.Logger != nil || cfg.Telemetry != nil {
+		ms = append(ms, Logging(cfg.Logger, cfg.Telemetry))
 	}
 	if cfg.Retry.enabled() {
 		ms = append(ms, Retry(cfg.Retry))
@@ -148,7 +154,7 @@ func ErrorDecode() func(http.RoundTripper) http.RoundTripper {
 // isErrorStatus reports whether a status code should be decoded as an error.
 func isErrorStatus(code int) bool { return code >= 400 }
 
-var headerRedact = regexp.MustCompile(`(?i)(Authorization|Cookie|Set-Cookie)\s*:`)
+var headerRedact = regexp.MustCompile(`(?i)(Authorization|Cookie|Set-Cookie)\s*:\s*[^\r\n,;]*`)
 
 func redact(s string) string { return headerRedact.ReplaceAllString(s, "$1: <redacted>") }
 

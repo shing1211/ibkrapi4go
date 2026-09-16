@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/shing1211/ibkrapi4go/internal"
 )
 
 // netDo runs a raw generated call, guarding against a closed client and mapping
@@ -21,10 +23,13 @@ func (c *Client) netDo(ctx context.Context, op string, fn func() (*http.Response
 	}
 	resp, err := fn()
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(c.cfg.logger, e)
+		return nil, e
 	}
 	if e := c.errorFrom(resp, op); e != nil {
 		resp.Body.Close()
+		internal.LogError(c.cfg.logger, e)
 		return nil, e
 	}
 	return resp, nil
