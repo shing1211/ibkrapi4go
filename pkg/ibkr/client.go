@@ -60,6 +60,7 @@ type config struct {
 	globalRateLimit    float64
 	retry              internal.RetryPolicy
 	telemetry          internal.Telemetry
+	breaker            *internal.Breaker
 }
 
 // Rate-limit defaults (see docs/RATE-LIMITING.md).
@@ -183,6 +184,19 @@ func WithTelemetry(t Telemetry) Option {
 	}
 }
 
+// WithCircuitBreaker enables a circuit breaker that opens after threshold
+// consecutive transport failures, short-circuits for cooldown, then allows a
+// half-open probe. threshold<=0 disables it (the default).
+func WithCircuitBreaker(threshold int, cooldown time.Duration) Option {
+	return func(c *config) error {
+		if threshold < 0 {
+			return &ConfigError{Field: "CircuitBreaker", Message: "threshold must not be negative"}
+		}
+		c.breaker = internal.NewBreaker(threshold, cooldown)
+		return nil
+	}
+}
+
 // WithRetryPolicy overrides the retry policy. Set MaxAttempts to 1 to disable
 // retries.
 func WithRetryPolicy(p RetryPolicy) Option {
@@ -292,6 +306,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		},
 		Logger:    cfg.logger,
 		Telemetry: cfg.telemetry,
+		Breaker:   cfg.breaker,
 		Retry:     cfg.retry,
 		Limiter:   limiter,
 		Timeout:   cfg.requestTimeout,

@@ -37,6 +37,7 @@ var (
 	ErrOrderRejected    = errors.New("ibkr: order rejected")
 	ErrClosed           = errors.New("ibkr: client closed")
 	ErrStreamingLimit   = errors.New("ibkr: streaming limit exceeded")
+	ErrCircuitOpen      = errors.New("ibkr: circuit breaker open")
 )
 
 // statusSentinel maps HTTP status codes to sentinel errors.

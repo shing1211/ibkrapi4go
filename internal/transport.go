@@ -24,6 +24,7 @@ type TransportConfig struct {
 	Token      func() (string, bool)
 	Logger     *slog.Logger
 	Telemetry  Telemetry
+	Breaker    *Breaker
 	Retry      RetryPolicy
 	Limiter    *Limiter
 	Timeout    time.Duration
@@ -47,6 +48,9 @@ func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundT
 	}
 	if cfg.Logger != nil || cfg.Telemetry != nil {
 		ms = append(ms, Logging(cfg.Logger, cfg.Telemetry))
+	}
+	if cfg.Breaker != nil {
+		ms = append(ms, CircuitBreaker(cfg.Breaker))
 	}
 	if cfg.Retry.enabled() {
 		ms = append(ms, Retry(cfg.Retry))

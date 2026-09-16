@@ -36,6 +36,7 @@ var (
 	ErrStreamingLimit     = internal.ErrStreamingLimit
 	ErrStreamDisconnected = internal.ErrWSDisconnected
 	ErrStreamReconnected  = internal.ErrWSReconnected
+	ErrCircuitOpen        = internal.ErrCircuitOpen
 )
 
 // SessionState is the lifecycle state of the gateway session.
