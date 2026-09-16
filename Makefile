@@ -40,7 +40,10 @@ coverage: ## Write coverage.out and coverage.html
 		echo "wrote coverage.out and coverage.html"; \
 	else echo "no go.mod yet; skipping"; fi
 
-check: fmt vet test ## Format, vet, and test
+check: fmt vet money-check test ## Format, vet, check money types, and test
+
+money-check: ## Fail if pkg/ibkr exposes float money fields (ADR 0008)
+	python3 scripts/check_money.py
 
 codegen: ## Regenerate client/ from the OpenAPI spec
 	./scripts/codegen.sh
