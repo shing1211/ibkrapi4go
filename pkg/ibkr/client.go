@@ -61,6 +61,9 @@ type config struct {
 	retry              internal.RetryPolicy
 	telemetry          internal.Telemetry
 	breaker            *internal.Breaker
+	restGatewayURL     string
+	oauth2             internal.OAuthConfig
+	tokenSource        *internal.TokenSource
 }
 
 // Rate-limit defaults (see docs/RATE-LIMITING.md).
@@ -240,6 +243,9 @@ type Client struct {
 	wsMu sync.Mutex
 	ws   *internal.WSConn
 
+	restMu sync.Mutex
+	rest   *RESTSurface
+
 	sessionManager    *SessionManager
 	accountManager    *AccountManager
 	portfolioManager  *PortfolioManager
@@ -279,6 +285,12 @@ func NewClient(opts ...Option) (*Client, error) {
 	}
 	if cfg.retry.MaxAttempts == 0 {
 		cfg.retry = internal.DefaultRetryPolicy()
+	}
+	if cfg.restGatewayURL == "" {
+		cfg.restGatewayURL = DefaultRESTGatewayURL
+	}
+	if cfg.tokenSource == nil && (cfg.oauth2.ClientID != "" || cfg.oauth2.RefreshToken != "") {
+		cfg.tokenSource = internal.NewTokenSource(cfg.oauth2)
 	}
 	cfg.streamingLimits = cfg.streamingLimits.withDefaults()
 
@@ -496,6 +508,20 @@ func applyEnv(cfg *config) {
 				cfg.globalRateLimit = f
 			}
 		}
+	}
+	if cfg.restGatewayURL == "" {
+		if v := os.Getenv("IBKR_REST_GATEWAY_URL"); v != "" {
+			cfg.restGatewayURL = v
+		}
+	}
+	if cfg.oauth2.ClientID == "" {
+		cfg.oauth2.ClientID = os.Getenv("IBKR_CLIENT_ID")
+	}
+	if cfg.oauth2.ClientSecret == "" {
+		cfg.oauth2.ClientSecret = os.Getenv("IBKR_CLIENT_SECRET")
+	}
+	if cfg.oauth2.RefreshToken == "" {
+		cfg.oauth2.RefreshToken = os.Getenv("IBKR_CLIENT_REFRESH_TOKEN")
 	}
 	if cfg.logger == nil {
 		cfg.logger = loggerFromEnv()
