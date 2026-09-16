@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -52,6 +53,7 @@ type config struct {
 	userAgent          string
 	logger             *slog.Logger
 	insecureSkipVerify bool
+	streamingLimits    StreamingLimits
 }
 
 // Option customizes a Client during construction. Options are applied in order;
@@ -131,6 +133,15 @@ func WithInsecureSkipVerify(skip bool) Option {
 	}
 }
 
+// WithStreamingLimits overrides the streaming subscription limits. Zero fields
+// keep their defaults.
+func WithStreamingLimits(l StreamingLimits) Option {
+	return func(c *config) error {
+		c.streamingLimits = l
+		return nil
+	}
+}
+
 // Client is the composition root for the SDK. It owns the HTTP transport, the
 // session state machine, and the domain managers. It is safe for concurrent use.
 type Client struct {
@@ -140,6 +151,9 @@ type Client struct {
 	generated  *client.ClientWithResponses
 
 	closed atomic.Bool
+
+	wsMu sync.Mutex
+	ws   *internal.WSConn
 
 	sessionManager    *SessionManager
 	accountManager    *AccountManager
@@ -172,6 +186,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	if cfg.userAgent == "" {
 		cfg.userAgent = defaultUserAgent()
 	}
+	cfg.streamingLimits = cfg.streamingLimits.withDefaults()
 
 	base, jar := baseTransport(cfg)
 	if cfg.insecureSkipVerify && isNonLoopback(cfg.gatewayURL) && cfg.logger != nil {
@@ -250,6 +265,13 @@ func (c *Client) HTTPClient() *http.Client { return c.httpClient }
 func (c *Client) Close() error {
 	if c.closed.Swap(true) {
 		return nil
+	}
+	c.wsMu.Lock()
+	ws := c.ws
+	c.ws = nil
+	c.wsMu.Unlock()
+	if ws != nil {
+		_ = ws.Close()
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), closeLogoutTimeout)
 	defer cancel()

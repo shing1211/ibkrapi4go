@@ -1,0 +1,499 @@
+// Copyright 2026 shing1211
+// SPDX-License-Identifier: Apache-2.0
+
+package internal
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"math/rand"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/coder/websocket"
+)
+
+// Streaming errors.
+var (
+	// ErrWSDisconnected is delivered to subscribers when the connection drops.
+	ErrWSDisconnected = errors.New("ibkr: ws: disconnected")
+	// ErrWSReconnected is delivered to subscribers after a successful reconnect.
+	ErrWSReconnected = errors.New("ibkr: ws: reconnected")
+)
+
+// WSUpdate is a single field update dispatched to a sink.
+type WSUpdate struct {
+	ConID int
+	Field string
+	Value string
+}
+
+// WSSink receives routed market-data updates for a subscription. Implementations
+// must not block: Deliver is called from the connection's reader goroutine.
+type WSSink interface {
+	// Wants reports whether the sink is interested in the given conid.
+	Wants(conid int) bool
+	// Deliver receives a scalar field update.
+	Deliver(WSUpdate)
+	// Fail receives connection-level events (drops, errors, reconnects).
+	Fail(error)
+}
+
+// WSOptions configures a WSConn.
+type WSOptions struct {
+	HTTPClient    *http.Client
+	Logger        *slog.Logger
+	PingInterval  time.Duration
+	PongTimeout   time.Duration
+	Reconnect     bool
+	ReconnectBase time.Duration
+	ReconnectMax  time.Duration
+}
+
+// WSHandle is a registered subscription on a WSConn.
+type WSHandle struct {
+	conn *WSConn
+	sub  *wsSub
+	once sync.Once
+}
+
+type wsSub struct {
+	sink   WSSink
+	conids []int
+	fields []string
+}
+
+// WSConn is a single multiplexed WebSocket connection to the gateway.
+type WSConn struct {
+	wsURL string
+	opts  WSOptions
+
+	mu   sync.Mutex
+	conn *websocket.Conn
+	subs map[*wsSub]struct{}
+
+	out    chan []byte
+	stopCh chan struct{}
+	doneCh chan struct{}
+	closed atomic.Bool
+	nextID atomic.Int64
+	wg     sync.WaitGroup
+}
+
+// DialWS connects to the gateway WebSocket derived from gatewayURL and starts
+// the reader, writer, and ping goroutines. The returned WSConn owns them until
+// Close.
+func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, error) {
+	wsURL, err := wsURLFromGateway(gatewayURL)
+	if err != nil {
+		return nil, err
+	}
+	if opts.PingInterval <= 0 {
+		opts.PingInterval = 30 * time.Second
+	}
+	if opts.PongTimeout <= 0 {
+		opts.PongTimeout = 10 * time.Second
+	}
+	if opts.ReconnectBase <= 0 {
+		opts.ReconnectBase = time.Second
+	}
+	if opts.ReconnectMax <= 0 {
+		opts.ReconnectMax = 30 * time.Second
+	}
+	c := &WSConn{
+		wsURL:  wsURL,
+		opts:   opts,
+		subs:   map[*wsSub]struct{}{},
+		out:    make(chan []byte, 64),
+		stopCh: make(chan struct{}),
+		doneCh: make(chan struct{}),
+	}
+	if err := c.dial(ctx); err != nil {
+		return nil, err
+	}
+	c.wg.Add(3)
+	go func() { defer c.wg.Done(); c.readLoop() }()
+	go func() { defer c.wg.Done(); c.writeLoop() }()
+	go func() { defer c.wg.Done(); c.pingLoop() }()
+	go func() { c.wg.Wait(); close(c.doneCh) }()
+	return c, nil
+}
+
+// Subscribe registers a subscription for conids/fields and sends the subscribe
+// frame. Deliveries begin once frames arrive.
+func (c *WSConn) Subscribe(ctx context.Context, sink WSSink, conids []int, fields []string) (*WSHandle, error) {
+	if c.closed.Load() {
+		return nil, ErrClosed
+	}
+	s := &wsSub{sink: sink, conids: conids, fields: fields}
+	c.mu.Lock()
+	c.subs[s] = struct{}{}
+	c.mu.Unlock()
+	if err := c.send(ctx, "subscribe", subscribeParams(s)); err != nil {
+		c.mu.Lock()
+		delete(c.subs, s)
+		c.mu.Unlock()
+		return nil, err
+	}
+	return &WSHandle{conn: c, sub: s}, nil
+}
+
+// Close unsubscribes and removes the handle. It is idempotent.
+func (h *WSHandle) Close() error {
+	h.once.Do(func() {
+		h.conn.mu.Lock()
+		delete(h.conn.subs, h.sub)
+		h.conn.mu.Unlock()
+		_ = h.conn.send(context.Background(), "unsubscribe", map[string]any{"conids": h.sub.conids})
+	})
+	return nil
+}
+
+// ActiveSubscriptions reports the number of registered subscriptions.
+func (c *WSConn) ActiveSubscriptions() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.subs)
+}
+
+// Close stops all goroutines and closes the connection. It is idempotent and
+// waits (bounded) for background goroutines to exit.
+func (c *WSConn) Close() error {
+	if c.closed.Swap(true) {
+		return nil
+	}
+	close(c.stopCh)
+	c.mu.Lock()
+	conn := c.conn
+	c.mu.Unlock()
+	if conn != nil {
+		_ = conn.Close(websocket.StatusNormalClosure, "client closing")
+	}
+	select {
+	case <-c.doneCh:
+	case <-time.After(3 * time.Second):
+	}
+	return nil
+}
+
+// --- internals --------------------------------------------------------------
+
+func (c *WSConn) dial(ctx context.Context) error {
+	dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(dctx, c.wsURL, &websocket.DialOptions{HTTPClient: c.opts.HTTPClient})
+	if err != nil {
+		return err
+	}
+	c.mu.Lock()
+	c.conn = conn
+	c.mu.Unlock()
+	return nil
+}
+
+func (c *WSConn) currentConn() *websocket.Conn {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.conn
+}
+
+func (c *WSConn) readLoop() {
+	attempt := 0
+	for {
+		if c.closed.Load() {
+			return
+		}
+		conn := c.currentConn()
+		if conn == nil {
+			if !c.opts.Reconnect || c.reconnect(&attempt) != nil {
+				return
+			}
+			continue
+		}
+		_, data, err := conn.Read(context.Background())
+		if err == nil {
+			attempt = 0
+			c.dispatch(data)
+			continue
+		}
+		if c.closed.Load() {
+			return
+		}
+		if !c.opts.Reconnect {
+			c.failAll(err)
+			return
+		}
+		c.failAll(ErrWSDisconnected)
+		if c.reconnect(&attempt) != nil {
+			return
+		}
+	}
+}
+
+func (c *WSConn) reconnect(attempt *int) error {
+	for {
+		delay := backoffDelay(*attempt, c.opts.ReconnectBase, c.opts.ReconnectMax)
+		select {
+		case <-time.After(delay):
+		case <-c.stopCh:
+			return ErrClosed
+		}
+		if c.closed.Load() {
+			return ErrClosed
+		}
+		if err := c.dial(context.Background()); err != nil {
+			if c.opts.Logger != nil {
+				c.opts.Logger.Warn("ws: reconnect failed", "err", err)
+			}
+			*attempt++
+			continue
+		}
+		*attempt = 0
+		c.notifyReconnect()
+		c.resubscribeAll()
+		return nil
+	}
+}
+
+func (c *WSConn) resubscribeAll() {
+	for _, s := range c.snapshotSubs() {
+		_ = c.send(context.Background(), "subscribe", subscribeParams(s))
+	}
+}
+
+func (c *WSConn) writeLoop() {
+	for {
+		select {
+		case b := <-c.out:
+			conn := c.currentConn()
+			if conn == nil {
+				continue
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			if err := conn.Write(ctx, websocket.MessageText, b); err != nil && c.opts.Logger != nil {
+				c.opts.Logger.Warn("ws: write failed", "err", err)
+			}
+			cancel()
+		case <-c.stopCh:
+			return
+		}
+	}
+}
+
+func (c *WSConn) pingLoop() {
+	ticker := time.NewTicker(c.opts.PingInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			conn := c.currentConn()
+			if conn == nil {
+				continue
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), c.opts.PongTimeout)
+			err := conn.Ping(ctx)
+			cancel()
+			if err != nil {
+				if c.opts.Logger != nil {
+					c.opts.Logger.Warn("ws: ping failed", "err", err)
+				}
+				_ = conn.Close(websocket.StatusPolicyViolation, "ping timeout")
+			}
+		case <-c.stopCh:
+			return
+		}
+	}
+}
+
+func (c *WSConn) send(ctx context.Context, method string, params map[string]any) error {
+	if c.closed.Load() {
+		return ErrClosed
+	}
+	frame := map[string]any{"id": c.nextID.Add(1), "method": method, "params": params}
+	b, err := json.Marshal(frame)
+	if err != nil {
+		return err
+	}
+	select {
+	case c.out <- b:
+		return nil
+	case <-c.stopCh:
+		return ErrClosed
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (c *WSConn) dispatch(data []byte) {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(data, &m); err != nil {
+		return
+	}
+	if raw, ok := m["error"]; ok {
+		var msg string
+		if json.Unmarshal(raw, &msg) == nil && msg != "" {
+			c.failAll(errors.New("ibkr: ws: " + msg))
+			return
+		}
+	}
+	rawConid, ok := m["conid"]
+	if !ok {
+		return
+	}
+	var num json.Number
+	if json.Unmarshal(rawConid, &num) != nil {
+		return
+	}
+	conid := int(jsonNumberToInt64(num))
+	updates := make([]WSUpdate, 0, len(m))
+	for k, v := range m {
+		if wsReservedField(k) {
+			continue
+		}
+		val, ok := wsScalarString(v)
+		if !ok {
+			continue
+		}
+		updates = append(updates, WSUpdate{ConID: conid, Field: k, Value: val})
+	}
+	if len(updates) == 0 {
+		return
+	}
+	for _, s := range c.snapshotSubs() {
+		if !s.sink.Wants(conid) {
+			continue
+		}
+		for _, u := range updates {
+			s.sink.Deliver(u)
+		}
+	}
+}
+
+func (c *WSConn) snapshotSubs() []*wsSub {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make([]*wsSub, 0, len(c.subs))
+	for s := range c.subs {
+		out = append(out, s)
+	}
+	return out
+}
+
+func (c *WSConn) failAll(err error) {
+	for _, s := range c.snapshotSubs() {
+		s.sink.Fail(err)
+	}
+}
+
+func (c *WSConn) notifyReconnect() {
+	for _, s := range c.snapshotSubs() {
+		s.sink.Fail(ErrWSReconnected)
+	}
+}
+
+func subscribeParams(s *wsSub) map[string]any {
+	params := map[string]any{"conids": s.conids}
+	if len(s.fields) > 0 {
+		params["fields"] = s.fields
+	}
+	return params
+}
+
+// wsReservedField reports whether a frame key is metadata rather than a field.
+func wsReservedField(k string) bool {
+	switch k {
+	case "conid", "_updated", "server_id", "6119", "6509", "topic", "method", "id":
+		return true
+	default:
+		return false
+	}
+}
+
+// wsScalarString renders a scalar JSON value (string, number, bool) as a string.
+// It returns false for objects, arrays, and null.
+func wsScalarString(v json.RawMessage) (string, bool) {
+	s := strings.TrimSpace(string(v))
+	if s == "" || s == "null" {
+		return "", false
+	}
+	switch s[0] {
+	case '{', '[':
+		return "", false
+	case '"':
+		var str string
+		if json.Unmarshal(v, &str) != nil {
+			return "", false
+		}
+		return str, true
+	case 't', 'f':
+		var b bool
+		if json.Unmarshal(v, &b) != nil {
+			return "", false
+		}
+		if b {
+			return "true", true
+		}
+		return "false", true
+	default:
+		var n json.Number
+		if json.Unmarshal(v, &n) != nil {
+			return "", false
+		}
+		return n.String(), true
+	}
+}
+
+// wsURLFromGateway converts an http(s) gateway URL into a ws(s) /v1/api/ws URL.
+func wsURLFromGateway(gatewayURL string) (string, error) {
+	u, err := url.Parse(strings.TrimSpace(gatewayURL))
+	if err != nil {
+		return "", err
+	}
+	switch u.Scheme {
+	case "https":
+		u.Scheme = "wss"
+	case "http":
+		u.Scheme = "ws"
+	case "wss", "ws":
+	default:
+		return "", errors.New("ibkr: ws: unsupported gateway scheme")
+	}
+	u.Path = strings.TrimSuffix(u.Path, "/") + "/v1/api/ws"
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String(), nil
+}
+
+// backoffDelay returns an exponential backoff with full jitter, capped at max.
+func backoffDelay(attempt int, base, max time.Duration) time.Duration {
+	if attempt < 0 {
+		attempt = 0
+	}
+	if attempt > 5 {
+		attempt = 5
+	}
+	d := base << attempt
+	if d > max {
+		d = max
+	}
+	return time.Duration(rand.Int63n(int64(d) + 1))
+}
+
+func jsonNumberToInt64(n json.Number) int64 {
+	if n == "" {
+		return 0
+	}
+	if i, err := n.Int64(); err == nil {
+		return i
+	}
+	if f, err := n.Float64(); err == nil {
+		return int64(f)
+	}
+	return 0
+}

@@ -26,13 +26,16 @@ func (e *ConfigError) Error() string {
 
 // Sentinel errors.
 var (
-	ErrNotAuthenticated = internal.ErrNotAuthenticated
-	ErrSessionExpired   = internal.ErrSessionExpired
-	ErrRateLimited      = internal.ErrRateLimited
-	ErrNotFound         = internal.ErrNotFound
-	ErrInvalidRequest   = internal.ErrInvalidRequest
-	ErrOrderRejected    = internal.ErrOrderRejected
-	ErrClosed           = internal.ErrClosed
+	ErrNotAuthenticated   = internal.ErrNotAuthenticated
+	ErrSessionExpired     = internal.ErrSessionExpired
+	ErrRateLimited        = internal.ErrRateLimited
+	ErrNotFound           = internal.ErrNotFound
+	ErrInvalidRequest     = internal.ErrInvalidRequest
+	ErrOrderRejected      = internal.ErrOrderRejected
+	ErrClosed             = internal.ErrClosed
+	ErrStreamingLimit     = internal.ErrStreamingLimit
+	ErrStreamDisconnected = internal.ErrWSDisconnected
+	ErrStreamReconnected  = internal.ErrWSReconnected
 )
 
 // SessionState is the lifecycle state of the gateway session.
