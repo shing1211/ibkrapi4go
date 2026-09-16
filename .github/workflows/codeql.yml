@@ -21,7 +21,7 @@ jobs:
         id: hasmod
         run: echo "present=$([ -f go.mod ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         if: steps.hasmod.outputs.present == 'yes'
         with:
           go-version: '1.26'
