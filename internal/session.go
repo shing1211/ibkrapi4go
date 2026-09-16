@@ -122,6 +122,7 @@ type Session struct {
 	requestTimeout  time.Duration
 	consecutiveFail atomic.Int64
 	tickleStop      atomic.Bool
+	tickleStopCh    chan struct{}
 	tickleDoneCh    chan struct{}
 	logger          *slog.Logger
 }
@@ -287,6 +288,7 @@ func (s *Session) startTickle() {
 	}
 	stopCh := make(chan struct{})
 	doneCh := make(chan struct{})
+	s.tickleStopCh = stopCh
 	s.tickleDoneCh = doneCh
 	s.consecutiveFail.Store(0)
 	s.mu.Unlock()
@@ -371,12 +373,17 @@ func (s *Session) stopTickle() {
 	if !s.tickleStop.CompareAndSwap(false, true) {
 		return
 	}
-	ch := s.tickleDoneCh
-	if ch == nil {
-		return
+	s.mu.Lock()
+	stopCh := s.tickleStopCh
+	doneCh := s.tickleDoneCh
+	s.mu.Unlock()
+
+	if stopCh != nil {
+		close(stopCh)
 	}
-	close(ch)
-	<-ch
+	if doneCh != nil {
+		<-doneCh
+	}
 }
 
 func (s *Session) Close(ctx context.Context) error {
