@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-17
+
 ### Fixed
 
 - **Codegen root cause for nil-`interface{}` panics.** `scripts/patch_spec.py`
@@ -145,5 +147,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/shing1211/ibkrapi4go/releases/tag/v0.1.0
