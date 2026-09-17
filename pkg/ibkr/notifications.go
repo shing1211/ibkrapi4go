@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/shing1211/ibkrapi4go/client"
 )
@@ -112,7 +113,7 @@ func (m *FYIManager) ModifyFYIDelivery(ctx context.Context, deliveryType, value 
 func (m *FYIManager) ModifyFYIEmails(ctx context.Context, enabled bool) error {
 	const op = "FYI.ModifyFYIEmails"
 	params := &client.ModifyFyiEmailsParams{
-		Enabled: enabled,
+		Enabled: strconv.FormatBool(enabled),
 	}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.ModifyFyiEmails(ctx, params)

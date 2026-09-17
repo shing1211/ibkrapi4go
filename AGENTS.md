@@ -34,10 +34,10 @@ make mock-gateway    # run the standalone mock IBKR gateway
    defects) or `scripts/patch_gen.py` (deterministic post-generation code
    fixups) and regenerate. Committed generated files must match
    `make codegen-verify`.
-   > **Note:** The 12 nil-interface{} guards originally applied by hand in
-   > `eb34ca1` (plus 4 more) now live in `scripts/patch_gen.py`, invoked by
-   > both `scripts/codegen.sh` and `scripts/validate_codegen.sh`, so a fresh
-   > generation reproduces them byte-for-byte.
+   > **Note:** The nil-`interface{}` panic class is fixed at the root in
+   > `scripts/patch_spec.py` (defect 4: inline query params with `type: null`
+   > are retyped to `type: string`). `scripts/patch_gen.py` is now a no-op kept
+   > for backward compatibility; a fresh generation needs no post-processing.
 2. **Never auto-retry order mutations.** See
    [ADR 0009](./docs/adr/0009-no-auto-retry-orders.md).
 3. **Money and quantities are `string`/`json.Number`, never `float64`.** See

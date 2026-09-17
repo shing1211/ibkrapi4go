@@ -5,7 +5,7 @@
 patch_spec.py — fix known defects in the IBKR OpenAPI spec before codegen.
 
 The published spec (v2.39.0) does not generate cleanly with oapi-codegen.
-This script applies three deterministic, idempotent fixes:
+This script applies four deterministic, idempotent fixes:
 
   1. Reconcile path parameters with the path template. Some operations declare
      a path parameter that is absent from the path (or whose name differs), and
@@ -18,6 +18,14 @@ This script applies three deterministic, idempotent fixes:
   3. Resolve Go type-name collisions after PascalCase normalization
      (e.g. ErrorResponse/errorResponse, User/user).
      Fix: assign x-go-name to later occurrences.
+
+  4. Replace bare `type: null` in inline query parameter schemas with
+     `type: string`.  OpenAPI allows a schema to omit `type`, but oapi-codegen
+     maps that to a bare `interface{}` in the generated params struct.  When
+     such a field is nil, `runtime.StyleParamWithOptions` panics.  These params
+     are plain strings in practice, so setting `type: string` makes
+     oapi-codegen emit a concrete `string` (or a named string enum), which is
+     nil-safe.  See docs/CODEGEN.md defect 4.
 
 Usage:
     python3 scripts/patch_spec.py specs/ibkr_spec.json > specs/ibkr_patched.json
@@ -108,6 +116,29 @@ def patch(spec: dict) -> collections.Counter:
         for i, key in enumerate(keys[1:], start=2):
             schemas[key]["x-go-name"] = f"{base}{i}"
             report["typename_renamed"] += 1
+
+    # 4. Replace bare `type: null` in inline query parameter schemas.
+    # These become `interface{}` in Go, which panics in StyleParamWithOptions when
+    # nil.  The correct type for these freeform string-keyed params is `string`
+    # (they are plain string values in practice).  Setting `type: string` makes
+    # oapi-codegen emit `string` in Go, which is nil-safe.
+    for path, item in spec.get("paths", {}).items():
+        for op in item.values():
+            if not isinstance(op, dict):
+                continue
+            for p in op.get("parameters", []):
+                if not isinstance(p, dict):
+                    continue
+                if p.get("in") != "query":
+                    continue
+                if "$ref" in p:
+                    continue
+                schema = p.get("schema")
+                if not isinstance(schema, dict):
+                    continue
+                if schema.get("type") is None:
+                    schema["type"] = "string"
+                    report["null_type_patched"] += 1
 
     return report
 

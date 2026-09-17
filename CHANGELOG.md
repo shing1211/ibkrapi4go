@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Codegen root cause for nil-`interface{}` panics.** `scripts/patch_spec.py`
+  now applies a fourth spec patch (defect 4): inline query parameters that omit
+  `type` (`type: null`) are retyped to `type: string`. `oapi-codegen` therefore
+  emits a concrete `string` (or named string enum) instead of a bare
+  `interface{}` for the affected 22 parameters, eliminating the nil-panic class
+  at the source. The generated `client/client.gen.go` no longer contains the
+  post-generation nil guards, and `scripts/patch_gen.py` is now a documented
+  no-op kept for backward compatibility.
+- Updated SDK callers for the retyped parameters: `TradeManager`
+  `GetTradingScheduleBySymbol` casts `assetClass` to the generated enum type,
+  and `FYIManager.ModifyFYIEmails` serializes the `enabled` flag with
+  `strconv.FormatBool`.
+
 ## [0.1.0] - 2026-09-17
 
 ### Added

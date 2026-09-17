@@ -670,7 +670,7 @@ func (m *TradeManager) GetInstrumentDefinition(ctx context.Context, conids strin
 func (m *TradeManager) GetTradingScheduleBySymbol(ctx context.Context, assetClass, symbol string) (*TradingSchedule, error) {
 	const op = "Trade.GetTradingScheduleBySymbol"
 	params := &client.GetTradingSchedule2Params{
-		AssetClass: assetClass,
+		AssetClass: client.GetTradingSchedule2ParamsAssetClass(assetClass),
 		Symbol:     symbol,
 	}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {

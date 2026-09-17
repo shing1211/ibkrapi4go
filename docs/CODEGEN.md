@@ -44,6 +44,7 @@ generalized fixes. Measured against v2.39.0:
 | 1 | Path parameter declared but absent from the path template (or name differs) | 27 endpoints | Reconcile: drop spurious, rename mismatched, add missing |
 | 2 | Duplicate `operationId` (`getTradingSchedule`) | 1 | Append a unique suffix to the later occurrence |
 | 3 | Go type-name collision after normalization (`ErrorResponse`/`errorResponse`, `User`/`user`) | 2 | Assign `x-go-name` to the later occurrence |
+| 4 | Inline query parameter schema omits `type` (OpenAPI `type: null`), e.g. `GetContractInfo`'s `sectype`, `GetConidsByExchange`'s `assetClass` | 22 params | Set `type: string` (the values are plain strings in practice) |
 
 Reconciliation detail (defect 1): **24** spurious params dropped, **3** renamed,
 **1** added. The notable case is `/gw/api/v1/balances/query`, whose POST
@@ -53,19 +54,14 @@ The patch script is idempotent and reports counts to stderr.
 
 ## Post-generation fixups
 
-Some defects cannot be expressed as spec patches. `scripts/patch_gen.py`
-rewrites the generated file deterministically and is run by both
-`scripts/codegen.sh` and `scripts/validate_codegen.sh`, so regeneration
-reproduces the committed output byte-for-byte.
+**None required.** Earlier revisions ran `scripts/patch_gen.py` to wrap
+unguarded `runtime.StyleParamWithOptions(...)` calls for query parameters typed
+as a bare `interface{}`. That class of panic is now fixed at the root by
+`patch_spec.py` defect 4: mapping `type: null` to `type: string` makes
+`oapi-codegen` emit a concrete `string` (or a named string enum), which is
+nil-safe and needs no guard.
 
-Current fixup:
-
-| # | Defect | Fix |
-|---|--------|-----|
-| 1 | `oapi-codegen` emits an unguarded `runtime.StyleParamWithOptions(...)` for query parameters typed as a bare `interface{}`. A nil such parameter panics the runtime. | Wrap the call in `if params.X != nil { ... }` for every bare-`interface{}` query parameter (16 fields across 7 operations). |
-
-The script is idempotent: a second run detects the existing guard and does
-nothing.
+`scripts/patch_gen.py` is retained as a no-op for backward compatibility.
 
 ## Measured result
 
@@ -75,12 +71,12 @@ With `oapi-codegen` **v2.8.0** and the patched spec:
 |--------|------:|
 | Generator exit code | `0` |
 | Output | `client/client.gen.go` |
-| Lines | 72,461 |
+| Lines | 72,532 |
 | Size | ~2.8 MB |
 | `go build` | ✅ clean |
 
 > This number replaces an earlier, unverified claim that "184/185 endpoints
-> generate cleanly". The true story is: **all 185** generate, but only after three
+> generate cleanly". The true story is: **all 185** generate, but only after four
 > classes of spec patches.
 
 ## Generated files

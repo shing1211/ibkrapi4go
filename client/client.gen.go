@@ -10172,6 +10172,24 @@ func (e SuppressOrderRepliesJSONBodyMessageIds) Valid() bool {
 	}
 }
 
+// Defines values for GetContractInfoParamsRight.
+const (
+	GetContractInfoParamsRightC GetContractInfoParamsRight = "C"
+	GetContractInfoParamsRightP GetContractInfoParamsRight = "P"
+)
+
+// Valid indicates whether the value is a known member of the GetContractInfoParamsRight enum.
+func (e GetContractInfoParamsRight) Valid() bool {
+	switch e {
+	case GetContractInfoParamsRightC:
+		return true
+	case GetContractInfoParamsRightP:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetContractSymbolsParamsSecType.
 const (
 	GetContractSymbolsParamsSecTypeBOND GetContractSymbolsParamsSecType = "BOND"
@@ -10328,6 +10346,45 @@ func (e GetUncachedPositionsParamsDirection) Valid() bool {
 	case GetUncachedPositionsParamsDirectionA:
 		return true
 	case GetUncachedPositionsParamsDirectionD:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GetTradingSchedule2ParamsAssetClass.
+const (
+	GetTradingSchedule2ParamsAssetClassBND GetTradingSchedule2ParamsAssetClass = "BND"
+	GetTradingSchedule2ParamsAssetClassCFD GetTradingSchedule2ParamsAssetClass = "CFD"
+	GetTradingSchedule2ParamsAssetClassFND GetTradingSchedule2ParamsAssetClass = "FND"
+	GetTradingSchedule2ParamsAssetClassFUT GetTradingSchedule2ParamsAssetClass = "FUT"
+	GetTradingSchedule2ParamsAssetClassICS GetTradingSchedule2ParamsAssetClass = "ICS"
+	GetTradingSchedule2ParamsAssetClassOPT GetTradingSchedule2ParamsAssetClass = "OPT"
+	GetTradingSchedule2ParamsAssetClassSTK GetTradingSchedule2ParamsAssetClass = "STK"
+	GetTradingSchedule2ParamsAssetClassSWP GetTradingSchedule2ParamsAssetClass = "SWP"
+	GetTradingSchedule2ParamsAssetClassWAR GetTradingSchedule2ParamsAssetClass = "WAR"
+)
+
+// Valid indicates whether the value is a known member of the GetTradingSchedule2ParamsAssetClass enum.
+func (e GetTradingSchedule2ParamsAssetClass) Valid() bool {
+	switch e {
+	case GetTradingSchedule2ParamsAssetClassBND:
+		return true
+	case GetTradingSchedule2ParamsAssetClassCFD:
+		return true
+	case GetTradingSchedule2ParamsAssetClassFND:
+		return true
+	case GetTradingSchedule2ParamsAssetClassFUT:
+		return true
+	case GetTradingSchedule2ParamsAssetClassICS:
+		return true
+	case GetTradingSchedule2ParamsAssetClassOPT:
+		return true
+	case GetTradingSchedule2ParamsAssetClassSTK:
+		return true
+	case GetTradingSchedule2ParamsAssetClassSWP:
+		return true
+	case GetTradingSchedule2ParamsAssetClassWAR:
 		return true
 	default:
 		return false
@@ -24695,15 +24752,15 @@ type GetForecastScheduleParams struct {
 
 // ModifyFyiEmailsParams defines parameters for ModifyFyiEmails.
 type ModifyFyiEmailsParams struct {
-	Enabled interface{} `form:"enabled" json:"enabled"`
+	Enabled string `form:"enabled" json:"enabled"`
 }
 
 // GetAllFyisParams defines parameters for GetAllFyis.
 type GetAllFyisParams struct {
-	Max     int64       `form:"max" json:"max"`
-	Include interface{} `form:"include,omitempty" json:"include,omitempty"`
-	Exclude interface{} `form:"exclude,omitempty" json:"exclude,omitempty"`
-	Id      interface{} `form:"id,omitempty" json:"id,omitempty"`
+	Max     int64   `form:"max" json:"max"`
+	Include *string `form:"include,omitempty" json:"include,omitempty"`
+	Exclude *string `form:"exclude,omitempty" json:"exclude,omitempty"`
+	Id      *string `form:"id,omitempty" json:"id,omitempty"`
 }
 
 // ModifyFyiNotificationJSONBody defines parameters for ModifyFyiNotification.
@@ -25030,15 +25087,18 @@ type GetBondFiltersParams struct {
 
 // GetContractInfoParams defines parameters for GetContractInfo.
 type GetContractInfoParams struct {
-	Conid    *string     `form:"conid,omitempty" json:"conid,omitempty"`
-	Sectype  interface{} `form:"sectype,omitempty" json:"sectype,omitempty"`
-	Month    interface{} `form:"month,omitempty" json:"month,omitempty"`
-	Exchange interface{} `form:"exchange,omitempty" json:"exchange,omitempty"`
-	Strike   interface{} `form:"strike,omitempty" json:"strike,omitempty"`
-	Right    interface{} `form:"right,omitempty" json:"right,omitempty"`
-	IssuerId *string     `form:"issuerId,omitempty" json:"issuerId,omitempty"`
-	Filters  interface{} `form:"filters,omitempty" json:"filters,omitempty"`
+	Conid    *string                     `form:"conid,omitempty" json:"conid,omitempty"`
+	Sectype  *string                     `form:"sectype,omitempty" json:"sectype,omitempty"`
+	Month    *string                     `form:"month,omitempty" json:"month,omitempty"`
+	Exchange *string                     `form:"exchange,omitempty" json:"exchange,omitempty"`
+	Strike   *string                     `form:"strike,omitempty" json:"strike,omitempty"`
+	Right    *GetContractInfoParamsRight `form:"right,omitempty" json:"right,omitempty"`
+	IssuerId *string                     `form:"issuerId,omitempty" json:"issuerId,omitempty"`
+	Filters  *string                     `form:"filters,omitempty" json:"filters,omitempty"`
 }
+
+// GetContractInfoParamsRight defines parameters for GetContractInfo.
+type GetContractInfoParamsRight string
 
 // GetContractSymbolsParams defines parameters for GetContractSymbols.
 type GetContractSymbolsParams struct {
@@ -25224,7 +25284,7 @@ type GetManySubaccountsParams struct {
 
 // GetAssetAllocationParams defines parameters for GetAssetAllocation.
 type GetAssetAllocationParams struct {
-	Model interface{} `form:"model,omitempty" json:"model,omitempty"`
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
 }
 
 // GetComboPositionsParams defines parameters for GetComboPositions.
@@ -25234,10 +25294,10 @@ type GetComboPositionsParams struct {
 
 // GetPaginatedPositionsParams defines parameters for GetPaginatedPositions.
 type GetPaginatedPositionsParams struct {
-	Model         interface{} `form:"model,omitempty" json:"model,omitempty"`
-	Sort          interface{} `form:"sort,omitempty" json:"sort,omitempty"`
-	Direction     interface{} `form:"direction,omitempty" json:"direction,omitempty"`
-	WaitForSecDef *bool       `form:"waitForSecDef,omitempty" json:"waitForSecDef,omitempty"`
+	Model         *string `form:"model,omitempty" json:"model,omitempty"`
+	Sort          *string `form:"sort,omitempty" json:"sort,omitempty"`
+	Direction     *string `form:"direction,omitempty" json:"direction,omitempty"`
+	WaitForSecDef *bool   `form:"waitForSecDef,omitempty" json:"waitForSecDef,omitempty"`
 }
 
 // GetUncachedPositionsParams defines parameters for GetUncachedPositions.
@@ -25251,8 +25311,8 @@ type GetUncachedPositionsParamsDirection string
 
 // GetConidsByExchangeParams defines parameters for GetConidsByExchange.
 type GetConidsByExchangeParams struct {
-	Exchange   string      `form:"exchange" json:"exchange"`
-	AssetClass interface{} `form:"assetClass,omitempty" json:"assetClass,omitempty"`
+	Exchange   string  `form:"exchange" json:"exchange"`
+	AssetClass *string `form:"assetClass,omitempty" json:"assetClass,omitempty"`
 }
 
 // GetFutureBySymbolParams defines parameters for GetFutureBySymbol.
@@ -25268,11 +25328,14 @@ type GetInstrumentDefinitionParams struct {
 
 // GetTradingSchedule2Params defines parameters for GetTradingSchedule2.
 type GetTradingSchedule2Params struct {
-	AssetClass     interface{} `form:"assetClass" json:"assetClass"`
-	Symbol         string      `form:"symbol" json:"symbol"`
-	Exchange       *string     `form:"exchange,omitempty" json:"exchange,omitempty"`
-	ExchangeFilter *string     `form:"exchangeFilter,omitempty" json:"exchangeFilter,omitempty"`
+	AssetClass     GetTradingSchedule2ParamsAssetClass `form:"assetClass" json:"assetClass"`
+	Symbol         string                              `form:"symbol" json:"symbol"`
+	Exchange       *string                             `form:"exchange,omitempty" json:"exchange,omitempty"`
+	ExchangeFilter *string                             `form:"exchangeFilter,omitempty" json:"exchangeFilter,omitempty"`
 }
+
+// GetTradingSchedule2ParamsAssetClass defines parameters for GetTradingSchedule2.
+type GetTradingSchedule2ParamsAssetClass string
 
 // GetStockBySymbolParams defines parameters for GetStockBySymbol.
 type GetStockBySymbolParams struct {
@@ -40296,14 +40359,11 @@ func NewModifyFyiEmailsRequest(server string, params *ModifyFyiEmailsParams) (*h
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.Enabled != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "enabled", params.Enabled, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
+		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "enabled", params.Enabled, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
 			}
 		}
 
@@ -40460,36 +40520,39 @@ func NewGetAllFyisRequest(server string, params *GetAllFyisParams) (*http.Reques
 		}
 
 		if params.Include != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "include", params.Include, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "include", *params.Include, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.Exclude != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "exclude", params.Exclude, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "exclude", *params.Exclude, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.Id != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "id", params.Id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "id", *params.Id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if encoded := queryValues.Encode(); encoded != "" {
@@ -42863,58 +42926,63 @@ func NewGetContractInfoRequest(server string, params *GetContractInfoParams) (*h
 		}
 
 		if params.Sectype != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "sectype", params.Sectype, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "sectype", *params.Sectype, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.Month != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "month", params.Month, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "month", *params.Month, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.Exchange != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "exchange", params.Exchange, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "exchange", *params.Exchange, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.Strike != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "strike", params.Strike, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "strike", *params.Strike, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.Right != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "right", params.Right, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "right", *params.Right, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.IssuerId != nil {
@@ -42930,14 +42998,15 @@ func NewGetContractInfoRequest(server string, params *GetContractInfoParams) (*h
 		}
 
 		if params.Filters != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "filters", params.Filters, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "filters", *params.Filters, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if encoded := queryValues.Encode(); encoded != "" {
@@ -43922,14 +43991,15 @@ func NewGetAssetAllocationRequest(server string, accountId string, params *GetAs
 		var rawQueryFragments []string
 
 		if params.Model != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "model", params.Model, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "model", *params.Model, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if encoded := queryValues.Encode(); encoded != "" {
@@ -44193,36 +44263,39 @@ func NewGetPaginatedPositionsRequest(server string, accountId string, pageId int
 		var rawQueryFragments []string
 
 		if params.Model != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "model", params.Model, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "model", *params.Model, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.Sort != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "sort", params.Sort, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "sort", *params.Sort, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.Direction != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "direction", params.Direction, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "direction", *params.Direction, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if params.WaitForSecDef != nil {
@@ -44449,14 +44522,15 @@ func NewGetConidsByExchangeRequest(server string, params *GetConidsByExchangePar
 		}
 
 		if params.AssetClass != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "assetClass", params.AssetClass, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "assetClass", *params.AssetClass, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
 				return nil, err
 			} else {
 				for _, qp := range strings.Split(queryFrag, "&") {
 					rawQueryFragments = append(rawQueryFragments, qp)
 				}
 			}
+
 		}
 
 		if encoded := queryValues.Encode(); encoded != "" {
@@ -44613,14 +44687,11 @@ func NewGetTradingSchedule2Request(server string, params *GetTradingSchedule2Par
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if params.AssetClass != nil {
-			// FIX: guard nil interface{} to avoid panic
-			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "assetClass", params.AssetClass, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-				return nil, err
-			} else {
-				for _, qp := range strings.Split(queryFrag, "&") {
-					rawQueryFragments = append(rawQueryFragments, qp)
-				}
+		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "assetClass", params.AssetClass, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+			return nil, err
+		} else {
+			for _, qp := range strings.Split(queryFrag, "&") {
+				rawQueryFragments = append(rawQueryFragments, qp)
 			}
 		}
 

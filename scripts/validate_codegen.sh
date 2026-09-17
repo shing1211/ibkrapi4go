@@ -45,9 +45,6 @@ oapi-codegen -config "$TMP_DIR/oapi-codegen.yaml" "$PATCHED_FILE"
     cat "$TMP_DIR/raw.gen.go"
 } > "$TMP_DIR/client.gen.go"
 
-# Apply the same deterministic post-generation fixups as scripts/codegen.sh.
-python3 "$SCRIPT_DIR/patch_gen.py" "$TMP_DIR/client.gen.go"
-
 if ! diff -q "$TMP_DIR/client.gen.go" "$COMMITTED" >/dev/null 2>&1; then
     echo "error: generated code differs from committed client/client.gen.go" >&2
     diff -u "$COMMITTED" "$TMP_DIR/client.gen.go" | head -80 >&2 || true
