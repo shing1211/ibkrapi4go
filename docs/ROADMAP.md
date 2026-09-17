@@ -250,9 +250,7 @@ Exit criteria:
 
 ## Backlog (not scheduled)
 
-GitHub Discussions (requires manual enablement: `Settings → Features → Discussions`).
-Coverage badge, pre-commit hooks, FUNDING.yml shipped in the 2026-09-17 ci-quality-gates run.
-Docs website shipped in the 2026-09-17 docs-website run (GitHub Pages from `main:/docs`).
+All items shipped. See individual run reports in [docs/runs/](./runs/index.md).
 
 ---
 

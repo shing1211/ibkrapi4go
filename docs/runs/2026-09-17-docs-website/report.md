@@ -5,7 +5,7 @@
 - **Base commit:** `919b576`
 - **Release commit:** `83f040f` — `feat(docs): add GitHub Pages landing page and docs badge`
 - **Remotes:** `origin/main` + `gitee/main` both at `83f040f`
-- **Status:** complete (manual GitHub Pages enablement remains for repo owner)
+- **Status:** complete (GitHub Pages and Discussions both live as of 2026-09-17)
 
 ## Shipped
 
@@ -22,7 +22,7 @@
 - All 6 README translations have the Docs badge
 
 ## Manual step required (out of scope — repo owner only)
-Enable GitHub Pages: `Settings → Pages → Source: main branch, /docs folder`
+~~Enable GitHub Pages~~ — done. Both GitHub Pages and Discussions are live.
 
 ## Verification (final)
 `make check` · `make test-race` · `make docs-check` · `make license-check` — all pass.

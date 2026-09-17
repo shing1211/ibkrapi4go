@@ -7,7 +7,7 @@ from ROADMAP.md.
 
 ## What was shipped
 
-All ROADMAP.md items are now complete or manually gated:
+All ROADMAP.md items are now shipped:
 
 | Item | Status | Notes |
 |------|--------|-------|
@@ -20,15 +20,8 @@ All ROADMAP.md items are now complete or manually gated:
 | Coverage badge | ✅ shipped | commit `09e9dfe` |
 | Pre-commit CI gate | ✅ shipped | commit `09e9dfe` |
 | FUNDING.yml | ✅ shipped | commit `09e9dfe` |
-| GitHub Discussions | ⏸ manual | Repo owner must enable in Settings |
-| Docs website | ⏸ manual | Repo owner must enable GitHub Pages (Settings → Pages) |
-
-## Manual actions remaining
-
-Both require the repo owner (`shing1211`) to complete manually:
-
-1. **GitHub Discussions:** `Settings → General → Features → Discussions → Enable`
-2. **GitHub Pages:** `Settings → Pages → Source: main branch, /docs folder`
+| GitHub Pages docs | ✅ shipped + live | `https://shing1211.github.io/ibkrapi4go/` |
+| GitHub Discussions | ✅ shipped + live | 6 categories active |
 
 ## Next phase suggestions
 
@@ -47,5 +40,4 @@ When you're ready to continue, possible directions:
 4. **Contributing guide** — `CONTRIBUTING.md`, PR template, code review checklist.
 
 ## Current state
-The SDK is functionally complete and well-tested. The remaining items are
-infrastructure (GitHub Pages, Discussions) that require manual GitHub UI actions.
+The SDK is feature-complete and fully operational. All infrastructure items shipped.
