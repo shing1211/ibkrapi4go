@@ -87,6 +87,7 @@ keep only failures and warnings.
 
 - [CONFIG.md](./CONFIG.md) — options, environment variables, precedence.
 - [ERRORS.md](./ERRORS.md) — error envelope and retry semantics.
+- [OBSERVABILITY.md](./OBSERVABILITY.md) — dependency-free metrics.
 - [RATE-LIMITING.md](./RATE-LIMITING.md) — `ibkr.ratelimit` waits.
 - [SESSIONS.md](./SESSIONS.md) — `ibkr.session` lifecycle.
 - [STREAMING.md](./STREAMING.md) — `ibkr.ws` lifecycle.

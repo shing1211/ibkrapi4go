@@ -256,6 +256,7 @@ func (c *Client) ensureWS(ctx context.Context) (*internal.WSConn, error) {
 	conn, err := internal.DialWS(ctx, c.cfg.gatewayURL, internal.WSOptions{
 		HTTPClient:    c.httpClient,
 		Logger:        c.cfg.logger,
+		Metrics:       c.cfg.metrics,
 		Reconnect:     true,
 		ReconnectBase: lim.ReconnectBase,
 		ReconnectMax:  lim.ReconnectMax,

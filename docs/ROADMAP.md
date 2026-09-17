@@ -105,6 +105,10 @@ Deliverables:
   (OTel-bridgeable). Unified subsystem prefixes (`ibkr.http`, `ibkr.session`,
   `ibkr.ws`, `ibkr.oauth`, `ibkr.ratelimit`, `ibkr.breaker`, `ibkr.error`,
   `ibkr.config`) with a never-nil logger contract ([LOGGING.md](./LOGGING.md)).
+- [x] Dependency-free, OTel-bridgeable metrics layer
+  ([OBSERVABILITY.md](./OBSERVABILITY.md), [ADR 0013](./adr/0013-metrics.md)):
+  HTTP request/error/latency, order outcomes, rate-limit waits, circuit-breaker
+  state, WebSocket connects/reconnects, and OAuth token counters/histograms/gauges.
 - [x] Testable `Example*` functions; godoc on exported symbols.
 
 Exit criteria:

@@ -159,6 +159,54 @@ func TestWS_ReconnectResubscribes(t *testing.T) {
 	}
 }
 
+func TestWS_MetricsConnectsAndReconnects(t *testing.T) {
+	m := NewInMemoryMetrics()
+	srv := newWSServer(t, wsServerConfig{dropFirstConn: true})
+	cli, err := NewClient(
+		WithGatewayURL(srv.URL),
+		WithMetrics(m),
+		WithStreamingLimits(StreamingLimits{ReconnectBase: 10 * time.Millisecond, ReconnectMax: 50 * time.Millisecond}),
+	)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	defer cli.Close()
+
+	sub, err := cli.MarketData().Subscribe(context.Background(), []ConID{265598}, nil)
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	defer sub.Close()
+
+	// Wait until the drop has been observed and the reconnect fully completed
+	// (an update arrives on the new connection), then check the counters.
+	gotUpdate := false
+	gotReconnect := false
+	deadline := time.After(5 * time.Second)
+	for !gotUpdate || !gotReconnect {
+		select {
+		case u := <-sub.Updates():
+			if u.Value == "150.25" {
+				gotUpdate = true
+			}
+		case err := <-sub.Errors():
+			if errors.Is(err, ErrStreamReconnected) {
+				gotReconnect = true
+			}
+		case <-deadline:
+			t.Fatalf("timeout: gotUpdate=%v gotReconnect=%v", gotUpdate, gotReconnect)
+		}
+	}
+
+	snap := m.Snapshot()
+	if got := snap.Counters[SeriesKey(MetricWSConnects)]; got != 1 {
+		t.Errorf("ws connects = %d; want 1", got)
+	}
+	if got := snap.Counters[SeriesKey(MetricWSReconnects)]; got < 1 {
+		t.Errorf("ws reconnects = %d; want >= 1", got)
+	}
+}
+
 func TestWS_BufferOverflowDropsOldest(t *testing.T) {
 	const burst = 64
 	srv := newWSServer(t, wsServerConfig{onSubscribe: func(c *websocket.Conn, conids []int, fields []string) {

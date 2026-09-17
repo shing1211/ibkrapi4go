@@ -4,10 +4,18 @@
 package internal
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
+)
+
+// Circuit breaker states, as reported by MetricBreakerState.
+const (
+	breakerClosed   = 0
+	breakerHalfOpen = 1
+	breakerOpen     = 2
 )
 
 // Breaker is an optional circuit breaker. After threshold consecutive failures
@@ -18,6 +26,8 @@ type Breaker struct {
 
 	// Logger receives state-transition diagnostics. Never nil after NewBreaker.
 	Logger *slog.Logger
+
+	metrics Metrics
 
 	mu          sync.Mutex
 	consecutive int
@@ -36,6 +46,26 @@ func NewBreaker(threshold int, cooldown time.Duration) *Breaker {
 	return &Breaker{threshold: threshold, cooldown: cooldown, Logger: NopLogger()}
 }
 
+// SetMetrics installs a metrics sink and records the current state. It is safe
+// to call after construction and before concurrent use.
+func (b *Breaker) SetMetrics(m Metrics) {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	b.metrics = m
+	state, label := breakerClosed, "closed"
+	if !b.openUntil.IsZero() {
+		if b.probing {
+			state, label = breakerHalfOpen, "half-open"
+		} else {
+			state, label = breakerOpen, "open"
+		}
+	}
+	b.mu.Unlock()
+	setGauge(context.Background(), m, MetricBreakerState, float64(state), Attr{Key: "state", Value: label})
+}
+
 // Allow reports whether a request may proceed. It returns ErrCircuitOpen while
 // the breaker is open.
 func (b *Breaker) Allow() error {
@@ -43,19 +73,24 @@ func (b *Breaker) Allow() error {
 		return nil
 	}
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	if b.openUntil.IsZero() {
+		b.mu.Unlock()
 		return nil
 	}
 	if time.Now().Before(b.openUntil) {
+		b.mu.Unlock()
 		return ErrCircuitOpen
 	}
 	// Cooldown elapsed: allow one probe.
 	if b.probing {
+		b.mu.Unlock()
 		return ErrCircuitOpen
 	}
 	b.probing = true
+	metrics := b.metrics
+	b.mu.Unlock()
 	b.Logger.Info("ibkr.breaker half-open")
+	setGauge(context.Background(), metrics, MetricBreakerState, breakerHalfOpen, Attr{Key: "state", Value: "half-open"})
 	return nil
 }
 
@@ -65,20 +100,27 @@ func (b *Breaker) Record(err error, status int) {
 		return
 	}
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	if breakerFailure(err, status) {
 		wasProbing := b.probing
 		b.probing = false
 		b.consecutive++
+		transitioned := false
 		if b.consecutive >= b.threshold {
 			if b.openUntil.IsZero() || wasProbing {
-				b.Logger.Warn("ibkr.breaker open",
-					"consecutive", b.consecutive,
-					"threshold", b.threshold,
-					"cooldown", b.cooldown.String(),
-				)
+				transitioned = true
 			}
 			b.openUntil = time.Now().Add(b.cooldown)
+		}
+		consecutive, threshold, cooldown := b.consecutive, b.threshold, b.cooldown
+		metrics := b.metrics
+		b.mu.Unlock()
+		if transitioned {
+			b.Logger.Warn("ibkr.breaker open",
+				"consecutive", consecutive,
+				"threshold", threshold,
+				"cooldown", cooldown.String(),
+			)
+			setGauge(context.Background(), metrics, MetricBreakerState, breakerOpen, Attr{Key: "state", Value: "open"})
 		}
 		return
 	}
@@ -86,8 +128,11 @@ func (b *Breaker) Record(err error, status int) {
 	b.consecutive = 0
 	b.openUntil = time.Time{}
 	b.probing = false
+	metrics := b.metrics
+	b.mu.Unlock()
 	if wasOpen {
 		b.Logger.Info("ibkr.breaker closed")
+		setGauge(context.Background(), metrics, MetricBreakerState, breakerClosed, Attr{Key: "state", Value: "closed"})
 	}
 }
 

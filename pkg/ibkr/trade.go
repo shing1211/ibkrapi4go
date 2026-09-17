@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/shing1211/ibkrapi4go/client"
+	"github.com/shing1211/ibkrapi4go/internal"
 )
 
 // OrderRequest describes an order to submit or modify. Monetary and quantity
@@ -154,7 +155,15 @@ func (m *TradeManager) Submit(ctx context.Context, account AccountID, req OrderR
 	if err != nil {
 		return nil, err
 	}
-	return m.parseSubmitResult(resp, op)
+	result, err := m.parseSubmitResult(resp, op)
+	if err != nil {
+		if errors.Is(err, ErrOrderRejected) {
+			m.countOrder(ctx, internal.MetricOrdersRejected, 1)
+		}
+		return nil, err
+	}
+	m.countOrder(ctx, internal.MetricOrdersSubmitted, 1)
+	return result, nil
 }
 
 // Confirm answers a pending order reply. Pass confirmed=true to proceed; false
@@ -169,7 +178,17 @@ func (m *TradeManager) Confirm(ctx context.Context, replyID string, confirmed bo
 	if err != nil {
 		return nil, err
 	}
-	return m.parseSubmitResult(resp, op)
+	result, err := m.parseSubmitResult(resp, op)
+	if err != nil {
+		if errors.Is(err, ErrOrderRejected) {
+			m.countOrder(ctx, internal.MetricOrdersRejected, 1)
+		}
+		return nil, err
+	}
+	if result.Accepted() {
+		m.countOrder(ctx, internal.MetricOrdersConfirmed, 1)
+	}
+	return result, nil
 }
 
 // WhatIf previews the margin impact of an order without submitting it.
@@ -218,7 +237,15 @@ func (m *TradeManager) Modify(ctx context.Context, account AccountID, orderID st
 	if err != nil {
 		return nil, err
 	}
-	return m.parseSubmitResult(resp, op)
+	result, err := m.parseSubmitResult(resp, op)
+	if err != nil {
+		if errors.Is(err, ErrOrderRejected) {
+			m.countOrder(ctx, internal.MetricOrdersRejected, 1)
+		}
+		return nil, err
+	}
+	m.countOrder(ctx, internal.MetricOrdersModified, 1)
+	return result, nil
 }
 
 // Cancel cancels an open order. It is never retried.
@@ -228,10 +255,21 @@ func (m *TradeManager) Cancel(ctx context.Context, account AccountID, orderID st
 		return m.client.generated.CancelOpenOrder(ctx, string(account), orderID, nil)
 	})
 	if err != nil {
+		if errors.Is(err, ErrOrderRejected) {
+			m.countOrder(ctx, internal.MetricOrdersRejected, 1)
+		}
 		return err
 	}
 	resp.Body.Close()
+	m.countOrder(ctx, internal.MetricOrdersCancelled, 1)
 	return nil
+}
+
+// countOrder increments an order metric when metrics are configured.
+func (m *TradeManager) countOrder(ctx context.Context, name string, delta int64) {
+	if sink := m.client.metricsSink(); sink != nil {
+		sink.Counter(ctx, name, delta)
+	}
 }
 
 // OpenOrders returns the orders currently working or completed in this session.

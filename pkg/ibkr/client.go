@@ -60,6 +60,7 @@ type config struct {
 	globalRateLimit    float64
 	retry              internal.RetryPolicy
 	telemetry          internal.Telemetry
+	metrics            internal.Metrics
 	breaker            *internal.Breaker
 	restGatewayURL     string
 	oauth2             internal.OAuthConfig
@@ -187,6 +188,62 @@ func WithTelemetry(t Telemetry) Option {
 	}
 }
 
+// Metrics receives metric observations. Implementations must be safe for
+// concurrent use and must not block. It is shaped to bridge directly onto
+// OpenTelemetry instruments but carries no OTel dependency (ADR 0013).
+type Metrics = internal.Metrics
+
+// Attr is a low-cardinality metric attribute. Keys and values must never carry
+// PII, account ids, conids, order ids, or tokens.
+type Attr = internal.Attr
+
+// InMemoryMetrics is a dependency-free, thread-safe Metrics implementation
+// suitable for tests and simple applications.
+type InMemoryMetrics = internal.InMemoryMetrics
+
+// MetricsSnapshot is a point-in-time copy of an InMemoryMetrics.
+type MetricsSnapshot = internal.MetricsSnapshot
+
+// NewInMemoryMetrics returns an empty in-memory metrics sink suitable for tests
+// and simple applications.
+func NewInMemoryMetrics() *InMemoryMetrics { return internal.NewInMemoryMetrics() }
+
+// NopMetrics returns a metrics sink that discards every observation.
+func NopMetrics() Metrics { return internal.NopMetrics() }
+
+// Metric names emitted by the SDK. All attributes are low-cardinality.
+const (
+	MetricHTTPRequests        = internal.MetricHTTPRequests
+	MetricHTTPErrors          = internal.MetricHTTPErrors
+	MetricHTTPDuration        = internal.MetricHTTPDuration
+	MetricOrdersSubmitted     = internal.MetricOrdersSubmitted
+	MetricOrdersConfirmed     = internal.MetricOrdersConfirmed
+	MetricOrdersModified      = internal.MetricOrdersModified
+	MetricOrdersCancelled     = internal.MetricOrdersCancelled
+	MetricOrdersRejected      = internal.MetricOrdersRejected
+	MetricRateLimitWaits      = internal.MetricRateLimitWaits
+	MetricRateLimitWaitMS     = internal.MetricRateLimitWaitMS
+	MetricBreakerState        = internal.MetricBreakerState
+	MetricWSConnects          = internal.MetricWSConnects
+	MetricWSReconnects        = internal.MetricWSReconnects
+	MetricOAuthTokenRefreshes = internal.MetricOAuthTokenRefreshes
+	MetricOAuthTokenFailures  = internal.MetricOAuthTokenFailures
+)
+
+// SeriesKey builds the stable, attribute-ordered snapshot key used by
+// InMemoryMetrics.
+func SeriesKey(name string, attrs ...Attr) string { return internal.SeriesKey(name, attrs...) }
+
+// WithMetrics installs a metrics sink. Every SDK subsystem (HTTP transport,
+// circuit breaker, rate limiter, OAuth token source, WebSocket) reports to it.
+// A nil sink disables metrics.
+func WithMetrics(m Metrics) Option {
+	return func(c *config) error {
+		c.metrics = m
+		return nil
+	}
+}
+
 // WithCircuitBreaker enables a circuit breaker that opens after threshold
 // consecutive transport failures, short-circuits for cooldown, then allows a
 // half-open probe. threshold<=0 disables it (the default).
@@ -302,8 +359,12 @@ func NewClient(opts ...Option) (*Client, error) {
 	if cfg.oauth2.Logger == nil {
 		cfg.oauth2.Logger = cfg.logger
 	}
+	cfg.oauth2.Metrics = cfg.metrics
 	if cfg.tokenSource == nil && (cfg.oauth2.ClientID != "" || cfg.oauth2.RefreshToken != "") {
 		cfg.tokenSource = internal.NewTokenSource(cfg.oauth2)
+	}
+	if cfg.tokenSource != nil {
+		cfg.tokenSource.SetMetrics(cfg.metrics)
 	}
 	cfg.streamingLimits = cfg.streamingLimits.withDefaults()
 
@@ -317,9 +378,11 @@ func NewClient(opts ...Option) (*Client, error) {
 	if cfg.rateLimit > 0 || cfg.globalRateLimit > 0 {
 		limiter = internal.NewLimiter(cfg.rateLimit, cfg.rateBurst, cfg.globalRateLimit)
 		limiter.Logger = cfg.logger
+		limiter.SetMetrics(cfg.metrics)
 	}
 	if cfg.breaker != nil {
 		cfg.breaker.Logger = cfg.logger
+		cfg.breaker.SetMetrics(cfg.metrics)
 	}
 
 	var session *internal.Session
@@ -335,6 +398,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		},
 		Logger:    cfg.logger,
 		Telemetry: cfg.telemetry,
+		Metrics:   cfg.metrics,
 		Breaker:   cfg.breaker,
 		Retry:     cfg.retry,
 		Limiter:   limiter,
@@ -460,6 +524,10 @@ func (c *Client) checkOpen() error {
 	}
 	return nil
 }
+
+// metricsSink returns the configured metrics sink, or nil when metrics are
+// disabled.
+func (c *Client) metricsSink() internal.Metrics { return c.cfg.metrics }
 
 // errorFrom maps a non-2xx response to *Error, tagging it with op.
 func (c *Client) errorFrom(resp *http.Response, op string) *Error {

@@ -18,6 +18,7 @@ a new ADR, not editing the old one.
 | [0010](./0010-naming.md) | Project naming and module path | Accepted |
 | [0011](./0011-oauth2-surface.md) | OAuth2 / IB REST surface | Accepted |
 | [0012](./0012-test-dependencies.md) | Test-only dependencies (`goleak`) | Accepted |
+| [0013](./0013-metrics.md) | Dependency-free metrics interface | Accepted |
 
 Template:
 

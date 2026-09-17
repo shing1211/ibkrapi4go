@@ -24,6 +24,7 @@ type TransportConfig struct {
 	Token      func() (string, bool)
 	Logger     *slog.Logger
 	Telemetry  Telemetry
+	Metrics    Metrics
 	Breaker    *Breaker
 	Retry      RetryPolicy
 	Limiter    *Limiter
@@ -48,6 +49,9 @@ func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundT
 	}
 	if cfg.Logger != nil || cfg.Telemetry != nil {
 		ms = append(ms, Logging(cfg.Logger, cfg.Telemetry))
+	}
+	if cfg.Metrics != nil {
+		ms = append(ms, Instrument(cfg.Metrics))
 	}
 	if cfg.Breaker != nil {
 		ms = append(ms, CircuitBreaker(cfg.Breaker))

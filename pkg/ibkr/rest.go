@@ -39,6 +39,7 @@ func (c *Client) REST() (*RESTSurface, error) {
 	if c.cfg.rateLimit > 0 || c.cfg.globalRateLimit > 0 {
 		limiter = internal.NewLimiter(c.cfg.rateLimit, c.cfg.rateBurst, c.cfg.globalRateLimit)
 		limiter.Logger = c.cfg.logger
+		limiter.SetMetrics(c.cfg.metrics)
 	}
 	transport := internal.NewClientTransport(base, internal.TransportConfig{
 		RequestID:  newRequestID,
@@ -53,6 +54,7 @@ func (c *Client) REST() (*RESTSurface, error) {
 		},
 		Logger:    c.cfg.logger,
 		Telemetry: c.cfg.telemetry,
+		Metrics:   c.cfg.metrics,
 		Breaker:   c.cfg.breaker,
 		Retry:     c.cfg.retry,
 		Limiter:   limiter,

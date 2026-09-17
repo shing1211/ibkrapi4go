@@ -39,6 +39,8 @@ type OAuthConfig struct {
 	EarlyRefresh time.Duration
 	// Logger receives token refresh diagnostics. Nil disables logging.
 	Logger *slog.Logger
+	// Metrics receives token refresh counters. Nil disables metrics.
+	Metrics Metrics
 
 	// JWTKey is the RSA private key for JWT-bearer token exchange.
 	// When set, the token source uses client_assertion grant (private_key_jwt)
@@ -54,10 +56,11 @@ type OAuthConfig struct {
 // TokenSource acquires and refreshes OAuth2 access tokens. It is safe for
 // concurrent use and serializes refreshes (single-flight).
 type TokenSource struct {
-	cfg    OAuthConfig
-	client *http.Client
-	jwtKey *rsa.PrivateKey
-	logger *slog.Logger
+	cfg     OAuthConfig
+	client  *http.Client
+	jwtKey  *rsa.PrivateKey
+	logger  *slog.Logger
+	metrics Metrics
 
 	mu           sync.Mutex
 	token        string
@@ -93,7 +96,16 @@ func NewTokenSource(cfg OAuthConfig) *TokenSource {
 			jwtKey = nil
 		}
 	}
-	return &TokenSource{cfg: cfg, client: hc, jwtKey: jwtKey, logger: cfg.Logger, refreshToken: cfg.RefreshToken}
+	return &TokenSource{cfg: cfg, client: hc, jwtKey: jwtKey, logger: cfg.Logger, metrics: cfg.Metrics, refreshToken: cfg.RefreshToken}
+}
+
+// SetMetrics installs a metrics sink. It is safe to call after construction and
+// before concurrent use.
+func (ts *TokenSource) SetMetrics(m Metrics) {
+	if ts == nil {
+		return
+	}
+	ts.metrics = m
 }
 
 // RefreshToken returns the current refresh token (which may have rotated).
@@ -143,8 +155,10 @@ func (ts *TokenSource) Token(ctx context.Context) (string, error) {
 	ts.mu.Unlock()
 	if err != nil {
 		ts.logger.Warn("ibkr.oauth token refresh failed", "err", redact(err.Error()))
+		incrCounter(ctx, ts.metrics, MetricOAuthTokenFailures, 1)
 	} else {
 		ts.logger.Debug("ibkr.oauth token refreshed", "expires_at", expiry.Format(time.RFC3339))
+		incrCounter(ctx, ts.metrics, MetricOAuthTokenRefreshes, 1)
 	}
 	return tok, err
 }

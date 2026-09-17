@@ -33,6 +33,8 @@ type Limiter struct {
 
 	// Logger receives wait diagnostics. Never nil after NewLimiter.
 	Logger *slog.Logger
+
+	metrics Metrics
 }
 
 // NewLimiter builds a limiter. rps<=0 disables per-endpoint limiting;
@@ -64,15 +66,30 @@ func NewLimiter(rps float64, burst int, globalRPS float64) *Limiter {
 	return l
 }
 
+// SetMetrics installs a metrics sink. It is safe to call after construction and
+// before concurrent use.
+func (l *Limiter) SetMetrics(m Metrics) {
+	if l == nil {
+		return
+	}
+	l.metrics = m
+}
+
 // Wait blocks until the request is permitted by the applicable buckets or the
 // context is done. Waits longer than 100ms are logged at Debug.
 func (l *Limiter) Wait(ctx context.Context, method, path string) error {
 	if l == nil {
 		return nil
 	}
+	needsWait := l.needsWait(method, path)
 	start := time.Now()
 	err := l.wait(ctx, method, path)
-	if waited := time.Since(start); waited > 100*time.Millisecond {
+	waited := time.Since(start)
+	if needsWait {
+		incrCounter(ctx, l.metrics, MetricRateLimitWaits, 1)
+		observeHistogram(ctx, l.metrics, MetricRateLimitWaitMS, float64(waited.Nanoseconds())/1e6)
+	}
+	if waited > 100*time.Millisecond {
 		l.Logger.Debug("ibkr.ratelimit wait",
 			"method", method,
 			"path", normalizePath(path),
@@ -80,6 +97,22 @@ func (l *Limiter) Wait(ctx context.Context, method, path string) error {
 		)
 	}
 	return err
+}
+
+// needsWait reports whether wait will have to sleep because at least one
+// applicable bucket is empty. It is advisory (another goroutine may consume a
+// token first) and only used to decide whether to record a wait metric.
+func (l *Limiter) needsWait(method, path string) bool {
+	if l.global != nil && l.global.Tokens() < 1 {
+		return true
+	}
+	if isAuthPath(path) {
+		return l.auth.Tokens() < 1
+	}
+	if l.rps <= 0 {
+		return false
+	}
+	return l.endpoint(method, path).Tokens() < 1
 }
 
 func (l *Limiter) wait(ctx context.Context, method, path string) error {

@@ -49,6 +49,7 @@ type WSSink interface {
 type WSOptions struct {
 	HTTPClient    *http.Client
 	Logger        *slog.Logger
+	Metrics       Metrics
 	PingInterval  time.Duration
 	PongTimeout   time.Duration
 	Reconnect     bool
@@ -120,6 +121,7 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 	if err := c.dial(ctx); err != nil {
 		return nil, err
 	}
+	incrCounter(ctx, c.opts.Metrics, MetricWSConnects, 1)
 	c.wg.Add(3)
 	go func() { defer c.wg.Done(); c.readLoop() }()
 	go func() { defer c.wg.Done(); c.writeLoop() }()
@@ -250,6 +252,7 @@ func (c *WSConn) reconnect(attempt *int) error {
 		if c.closed.Load() {
 			return ErrClosed
 		}
+		incrCounter(context.Background(), c.opts.Metrics, MetricWSReconnects, 1)
 		if err := c.dial(context.Background()); err != nil {
 			c.opts.Logger.Warn("ibkr.ws reconnect failed", "err", err)
 			*attempt++
