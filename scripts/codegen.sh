@@ -58,4 +58,7 @@ mkdir -p "$(dirname "$OUTPUT")"
     cat "$tmp_gen"
 } > "$OUTPUT"
 
+# 4. Apply deterministic post-generation fixups (nil interface{} guards).
+python3 "$SCRIPT_DIR/patch_gen.py" "$OUTPUT"
+
 echo "wrote: client/client.gen.go ($(wc -l < "$OUTPUT") lines)"

@@ -29,6 +29,8 @@ The spec is **not committed**; it is fetched at build time and cached under
 1. **Fetch** the spec to `specs/ibkr_spec.json` (or use the provided path).
 2. **Patch** it via `scripts/patch_spec.py` → `specs/ibkr_patched.json`.
 3. **Generate** with `oapi-codegen` using `oapi-codegen.yaml` → `client/client.gen.go`.
+4. **Fix up** the generated file via `scripts/patch_gen.py` (deterministic
+   post-generation patches; see below).
 
 The build-time toolchain is pinned in `go.mod` (tools) / `Makefile` (`make tools`).
 
@@ -49,6 +51,22 @@ Reconciliation detail (defect 1): **24** spurious params dropped, **3** renamed,
 
 The patch script is idempotent and reports counts to stderr.
 
+## Post-generation fixups
+
+Some defects cannot be expressed as spec patches. `scripts/patch_gen.py`
+rewrites the generated file deterministically and is run by both
+`scripts/codegen.sh` and `scripts/validate_codegen.sh`, so regeneration
+reproduces the committed output byte-for-byte.
+
+Current fixup:
+
+| # | Defect | Fix |
+|---|--------|-----|
+| 1 | `oapi-codegen` emits an unguarded `runtime.StyleParamWithOptions(...)` for query parameters typed as a bare `interface{}`. A nil such parameter panics the runtime. | Wrap the call in `if params.X != nil { ... }` for every bare-`interface{}` query parameter (16 fields across 7 operations). |
+
+The script is idempotent: a second run detects the existing guard and does
+nothing.
+
 ## Measured result
 
 With `oapi-codegen` **v2.8.0** and the patched spec:
@@ -57,7 +75,7 @@ With `oapi-codegen` **v2.8.0** and the patched spec:
 |--------|------:|
 | Generator exit code | `0` |
 | Output | `client/client.gen.go` |
-| Lines | 72,411 |
+| Lines | 72,461 |
 | Size | ~2.8 MB |
 | `go build` | ✅ clean |
 
@@ -90,7 +108,8 @@ output-options:
 
 Rules (enforced by `AGENTS.md` and CI):
 
-1. Never hand-edit `client/*.gen.go`. Change `patch_spec.py` and regenerate.
+1. Never hand-edit `client/*.gen.go`. Change `patch_spec.py` (spec defects) or
+   `patch_gen.py` (post-generation fixups) and regenerate.
 2. `make codegen-verify` regenerates and fails if the committed output differs.
 
 ## Drift verification

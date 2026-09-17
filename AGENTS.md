@@ -30,12 +30,14 @@ make mock-gateway    # run the standalone mock IBKR gateway
 
 ## Hard rules
 
-1. **Do not edit `client/*.gen.go`.** Change `scripts/patch_spec.py` and
-   regenerate. Committed generated files must match `make codegen-verify`.
-   > **Note:** A one-time toolchain-gap exception was granted in
-   > `eb34ca1` to patch 12 nil-interface{} guards directly in gen.go; this
-   > does not alter the standing rule. Future fixes must go through the
-   > spec-patch/codegen pipeline.
+1. **Do not edit `client/*.gen.go`.** Change `scripts/patch_spec.py` (spec
+   defects) or `scripts/patch_gen.py` (deterministic post-generation code
+   fixups) and regenerate. Committed generated files must match
+   `make codegen-verify`.
+   > **Note:** The 12 nil-interface{} guards originally applied by hand in
+   > `eb34ca1` (plus 4 more) now live in `scripts/patch_gen.py`, invoked by
+   > both `scripts/codegen.sh` and `scripts/validate_codegen.sh`, so a fresh
+   > generation reproduces them byte-for-byte.
 2. **Never auto-retry order mutations.** See
    [ADR 0009](./docs/adr/0009-no-auto-retry-orders.md).
 3. **Money and quantities are `string`/`json.Number`, never `float64`.** See
