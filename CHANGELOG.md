@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-17
+
 ### Added
 
 - **Complete public SDK (`pkg/ibkr`)** covering both API surfaces — **185/185
@@ -90,6 +92,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   codegen against IBKR Web API v2.39.0 succeeds after three classes of spec
   patches; the generated client is ~72k LOC and compiles cleanly. See
   [docs/CODEGEN.md](./docs/CODEGEN.md).
+- `scripts/patch_gen.py`: deterministic post-generation fixups. It wraps
+  unguarded `runtime.StyleParamWithOptions` calls for bare-`interface{}` query
+  parameters in a nil guard, and is invoked by `scripts/codegen.sh` and
+  `scripts/validate_codegen.sh` so a fresh generation matches the committed
+  output byte-for-byte.
 - Full Apache License 2.0 text, `NOTICE`, `THIRD_PARTY_NOTICES.md`,
   `DISCLAIMER.md`.
 - Code of Conduct, Security Policy, Support and Governance documents.
@@ -109,15 +116,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected the documented dependency set: `testify` is not used;
   `go.uber.org/goleak` is the test-only dependency.
 - Fixed nil-interface{} panics in the generated client (`client/client.gen.go`):
-  12 nil guards added to request builders for `GetContractInfo` (6 fields),
-  `GetConidsByExchange` (1 field), `GetAllFyis` (3 fields),
+  16 nil guards added to request builders for `GetContractInfo` (6 fields),
+  `GetAllFyis` (3 fields), `GetAssetAllocation` (1 field),
+  `GetPaginatedPositions` (3 fields), `GetConidsByExchange` (1 field),
   `GetTradingSchedule2` (1 field), and `ModifyFyiEmails` (1 field).
   Root cause: spec-patch produces `interface{}` with `omitempty` for optional
-  non-pointer params; codegen template did not guard against nil.
+  non-pointer params; the codegen template did not guard against nil. The guards
+  now live in `scripts/patch_gen.py`, so `make codegen` reproduces them and
+  `make codegen-verify` passes.
 - Fixed 8 REST wrapper/decode mismatches in `pkg/ibkr/rest.go` and
   `pkg/ibkr/rest_utilities.go`: `TaxDocuments.Generate`,
   `TaxVouchers.CreateRequests`, `ActiveCountries`, `AvailableYears`,
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/commits/main
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/shing1211/ibkrapi4go/releases/tag/v0.1.0
