@@ -9,8 +9,8 @@ Plan: `plan.md` · Status legend: `todo` · `doing` · `done`
 | T2 | Fuzz tests: unmarshal all public types, 185 op response decode | backend | done | T1 | 47 fuzz functions; no panics; corpus generated |
 | T3 | CI: benchmark comparison gate in `ci.yml` | devops | done | T1 | ci.yml updated; benchmark.baseline + bench_compare.go created |
 | T4 | Docs sync | docs | done | T2 | CHANGELOG.md, OBSERVABILITY.md, ROADMAP.md updated; `make docs-check` pass |
-| T5 | Release: commit + push both remotes | release | doing | T4 | both remotes at new commit |
-| T6 | Next-phase planning | planner | todo | T5 | `next-phase.md` |
+| T5 | Release: commit + push both remotes | release | done | T4 | both remotes at c97a027; pushed to origin + gitee |
+| T6 | Next-phase planning | planner | doing | T5 | `next-phase.md` |
 | T7 | Close-out report + index | orchestrator | todo | T6 | `report.md` + index line |
 
 ## Notes
