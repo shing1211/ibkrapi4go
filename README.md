@@ -6,12 +6,12 @@
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-pre--alpha-red?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
 
-> **⚠️ Unofficial & pre-alpha.** ibkrapi4go is a community Go SDK for the
+> **⚠️ Unofficial & alpha.** ibkrapi4go is a community Go SDK for the
 > Interactive Brokers Web API. It is **not affiliated with Interactive Brokers**.
 > All 185 API operations are implemented (115 CPAPI + 70 IB REST).
 > See [DISCLAIMER.md](./DISCLAIMER.md) and [docs/ROADMAP.md](./docs/ROADMAP.md).
@@ -43,11 +43,16 @@
 | Item | State |
 |------|-------|
 | Planning & documentation | ✅ Complete |
-| OpenAPI codegen validation | ✅ Verified (see [docs/CODEGEN.md](./docs/CODEGEN.md)) |
+| OpenAPI codegen validation | ✅ Verified ([docs/CODEGEN.md](./docs/CODEGEN.md)) |
 | `client/` generated code | ✅ Committed (generated) |
 | `pkg/ibkr` public API | ✅ Implemented (185/185 operations) |
 | `internal/` implementation | ✅ Implemented |
 | Tests / examples | ✅ Implemented |
+| Mock gateway (185/185 ops) | ✅ Shipped ([docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)) |
+| Benchmarks + fuzz tests | ✅ Shipped ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
+| Metrics + logging | ✅ Shipped ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
+| CI quality gates (coverage, pre-commit) | ✅ Shipped |
+| Docs website + Discussions | ✅ Shipped ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
 
 This repository contains the **generated OpenAPI client**, documentation, and
 codegen tooling. All 185 API operations are implemented across both CPAPI and IB REST
@@ -136,6 +141,8 @@ ibkrapi4go/
 ├── client/          # Generated OpenAPI types + HTTP client (DO NOT EDIT)
 ├── pkg/ibkr/        # Public SDK surface
 ├── internal/        # Private implementation
+├── cmd/             # Standalone binaries (ibkr-mock-gateway)
+├── examples/        # Runnable examples (mock)
 ├── docs/            # Design, reference, ADRs
 ├── scripts/         # Codegen + validation
 └── specs/           # Cached OpenAPI spec (gitignored)
@@ -151,6 +158,8 @@ ibkrapi4go/
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | In-repo mock gateway for tests, examples, and a standalone binary |
 | [docs/AUTH.md](./docs/AUTH.md) | The two auth models |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | Spec fetch, patch, generate, verify |
+| [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | Metrics, benchmarks, fuzz tests, logging |
+| [docs/TESTING.md](./docs/TESTING.md) | Testing strategy and tiers |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | Terminology |
 | [docs/adr/](./docs/adr/) | Architecture Decision Records |
 | [docs/design/](./docs/design/) | Per-module design contracts |

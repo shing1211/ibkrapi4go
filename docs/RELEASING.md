@@ -10,11 +10,12 @@
 
 ## Pre-1.0 policy
 
-The project is pre-alpha. Nothing is tagged yet. Until `0.1.0`:
+The project is **alpha**. All 185 operations are implemented and the core feature
+set is complete (see [ROADMAP.md](./ROADMAP.md)). Until `v1.0.0`:
 
-- The public packages exist and implement 185/185 operations, but the API is not
-  yet frozen (see [ROADMAP.md](./ROADMAP.md)).
-- Tags may be deleted or rewritten before `0.1.0`.
+- The public API may still change in a **MINOR** release; breaking changes are
+  called out explicitly in the changelog.
+- Tags may be deleted or rewritten before `v1.0.0`.
 
 ## Release checklist
 

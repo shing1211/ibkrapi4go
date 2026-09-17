@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-pre--alpha-red?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
@@ -51,6 +51,11 @@
 | `pkg/ibkr` 공개 API | ✅ 구현됨 (185/185 오퍼레이션) |
 | `internal/` 구현 | ✅ 구현됨 |
 | 테스트 / 예제 | ✅ 구현됨 |
+| 모의 게이트웨이 (185/185 연산) | ✅ 구현됨 ([docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)) |
+| 벤치마크 + 퍼즈 테스트 | ✅ 구현됨 ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
+| 메트릭 + 로깅 | ✅ 구현됨 ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
+| CI 품질 게이트 (커버리지, 프리컴밋) | ✅ 구현됨 |
+| 문서 웹사이트 + Discussions | ✅ 구현됨 ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
 
 현재 저장소에는 **생성된 OpenAPI 클라이언트**, 문서, 코드 생성 도구가 포함되어
 있습니다. 모든 185개 API 오퍼레이션이 구현되었습니다. 계획은
@@ -139,6 +144,8 @@ ibkrapi4go/
 ├── client/          # 생성된 OpenAPI 타입 + HTTP 클라이언트 (편집 금지)
 ├── pkg/ibkr/        # 공개 SDK 표면
 ├── internal/        # 내부 구현
+├── cmd/             # 독립 실행 파일 (ibkr-mock-gateway)
+├── examples/        # 실행 가능한 예제 (mock)
 ├── docs/            # 설계, 레퍼런스, ADR
 ├── scripts/         # 코드 생성 + 검증
 └── specs/           # 캐시된 OpenAPI 명세 (gitignore)
@@ -154,6 +161,8 @@ ibkrapi4go/
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | 저장소 내 모의 게이트웨이 (테스트, 예제, 독립 실행 파일) |
 | [docs/AUTH.md](./docs/AUTH.md) | 두 가지 인증 모델 |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 명세 가져오기, 패치, 생성, 검증 |
+| [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | 메트릭, 벤치마크, 퍼즈 테스트, 로깅 |
+| [docs/TESTING.md](./docs/TESTING.md) | 테스트 전략 및 티어 |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 용어집 |
 | [docs/adr/](./docs/adr/) | 아키텍처 결정 기록 |
 | [docs/design/](./docs/design/) | 모듈별 설계 계약 |

@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-pre--alpha-red?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
@@ -51,6 +51,11 @@
 | API pública `pkg/ibkr` | ✅ Implementada (185/185 operaciones) |
 | Implementación `internal/` | ✅ Implementada |
 | Pruebas / ejemplos | ✅ Implementados |
+| Mock gateway (185/185 operaciones) | ✅ Implementado ([docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)) |
+| Benchmarks + fuzz tests | ✅ Implementados ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
+| Métricas + logging | ✅ Implementadas ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
+| CI quality gates (cobertura, pre-commit) | ✅ Implementados |
+| Sitio web de documentación + Discussions | ✅ Implementado ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
 
 Este repositorio contiene el **cliente OpenAPI generado**, documentación y
 herramientas de generación de código. Las 185 operaciones de la API están
@@ -141,6 +146,8 @@ ibkrapi4go/
 ├── client/          # Tipos OpenAPI generados + cliente HTTP (NO EDITAR)
 ├── pkg/ibkr/        # Superficie pública del SDK
 ├── internal/        # Implementación privada
+├── cmd/             # Binarios independientes (ibkr-mock-gateway)
+├── examples/        # Ejemplos ejecutables (mock)
 ├── docs/            # Diseño, referencia, ADR
 ├── scripts/         # Generación de código + validación
 └── specs/           # Especificación OpenAPI en caché (gitignore)
@@ -156,6 +163,8 @@ ibkrapi4go/
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | Pasarela simulada del repositorio (pruebas, ejemplos, binario independiente) |
 | [docs/AUTH.md](./docs/AUTH.md) | Los dos modelos de autenticación |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | Obtención, parcheo, generación y verificación |
+| [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | Métricas, benchmarks, fuzz tests, logging |
+| [docs/TESTING.md](./docs/TESTING.md) | Estrategia de pruebas y niveles |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | Terminología |
 | [docs/adr/](./docs/adr/) | Registros de decisiones de arquitectura |
 | [docs/design/](./docs/design/) | Contratos de diseño por módulo |

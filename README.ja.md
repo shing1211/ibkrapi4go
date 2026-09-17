@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-pre--alpha-red?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
@@ -51,6 +51,11 @@
 | `pkg/ibkr` 公開 API | ✅ 実装済み（185/185 オペレーション） |
 | `internal/` 実装 | ✅ 実装済み |
 | テスト / サンプル | ✅ 実装済み |
+| モックゲートウェイ（185/185 オペレーション） | ✅ 実装済み（[docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)） |
+| ベンチマーク + ファズテスト | ✅ 実装済み（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
+| メトリクス + ロギング | ✅ 実装済み（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
+| CI 品質ゲート（カバレッジ、プレコミット） | ✅ 実装済み |
+| ドキュメントサイト + Discussions | ✅ 実装済み（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
 
 現在のリポジトリには**生成済みの OpenAPI クライアント**、ドキュメント、
 コード生成ツールが含まれます。すべての 185 の API オペレーションが実装済みです。
@@ -139,6 +144,8 @@ ibkrapi4go/
 ├── client/          # 生成された OpenAPI 型 + HTTP クライアント（編集禁止）
 ├── pkg/ibkr/        # 公開 SDK サーフェス
 ├── internal/        # 内部実装
+├── cmd/             # 単体バイナリ（ibkr-mock-gateway）
+├── examples/        # 実行可能なサンプル（mock）
 ├── docs/            # 設計、リファレンス、ADR
 ├── scripts/         # コード生成 + 検証
 └── specs/           # キャッシュされた OpenAPI 仕様（gitignore 済み）
@@ -154,6 +161,8 @@ ibkrapi4go/
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | リポジトリ内モックゲートウェイ（テスト、サンプル、単体バイナリ） |
 | [docs/AUTH.md](./docs/AUTH.md) | 2 つの認証モデル |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 仕様の取得、パッチ、生成、検証 |
+| [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | メトリクス、ベンチマーク、ファズテスト、ロギング |
+| [docs/TESTING.md](./docs/TESTING.md) | テスト戦略とティア |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 用語集 |
 | [docs/adr/](./docs/adr/) | アーキテクチャ決定記録 |
 | [docs/design/](./docs/design/) | モジュールごとの設計契約 |

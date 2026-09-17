@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-pre--alpha-red?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
@@ -50,6 +50,11 @@
 | `pkg/ibkr` 公開 API | ✅ 已實作（185/185 操作） |
 | `internal/` 實作 | ✅ 已實作 |
 | 測試 / 範例 | ✅ 已實作 |
+| 模擬閘道（185/185 操作） | ✅ 已實作（[docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)） |
+| 基準測試 + 模糊測試 | ✅ 已實作（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
+| 指標 + 日誌 | ✅ 已實作（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
+| CI 品質閘道（覆蓋率、預提交） | ✅ 已實作 |
+| 文件網站 + Discussions | ✅ 已實作（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
 
 目前倉庫包含**產生的 OpenAPI 用戶端**、文件與程式碼產生工具。全部 185 個 API
 操作已實作。建置計畫見 [docs/ROADMAP.md](./docs/ROADMAP.md)。
@@ -133,9 +138,11 @@ Client Portal Gateway 透過**互動式**方式認證（瀏覽器登入 + 2FA）
 
 ```
 ibkrapi4go/
-├── client/          # 產生的 OpenAPI 型別 + HTTP 用戶端（請勿編輯）
+├── client/          # 產生的 OpenAPI 類型 + HTTP 用戶端（請勿編輯）
 ├── pkg/ibkr/        # 公開 SDK 表面
 ├── internal/        # 私有實作
+├── cmd/             # 獨立二進位（ibkr-mock-gateway）
+├── examples/        # 可運行範例（mock）
 ├── docs/            # 設計、參考、ADR
 ├── scripts/         # 程式碼產生 + 驗證
 └── specs/           # 快取的 OpenAPI 規範（已 gitignore）
@@ -151,6 +158,8 @@ ibkrapi4go/
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | 倉庫內模擬閘道（測試、範例、獨立二進位） |
 | [docs/AUTH.md](./docs/AUTH.md) | 兩種認證模型 |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 規範取得、修補、產生、驗證 |
+| [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | 指標、基準測試、模糊測試、日誌 |
+| [docs/TESTING.md](./docs/TESTING.md) | 測試策略與分層 |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 術語表 |
 | [docs/adr/](./docs/adr/) | 架構決策記錄 |
 | [docs/design/](./docs/design/) | 各模組設計契約 |

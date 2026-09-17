@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-pre--alpha-red?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
@@ -50,6 +50,11 @@
 | `pkg/ibkr` 公开 API | ✅ 已实现（185/185 操作） |
 | `internal/` 实现 | ✅ 已实现 |
 | 测试 / 示例 | ✅ 已实现 |
+| 模拟网关（185/185 操作） | ✅ 已实现（[docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)） |
+| 基准测试 + 模糊测试 | ✅ 已实现（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
+| 指标 + 日志 | ✅ 已实现（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
+| CI 质量门禁（覆盖率、预提交） | ✅ 已实现 |
+| 文档网站 + Discussions | ✅ 已实现（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
 
 当前仓库包含**生成的 OpenAPI 客户端**、文档与代码生成工具。全部 185 个 API
 操作已实现。构建计划见 [docs/ROADMAP.md](./docs/ROADMAP.md)。
@@ -136,6 +141,8 @@ ibkrapi4go/
 ├── client/          # 生成的 OpenAPI 类型 + HTTP 客户端（请勿编辑）
 ├── pkg/ibkr/        # 公开 SDK 表面
 ├── internal/        # 私有实现
+├── cmd/             # 独立二进制（ibkr-mock-gateway）
+├── examples/        # 可运行示例（mock）
 ├── docs/            # 设计、参考、ADR
 ├── scripts/         # 代码生成 + 校验
 └── specs/           # 缓存的 OpenAPI 规范（已 gitignore）
@@ -151,6 +158,8 @@ ibkrapi4go/
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | 仓库内模拟网关（测试、示例、独立二进制） |
 | [docs/AUTH.md](./docs/AUTH.md) | 两种认证模型 |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 规范获取、修补、生成、验证 |
+| [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | 指标、基准测试、模糊测试、日志 |
+| [docs/TESTING.md](./docs/TESTING.md) | 测试策略与分层 |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 术语表 |
 | [docs/adr/](./docs/adr/) | 架构决策记录 |
 | [docs/design/](./docs/design/) | 各模块设计契约 |
