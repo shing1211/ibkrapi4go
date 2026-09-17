@@ -52,6 +52,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [ADR 0014](./docs/adr/0014-mock-gateway.md). Manager and WebSocket tests now
   run against it. The mock is a development/testing aid, not a conformance
   suite.
+- **Benchmarks (`pkg/ibkr/benchmark_test.go`, `internal/benchmark_test.go`):**
+  `testing.B` benchmarks for JSON encode/decode across 20 public response types,
+  HTTP round-trip latency (mock gateway), WebSocket subscribe/unsubscribe, and
+  session init. Baseline stored in `benchmark.baseline`. See
+  [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md).
+- **Fuzz tests (`pkg/ibkr/fuzz_test.go`, `internal/fuzz_test.go`):** 47 `testing.F`
+  fuzz functions covering all major public JSON decode types, plus response decode
+  fuzzing across all 185 op response shapes using mock gateway fixtures. No
+  panics found; corpus generated in `testdata/fuzz/`.
+- **Benchmark CI gate (`.github/workflows/ci.yml`):** `benchmarks` job compares
+  current results against `benchmark.baseline`; fails on >10% regression in
+  ns/op. `scripts/bench_compare.go` is pure stdlib.
 - Initialized the Go module (`go.mod`) and committed the generated OpenAPI
   client (`client/client.gen.go`, package `client`), with a deterministic SPDX
   header and a reproducible `make codegen-verify` check.

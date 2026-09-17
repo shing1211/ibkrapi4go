@@ -75,3 +75,32 @@ jobs:
 
       - name: Verify generated code is reproducible
         run: make codegen-verify
+
+  benchmarks:
+    name: benchmark regression gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+          check-latest: true
+
+      - name: Check for Go module
+        id: hasmod
+        run: echo "present=$([ -f go.mod ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+
+      - name: Run benchmarks
+        if: steps.hasmod.outputs.present == 'yes'
+        run: |
+          go test -run=^$ -bench=. -benchmem -benchtime=1s -json ./pkg/ibkr/... ./internal/... > $RUNNER_TEMP/bench_current.json
+
+      - name: Compare against baseline
+        if: steps.hasmod.outputs.present == 'yes'
+        run: |
+          go run scripts/bench_compare.go $RUNNER_TEMP/bench_current.json benchmark.baseline
+
+      - name: Skip notice
+        if: steps.hasmod.outputs.present == 'no'
+        run: echo "No go.mod yet; public SDK not implemented. Skipping benchmarks."

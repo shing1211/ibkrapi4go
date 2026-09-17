@@ -250,8 +250,8 @@ Exit criteria:
 
 ## Backlog (not scheduled)
 
-Benchmarks, fuzz tests, coverage badge, pre-commit hooks, GitHub Discussions,
-`FUNDING.yml`, docs website.
+Coverage badge, pre-commit hooks, GitHub Discussions, `FUNDING.yml`, docs website.
+Benchmarks and fuzz tests shipped in the 2026-09-17 benchmarks+fuzz run.
 
 ---
 

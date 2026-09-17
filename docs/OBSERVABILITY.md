@@ -163,6 +163,57 @@ func (m *OTelMetrics) Gauge(ctx context.Context, name string, value float64, att
 //   cli, _ := ibkr.NewClient(ibkr.WithGatewayURL(url), ibkr.WithMetrics(NewOTelMetrics(metricMeter)))
 ```
 
+## Benchmarks
+
+`pkg/ibkr/benchmark_test.go` and `internal/benchmark_test.go` contain `testing.B`
+benchmarks for all hot paths:
+
+| Benchmark | What it measures |
+|-----------|-----------------|
+| `Benchmark*JSON/Marshal` | `json.Marshal` throughput per public type (ns/op, MB/s) |
+| `Benchmark*JSON/Unmarshal` | `json.Unmarshal` throughput per public type (ns/op, MB/s) |
+| `BenchmarkHTTP*` | Full round-trip HTTP latency against mock gateway (p50/p95/p99) |
+| `BenchmarkWSSubscribeUnsubscribe` | WS subscribe + receive one tick + unsubscribe (ms/op) |
+| `BenchmarkSessionInit` | Cold session init: `NewClient` + `Session.Initialize` (ms/op) |
+| `BenchmarkWSMessageDecode/Dispatch` | WS message decode and dispatch (ns/op) |
+
+Baseline numbers are stored in `benchmark.baseline` (root). The CI benchmark job
+(`.github/workflows/ci.yml`) compares every run against this baseline and fails
+on >10% regression.
+
+```bash
+# Run benchmarks
+go test -bench=. ./pkg/ibkr/... ./internal/... -benchtime=5s -benchmem
+
+# Capture a new baseline
+go test -bench=. -json ./pkg/ibkr/... ./internal/... > benchmark.baseline
+
+# Compare against baseline
+go run scripts/bench_compare.go /tmp/bench_current.json benchmark.baseline
+```
+
+## Fuzz Tests
+
+`pkg/ibkr/fuzz_test.go` and `internal/fuzz_test.go` contain `testing.F` fuzz tests:
+
+- **JSON decode fuzzing** (47 `Fuzz*` functions): every major public `pkg/ibkr` type
+  is fuzzed with valid JSON mutations (byte-flip, deletion, truncation, swap,
+  duplication) and invalid inputs to verify clean errors — never panics.
+- **Response decode fuzzing** (all 185 op fixtures): each mock gateway fixture is
+  mutated across all 185 operations and decoded through the real SDK response path.
+- **Money/quantity round-trip** (`FuzzMoneyQuantityRoundTrip`): ADR 0008 compliance —
+  decimal strings survive encode/decode without precision loss.
+
+```bash
+# Run fuzz tests (30s seed)
+go test ./pkg/ibkr/... ./internal/... -fuzz=. -fuzztime=30s
+
+# Verify no panics (fast)
+go test ./pkg/ibkr/... ./internal/... -test.run=Fuzz -test.fuzztime=10s
+```
+
+Corpus entries are written to `pkg/ibkr/testdata/fuzz/` and `internal/testdata/fuzz/`.
+
 ## Rules
 
 - Implementations must be safe for concurrent use and must **not block**.
@@ -177,3 +228,5 @@ func (m *OTelMetrics) Gauge(ctx context.Context, name string, value float64, att
 - [RATE-LIMITING.md](./RATE-LIMITING.md) — `ibkr.ratelimit` waits.
 - [STREAMING.md](./STREAMING.md) — `ibkr.ws` lifecycle.
 - [ADR 0013](./adr/0013-metrics.md) — the metrics decision record.
+- `benchmark.baseline` — baseline benchmark results for CI regression detection.
+- `scripts/bench_compare.go` — pure-stdlib benchmark comparison tool.
