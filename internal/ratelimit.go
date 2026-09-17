@@ -5,6 +5,7 @@ package internal
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,6 +30,9 @@ type Limiter struct {
 
 	rps   rate.Limit
 	burst int
+
+	// Logger receives wait diagnostics. Never nil after NewLimiter.
+	Logger *slog.Logger
 }
 
 // NewLimiter builds a limiter. rps<=0 disables per-endpoint limiting;
@@ -37,6 +41,7 @@ func NewLimiter(rps float64, burst int, globalRPS float64) *Limiter {
 	l := &Limiter{
 		buckets:  map[string]*rate.Limiter{},
 		lastUsed: map[string]time.Time{},
+		Logger:   NopLogger(),
 	}
 	if rps > 0 {
 		if burst <= 0 {
@@ -60,11 +65,24 @@ func NewLimiter(rps float64, burst int, globalRPS float64) *Limiter {
 }
 
 // Wait blocks until the request is permitted by the applicable buckets or the
-// context is done.
+// context is done. Waits longer than 100ms are logged at Debug.
 func (l *Limiter) Wait(ctx context.Context, method, path string) error {
 	if l == nil {
 		return nil
 	}
+	start := time.Now()
+	err := l.wait(ctx, method, path)
+	if waited := time.Since(start); waited > 100*time.Millisecond {
+		l.Logger.Debug("ibkr.ratelimit wait",
+			"method", method,
+			"path", normalizePath(path),
+			"duration", waited.String(),
+		)
+	}
+	return err
+}
+
+func (l *Limiter) wait(ctx context.Context, method, path string) error {
 	if l.global != nil {
 		if err := l.global.Wait(ctx); err != nil {
 			return err

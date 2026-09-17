@@ -102,7 +102,9 @@ Deliverables:
 - [x] Rate limiting per endpoint + global ([RATE-LIMITING.md](./RATE-LIMITING.md)).
 - [x] Retry budgets for idempotent methods; circuit breaker.
 - [x] `slog` logging with redaction; dependency-free telemetry hooks
-  (OTel-bridgeable).
+  (OTel-bridgeable). Unified subsystem prefixes (`ibkr.http`, `ibkr.session`,
+  `ibkr.ws`, `ibkr.oauth`, `ibkr.ratelimit`, `ibkr.breaker`, `ibkr.error`,
+  `ibkr.config`) with a never-nil logger contract ([LOGGING.md](./LOGGING.md)).
 - [x] Testable `Example*` functions; godoc on exported symbols.
 
 Exit criteria:

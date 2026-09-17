@@ -145,6 +145,9 @@ func NewSession(cfg SessionConfig) *Session {
 	if cfg.HTTPClient == nil {
 		cfg.HTTPClient = http.DefaultClient
 	}
+	if cfg.Logger == nil {
+		cfg.Logger = NopLogger()
+	}
 	return &Session{
 		api:            newHTTPAPI(cfg.HTTPClient, cfg.ServerURL),
 		tickleInterval: cfg.TickleInterval,
@@ -189,9 +192,7 @@ func (s *Session) Initialize(ctx context.Context) error {
 
 	s.setState(StateInitializing)
 
-	if s.logger != nil {
-		s.logger.Info("session: initializing")
-	}
+	s.logger.Info("ibkr.session initializing")
 
 	{
 		ctx, cancel := context.WithTimeout(ctx, s.requestTimeout)
@@ -222,16 +223,12 @@ func (s *Session) Initialize(ctx context.Context) error {
 			case <-ticker.C:
 				bs, err := s.fetchAuthStatus(pollCtx)
 				if err != nil {
-					if s.logger != nil {
-						s.logger.Warn("session: auth_status error", "err", err)
-					}
+					s.logger.Warn("ibkr.session auth_status error", "err", err)
 					continue
 				}
 				if bs.Established && bs.Authenticated {
 					s.setState(StateAuthenticated)
-					if s.logger != nil {
-						s.logger.Info("session: authenticated", "connected", bs.Connected)
-					}
+					s.logger.Info("ibkr.session authenticated", "connected", bs.Connected)
 					s.startTickle()
 					return nil
 				}
@@ -357,15 +354,11 @@ func (s *Session) tickleRound() {
 
 func (s *Session) onTickleFailure() {
 	fails := s.consecutiveFail.Add(1)
-	if s.logger != nil {
-		s.logger.Warn("session: tickle failure", "consecutive", fails)
-	}
+	s.logger.Warn("ibkr.session tickle failure", "consecutive", fails)
 
 	if fails >= 2 {
 		s.setState(StateExpired)
-		if s.logger != nil {
-			s.logger.Warn("session: expired after tickle failures")
-		}
+		s.logger.Warn("ibkr.session expired after tickle failures")
 	}
 }
 
@@ -396,9 +389,7 @@ func (s *Session) Close(ctx context.Context) error {
 
 	s.stopTickle()
 
-	if s.logger != nil {
-		s.logger.Info("session: closing")
-	}
+	s.logger.Info("ibkr.session closing")
 	_ = s.api.logout(ctx)
 	return nil
 }

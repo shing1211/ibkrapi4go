@@ -4,6 +4,7 @@
 package internal
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -12,6 +13,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -181,6 +183,39 @@ func TestTokenSource_Error(t *testing.T) {
 	ts := NewTokenSource(OAuthConfig{TokenURL: srv.URL, ClientID: "bad"})
 	if _, err := ts.Token(context.Background()); err == nil {
 		t.Fatal("Token = nil; want error")
+	}
+}
+
+func TestTokenSource_LogsRefresh(t *testing.T) {
+	srv := newTokenServer(t, []string{"tok-1"}, []string{""})
+	var buf bytes.Buffer
+	ts := NewTokenSource(OAuthConfig{
+		TokenURL: srv.URL,
+		ClientID: "cid",
+		Logger:   slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})),
+	})
+
+	if _, err := ts.Token(context.Background()); err != nil {
+		t.Fatalf("Token: %v", err)
+	}
+	if out := buf.String(); !strings.Contains(out, "ibkr.oauth token refreshed") {
+		t.Errorf("log output = %q; want refresh success", out)
+	}
+
+	failSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(w, `{"error":"invalid_client"}`)
+	}))
+	defer failSrv.Close()
+
+	bad := NewTokenSource(OAuthConfig{
+		TokenURL: failSrv.URL,
+		ClientID: "cid",
+		Logger:   slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})),
+	})
+	_, _ = bad.Token(context.Background())
+	if out := buf.String(); !strings.Contains(out, "ibkr.oauth token refresh failed") {
+		t.Errorf("log output = %q; want refresh failure", out)
 	}
 }
 

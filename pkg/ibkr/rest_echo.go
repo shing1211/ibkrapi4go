@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 
 	"github.com/shing1211/ibkrapi4go/client"
+	"github.com/shing1211/ibkrapi4go/internal"
 )
 
 // RESTEcho exposes echo utility operations for testing security policies.
@@ -34,14 +35,20 @@ func (m *RESTEcho) ListEchoHttps(ctx context.Context) (*EchoHttpsResponse, error
 	}
 	resp, err := m.surface.generated.ListEchoHttpsWithResponse(ctx)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw echoResponseRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -75,14 +82,20 @@ func (m *RESTEcho) CreateEchoSignedJwt(ctx context.Context, req SignedJwtEchoReq
 		bytes.NewReader(jsonMarshal(payload)),
 	)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw echoResponseRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublicSignedJwt(), nil
 }

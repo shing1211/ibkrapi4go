@@ -4,7 +4,10 @@
 package internal
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 )
@@ -46,6 +49,25 @@ func TestLimiter_BurstThenThrottle(t *testing.T) {
 	}
 	if elapsed := time.Since(start); elapsed < 50*time.Millisecond {
 		t.Errorf("post-burst wait took %v; want >= 50ms (throttled)", elapsed)
+	}
+}
+
+func TestLimiter_LogsLongWait(t *testing.T) {
+	var buf bytes.Buffer
+	l := NewLimiter(5, 1, 0) // 200ms/req, burst 1
+	l.Logger = slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	ctx := context.Background()
+
+	if err := l.Wait(ctx, "GET", "/v1/api/portfolio/U1234567/summary"); err != nil {
+		t.Fatalf("warmup: %v", err)
+	}
+	if err := l.Wait(ctx, "GET", "/v1/api/portfolio/U1234567/summary"); err != nil {
+		t.Fatalf("throttled wait: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "ibkr.ratelimit wait") || !strings.Contains(out, "/v1/api/portfolio/{}/summary") {
+		t.Errorf("log output = %q; want ratelimit wait with normalized path", out)
 	}
 }
 

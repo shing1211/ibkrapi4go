@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/shing1211/ibkrapi4go/client"
+	"github.com/shing1211/ibkrapi4go/internal"
 )
 
 type RESTUtilities struct {
@@ -23,14 +24,20 @@ func (m *RESTUtilities) Enumerations(ctx context.Context, enumType string) ([]st
 	}
 	resp, err := m.surface.generated.GetEnumerationsWithResponse(ctx, client.EnumerationType(enumType), nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw []string
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw, nil
 }
@@ -42,14 +49,20 @@ func (m *RESTUtilities) ComplexAssetTransferBrokers(ctx context.Context) ([]stri
 	}
 	resp, err := m.surface.generated.ListEnumerationsComplexAssetTransferWithResponse(ctx, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw []string
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw, nil
 }
@@ -61,14 +74,20 @@ func (m *RESTUtilities) Forms(ctx context.Context, formNos []int64) ([]Form, err
 	}
 	resp, err := m.surface.generated.ListFormsWithResponse(ctx, &client.ListFormsParams{FormNo: &formNos})
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw formsRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -80,14 +99,20 @@ func (m *RESTUtilities) RequiredForms(ctx context.Context) ([]Form, error) {
 	}
 	resp, err := m.surface.generated.ListFormsRequiredFormsWithResponse(ctx, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw formsRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -99,14 +124,20 @@ func (m *RESTUtilities) ParticipatingBanks(ctx context.Context) ([]Bank, error) 
 	}
 	resp, err := m.surface.generated.ListParticipatingBanksWithResponse(ctx, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw banksRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -118,14 +149,20 @@ func (m *RESTUtilities) ValidateUsername(ctx context.Context, username string) (
 	}
 	resp, err := m.surface.generated.GetValidationsUsernamesWithResponse(ctx, username)
 	if err != nil {
-		return false, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return false, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return false, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return false, e
 	}
 	var raw validationRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return false, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return false, e
 	}
 	return raw.Available, nil
 }

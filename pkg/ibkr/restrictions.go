@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/shing1211/ibkrapi4go/client"
+	"github.com/shing1211/ibkrapi4go/internal"
 )
 
 type RESTRestrictions struct {
@@ -24,14 +25,20 @@ func (r *RESTRestrictions) AccountRestrictions(ctx context.Context, accountID Ac
 	acct := string(accountID)
 	resp, err := r.surface.generated.GetAccountRestrictionsWithResponse(ctx, &client.GetAccountRestrictionsParams{AccountId: acct})
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw restrictionsIDsRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -43,14 +50,20 @@ func (r *RESTRestrictions) UserRestrictions(ctx context.Context, username string
 	}
 	resp, err := r.surface.generated.GetUserRestrictionsWithResponse(ctx, &client.GetUserRestrictionsParams{UserName: username})
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw restrictionsIDsRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -85,13 +98,19 @@ func (r *RESTRestrictions) MasterRestrictionIDs(ctx context.Context, username st
 		Authorization:  auth,
 	})
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON200 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil body"}
+		e := &Error{Op: op, Message: "unexpected nil body"}
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return parseMasterRestrictions(resp.JSON200), nil
 }
@@ -114,13 +133,19 @@ func (r *RESTRestrictions) MasterListIDs(ctx context.Context, username string, a
 		Authorization:  auth,
 	})
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON200 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil body"}
+		e := &Error{Op: op, Message: "unexpected nil body"}
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return parseMasterListIDs(resp.JSON200), nil
 }
@@ -159,13 +184,19 @@ func (r *RESTRestrictions) ListDetails(ctx context.Context, username string, lis
 		Authorization:  auth,
 	})
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON200 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil body"}
+		e := &Error{Op: op, Message: "unexpected nil body"}
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return parseListDetails(resp.JSON200), nil
 }
@@ -214,13 +245,19 @@ func (r *RESTRestrictions) RestrictionDetails(ctx context.Context, username stri
 		Authorization:  auth,
 	})
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON200 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil body"}
+		e := &Error{Op: op, Message: "unexpected nil body"}
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return parseRestrictionDetails(resp.JSON200), nil
 }
@@ -252,13 +289,19 @@ func (r *RESTRestrictions) RestrictionScope(ctx context.Context, username string
 		Authorization:  auth,
 	})
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON200 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil body"}
+		e := &Error{Op: op, Message: "unexpected nil body"}
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return parseRestrictionScope(resp.JSON200), nil
 }
@@ -283,14 +326,20 @@ func (r *RESTRestrictions) ApplyCSV(ctx context.Context, auth string, csvJWTCont
 		client.ApplyCSVTextRequestBody(csvJWTContent),
 	)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw csvApplyResponseRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -332,14 +381,20 @@ func (r *RESTRestrictions) VerifyCSV(ctx context.Context, auth string, req CsvVe
 		payload,
 	)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := r.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw csvVerifyResponseRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(r.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }

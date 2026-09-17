@@ -4,6 +4,7 @@
 package internal
 
 import (
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -14,6 +15,9 @@ import (
 type Breaker struct {
 	threshold int
 	cooldown  time.Duration
+
+	// Logger receives state-transition diagnostics. Never nil after NewBreaker.
+	Logger *slog.Logger
 
 	mu          sync.Mutex
 	consecutive int
@@ -29,7 +33,7 @@ func NewBreaker(threshold int, cooldown time.Duration) *Breaker {
 	if cooldown <= 0 {
 		cooldown = 30 * time.Second
 	}
-	return &Breaker{threshold: threshold, cooldown: cooldown}
+	return &Breaker{threshold: threshold, cooldown: cooldown, Logger: NopLogger()}
 }
 
 // Allow reports whether a request may proceed. It returns ErrCircuitOpen while
@@ -51,6 +55,7 @@ func (b *Breaker) Allow() error {
 		return ErrCircuitOpen
 	}
 	b.probing = true
+	b.Logger.Info("ibkr.breaker half-open")
 	return nil
 }
 
@@ -62,16 +67,28 @@ func (b *Breaker) Record(err error, status int) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if breakerFailure(err, status) {
+		wasProbing := b.probing
 		b.probing = false
 		b.consecutive++
 		if b.consecutive >= b.threshold {
+			if b.openUntil.IsZero() || wasProbing {
+				b.Logger.Warn("ibkr.breaker open",
+					"consecutive", b.consecutive,
+					"threshold", b.threshold,
+					"cooldown", b.cooldown.String(),
+				)
+			}
 			b.openUntil = time.Now().Add(b.cooldown)
 		}
 		return
 	}
+	wasOpen := !b.openUntil.IsZero()
 	b.consecutive = 0
 	b.openUntil = time.Time{}
 	b.probing = false
+	if wasOpen {
+		b.Logger.Info("ibkr.breaker closed")
+	}
 }
 
 // breakerFailure reports whether an outcome counts as a failure.

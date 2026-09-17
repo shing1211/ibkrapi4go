@@ -57,7 +57,7 @@ Invalid configuration (for example a malformed gateway URL) is reported as a
 | `IBKR_TICKLE_INTERVAL` | Tickle heartbeat interval | `60s` |
 | `IBKR_RATE_LIMIT` | Per-endpoint requests/second | `10` |
 | `IBKR_GLOBAL_RATE_LIMIT` | Client-wide requests/second | `50` |
-| `IBKR_LOG_LEVEL` | `debug`/`info`/`warn`/`error` | `info` |
+| `IBKR_LOG_LEVEL` | `debug`/`info`/`warn`/`error` (unset discards) | silent |
 | `IBKR_USER_AGENT` | Outbound User-Agent | module version |
 | `IBKR_REST_GATEWAY_URL` | IB REST API base URL | `https://api.ibkr.com` |
 | `IBKR_CLIENT_ID` | OAuth2 client id (REST surface) | — |
@@ -76,9 +76,11 @@ non-loopback host.
 
 ## Logging
 
-The SDK accepts a `*slog.Logger`. When unset, it discards output. Tokens,
-cookies, and `Authorization` headers are always redacted. See
-[../SECURITY.md](../SECURITY.md).
+The SDK accepts a `*slog.Logger` via `WithLogger`. After construction the logger
+is never nil: when unset (or set to nil) the SDK substitutes a no-op logger, so
+call sites never nil-check. Log messages use `ibkr.<subsystem>` prefixes and
+tokens, cookies, and `Authorization` headers are always redacted. See
+[LOGGING.md](./LOGGING.md) and [../SECURITY.md](../SECURITY.md).
 
 ## Timeouts
 

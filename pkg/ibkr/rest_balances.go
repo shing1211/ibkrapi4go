@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/shing1211/ibkrapi4go/client"
+	"github.com/shing1211/ibkrapi4go/internal"
 )
 
 type RESTBalances struct {
@@ -33,14 +34,20 @@ func (m *RESTBalances) Query(ctx context.Context, accountID AccountID, currency 
 	}
 	resp, err := m.surface.generated.CreateBalancesQueryWithResponse(ctx, payload)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw balancesRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }

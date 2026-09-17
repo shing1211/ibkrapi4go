@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/shing1211/ibkrapi4go/client"
+	"github.com/shing1211/ibkrapi4go/internal"
 )
 
 // List returns all accounts associated with the client ID.
@@ -23,14 +24,20 @@ func (m *RESTAccounts) List(ctx context.Context) ([]RESTAccountSummary, error) {
 	}
 	resp, err := m.surface.generated.ListAccountsWithResponse(ctx, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw []RESTAccountSummary
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw, nil
 }
@@ -43,14 +50,20 @@ func (m *RESTAccounts) LoginMessages(ctx context.Context) ([]LoginMessage, error
 	}
 	resp, err := m.surface.generated.ListAccountsLoginMessagesWithResponse(ctx, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw LoginMessagesWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	out := make([]LoginMessage, 0, len(raw.LoginMessages))
 	for _, lm := range raw.LoginMessages {
@@ -69,14 +82,20 @@ func (m *RESTAccounts) BulkStatus(ctx context.Context) ([]RESTAccountStatus, err
 	}
 	resp, err := m.surface.generated.ListAccountsStatusWithResponse(ctx, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw AccountStatusBulkWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	out := make([]RESTAccountStatus, 0, len(raw.Accounts))
 	for _, a := range raw.Accounts {
@@ -95,14 +114,20 @@ func (m *RESTAccounts) KycURL(ctx context.Context, accountID AccountID) (string,
 	}
 	resp, err := m.surface.generated.GetAccountsKycWithResponse(ctx, string(accountID))
 	if err != nil {
-		return "", wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	var raw Au10TixWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return "", &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	return raw.KycURL(), nil
 }
@@ -115,14 +140,20 @@ func (m *RESTAccounts) LoginMessagesForAccount(ctx context.Context, accountID Ac
 	}
 	resp, err := m.surface.generated.GetAccountsLoginMessagesWithResponse(ctx, string(accountID), nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw LoginMessagesWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	out := make([]LoginMessage, 0, len(raw.LoginMessages))
 	for _, lm := range raw.LoginMessages {
@@ -141,14 +172,20 @@ func (m *RESTAccounts) Status(ctx context.Context, accountID AccountID) (*RESTAc
 	}
 	resp, err := m.surface.generated.GetAccountsStatusWithResponse(ctx, string(accountID))
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw RESTAccountStatus
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return &raw, nil
 }
@@ -166,14 +203,20 @@ func (m *RESTAccounts) Tasks(ctx context.Context, accountID AccountID, taskType 
 	}
 	resp, err := m.surface.generated.GetAccountsTasksWithResponse(ctx, string(accountID), &params)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw RegistrationTasksWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	tasks := raw.Tasks()
 	return tasks, nil
@@ -197,10 +240,14 @@ func (m *RESTAccounts) Update(ctx context.Context, config AccountConfiguration) 
 	data, _ := json.Marshal(body)
 	resp, err := m.surface.generated.UpdateAccountsWithBodyWithResponse(ctx, "application/json", strings.NewReader(string(data)))
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	return nil
 }
@@ -217,14 +264,20 @@ func (m *RESTAccounts) Create(ctx context.Context, payload io.Reader, mimeType s
 	}
 	data, err := io.ReadAll(payload)
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	resp, err := m.surface.generated.CreateAccountsWithBodyWithResponse(ctx, mimeType, bytes.NewReader(data))
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	return nil
 }
@@ -242,23 +295,35 @@ func (m *RESTAccounts) SubmitDocument(ctx context.Context, accountID AccountID, 
 	w := multipart.NewWriter(buf)
 	part, err := w.CreateFormFile("file", filename)
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	if _, err := io.Copy(part, doc); err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	if err := w.WriteField("accountId", string(accountID)); err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	if err := w.Close(); err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	resp, err := m.surface.generated.CreateAccountsDocumentsWithBodyWithResponse(ctx, w.FormDataContentType(), buf)
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	return nil
 }
@@ -277,10 +342,14 @@ func (m *RESTAccounts) UpdateStatus(ctx context.Context, accountID AccountID, st
 	data, _ := json.Marshal(body)
 	resp, err := m.surface.generated.UpdateAccountsStatusWithBodyWithResponse(ctx, string(accountID), "application/json", bytes.NewReader(data))
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	return nil
 }
@@ -307,10 +376,14 @@ func (m *RESTAccounts) UpdateTasks(ctx context.Context, accountID AccountID, tas
 	data, _ := json.Marshal(payload)
 	resp, err := m.surface.generated.UpdateAccountsTasksWithBodyWithResponse(ctx, string(accountID), "application/json", bytes.NewReader(data))
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	return nil
 }
@@ -334,10 +407,14 @@ func (m *RESTAccounts) AssignTask(ctx context.Context, accountID AccountID, task
 	data, _ := json.Marshal(payload)
 	resp, err := m.surface.generated.CreateAccountsTasksWithBodyWithResponse(ctx, string(accountID), "application/json", bytes.NewReader(data))
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return e
 	}
 	return nil
 }

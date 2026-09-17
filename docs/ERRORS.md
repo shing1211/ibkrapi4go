@@ -108,4 +108,5 @@ in the manager layer and surfaced as `ErrOrderRejected` or a reply handle — se
 ## Logging
 
 Errors log at `warn`/`error` with `Op`, `Code`, `HTTPStatus`, `RequestID`.
-Request/response bodies are logged at `debug` only, with redaction applied.
+Request/response bodies are logged at `debug` only, with redaction applied. The
+full message scheme is documented in [LOGGING.md](./LOGGING.md).

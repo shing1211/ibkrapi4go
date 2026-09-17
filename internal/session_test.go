@@ -8,11 +8,15 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+// testLogger discards output; used by tests that construct Session directly.
+var testLogger = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 type fakeAPI struct {
 	initSessionFn func(ctx context.Context) (*http.Response, error)
@@ -72,6 +76,7 @@ func TestSession_HappyPath(t *testing.T) {
 		tickleInterval: 1 * time.Millisecond,
 		requestTimeout: 10 * time.Second,
 		state:          int32(StateDisconnected),
+		logger:         testLogger,
 	}
 
 	ctx := context.Background()
@@ -108,7 +113,7 @@ func TestSession_Initialize_Idempotent(t *testing.T) {
 		},
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
-	s := &Session{api: api, state: int32(StateAuthenticated)}
+	s := &Session{api: api, state: int32(StateAuthenticated), logger: testLogger}
 	ctx := context.Background()
 	defer s.Close(ctx)
 
@@ -140,6 +145,7 @@ func TestSession_TickleFailure_Expires(t *testing.T) {
 		tickleInterval: 50 * time.Millisecond,
 		requestTimeout: 10 * time.Second,
 		state:          int32(StateDisconnected),
+		logger:         testLogger,
 	}
 
 	ctx := context.Background()
@@ -174,7 +180,7 @@ func TestSession_ReinitializeFromExpired(t *testing.T) {
 		},
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
-	s := &Session{api: api, requestTimeout: 10 * time.Second, state: int32(StateExpired)}
+	s := &Session{api: api, requestTimeout: 10 * time.Second, state: int32(StateExpired), logger: testLogger}
 	ctx := context.Background()
 	defer s.Close(ctx)
 
@@ -206,7 +212,7 @@ func TestSession_Close_Idempotent(t *testing.T) {
 			return nil
 		},
 	}
-	s := &Session{api: api, state: int32(StateAuthenticated)}
+	s := &Session{api: api, state: int32(StateAuthenticated), logger: testLogger}
 	ctx := context.Background()
 
 	if err := s.Close(ctx); err != nil {
@@ -229,7 +235,7 @@ func TestSession_Close_Idempotent(t *testing.T) {
 
 func TestSession_CloseFromDisconnected(t *testing.T) {
 	api := &fakeAPI{logoutFn: func(ctx context.Context) error { return nil }}
-	s := &Session{api: api, state: int32(StateDisconnected)}
+	s := &Session{api: api, state: int32(StateDisconnected), logger: testLogger}
 	ctx := context.Background()
 	if err := s.Close(ctx); err != nil {
 		t.Fatalf("Close from DISCONNECTED: %v", err)
@@ -241,7 +247,7 @@ func TestSession_CloseFromDisconnected(t *testing.T) {
 
 func TestSession_CloseFromClosed_IsIdempotent(t *testing.T) {
 	api := &fakeAPI{logoutFn: func(ctx context.Context) error { return nil }}
-	s := &Session{api: api, state: int32(StateClosed)}
+	s := &Session{api: api, state: int32(StateClosed), logger: testLogger}
 	ctx := context.Background()
 	if err := s.Close(ctx); err != nil {
 		t.Fatalf("Close from CLOSED: %v", err)
@@ -264,7 +270,7 @@ func TestSession_InitError_AuthRejected(t *testing.T) {
 		},
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
-	s := &Session{api: api, requestTimeout: 1 * time.Second, state: int32(StateDisconnected)}
+	s := &Session{api: api, requestTimeout: 1 * time.Second, state: int32(StateDisconnected), logger: testLogger}
 	ctx := context.Background()
 	defer s.Close(ctx)
 
@@ -290,7 +296,7 @@ func TestSession_StateTransitions(t *testing.T) {
 		},
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
-	s := &Session{api: api, requestTimeout: 10 * time.Second, state: int32(StateDisconnected)}
+	s := &Session{api: api, requestTimeout: 10 * time.Second, state: int32(StateDisconnected), logger: testLogger}
 	ctx := context.Background()
 	defer s.Close(ctx)
 
@@ -331,7 +337,7 @@ func TestSessionState_String(t *testing.T) {
 }
 
 func TestSession_Token_NotAuthenticated(t *testing.T) {
-	s := &Session{state: int32(StateDisconnected)}
+	s := &Session{state: int32(StateDisconnected), logger: testLogger}
 	if tok, ok := s.Token(); ok || tok != "" {
 		t.Errorf("Token from DISCONNECTED: got %q, ok=%v; want %q, false", tok, ok, "")
 	}
@@ -363,6 +369,7 @@ func TestSession_ReauthorizeAfterTickleFailure(t *testing.T) {
 		tickleInterval: 50 * time.Millisecond,
 		requestTimeout: 10 * time.Second,
 		state:          int32(StateDisconnected),
+		logger:         testLogger,
 	}
 	ctx := context.Background()
 	defer s.Close(ctx)
@@ -394,7 +401,7 @@ func TestSession_TokenCopy(t *testing.T) {
 		},
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
-	s := &Session{api: api, tickleInterval: 1 * time.Millisecond, requestTimeout: 10 * time.Second, state: int32(StateDisconnected)}
+	s := &Session{api: api, tickleInterval: 1 * time.Millisecond, requestTimeout: 10 * time.Second, state: int32(StateDisconnected), logger: testLogger}
 	ctx := context.Background()
 	defer s.Close(ctx)
 
@@ -422,7 +429,7 @@ func TestSession_StartTickle_Idempotent(t *testing.T) {
 		},
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
-	s := &Session{api: api, state: int32(StateAuthenticated)}
+	s := &Session{api: api, state: int32(StateAuthenticated), logger: testLogger}
 	ctx := context.Background()
 	defer s.Close(ctx)
 

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -36,6 +37,8 @@ type OAuthConfig struct {
 	HTTPClient *http.Client
 	// EarlyRefresh refreshes this long before expiry. Defaults to 30s.
 	EarlyRefresh time.Duration
+	// Logger receives token refresh diagnostics. Nil disables logging.
+	Logger *slog.Logger
 
 	// JWTKey is the RSA private key for JWT-bearer token exchange.
 	// When set, the token source uses client_assertion grant (private_key_jwt)
@@ -54,6 +57,7 @@ type TokenSource struct {
 	cfg    OAuthConfig
 	client *http.Client
 	jwtKey *rsa.PrivateKey
+	logger *slog.Logger
 
 	mu           sync.Mutex
 	token        string
@@ -75,6 +79,9 @@ func NewTokenSource(cfg OAuthConfig) *TokenSource {
 	if hc == nil {
 		hc = &http.Client{Timeout: 15 * time.Second}
 	}
+	if cfg.Logger == nil {
+		cfg.Logger = NopLogger()
+	}
 	var jwtKey *rsa.PrivateKey
 	switch {
 	case cfg.JWTKey != nil:
@@ -86,7 +93,7 @@ func NewTokenSource(cfg OAuthConfig) *TokenSource {
 			jwtKey = nil
 		}
 	}
-	return &TokenSource{cfg: cfg, client: hc, jwtKey: jwtKey, refreshToken: cfg.RefreshToken}
+	return &TokenSource{cfg: cfg, client: hc, jwtKey: jwtKey, logger: cfg.Logger, refreshToken: cfg.RefreshToken}
 }
 
 // RefreshToken returns the current refresh token (which may have rotated).
@@ -134,6 +141,11 @@ func (ts *TokenSource) Token(ctx context.Context) (string, error) {
 	}
 	close(ch)
 	ts.mu.Unlock()
+	if err != nil {
+		ts.logger.Warn("ibkr.oauth token refresh failed", "err", redact(err.Error()))
+	} else {
+		ts.logger.Debug("ibkr.oauth token refreshed", "expires_at", expiry.Format(time.RFC3339))
+	}
 	return tok, err
 }
 

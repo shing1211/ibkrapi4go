@@ -4,9 +4,11 @@
 package internal
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -51,6 +53,26 @@ func TestBreaker_OpensAndHalfOpens(t *testing.T) {
 	b.Record(nil, 200) // probe succeeds -> closed
 	if err := b.Allow(); err != nil {
 		t.Fatalf("Allow after recovery: %v", err)
+	}
+}
+
+func TestBreaker_LogsTransitions(t *testing.T) {
+	var buf bytes.Buffer
+	b := NewBreaker(1, 40*time.Millisecond)
+	b.Logger = slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	b.Record(nil, 500) // opens
+	time.Sleep(60 * time.Millisecond)
+	if err := b.Allow(); err != nil { // half-open probe
+		t.Fatalf("Allow (half-open): %v", err)
+	}
+	b.Record(nil, 200) // closes
+
+	out := buf.String()
+	for _, want := range []string{"ibkr.breaker open", "ibkr.breaker half-open", "ibkr.breaker closed"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("log output missing %q; got %q", want, out)
+		}
 	}
 }
 

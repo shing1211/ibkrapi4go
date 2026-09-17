@@ -38,6 +38,7 @@ func (c *Client) REST() (*RESTSurface, error) {
 	var limiter *internal.Limiter
 	if c.cfg.rateLimit > 0 || c.cfg.globalRateLimit > 0 {
 		limiter = internal.NewLimiter(c.cfg.rateLimit, c.cfg.rateBurst, c.cfg.globalRateLimit)
+		limiter.Logger = c.cfg.logger
 	}
 	transport := internal.NewClientTransport(base, internal.TransportConfig{
 		RequestID:  newRequestID,
@@ -624,14 +625,20 @@ func (m *RESTTaxVouchers) CreateRequests(ctx context.Context, csvContent string)
 	}
 	resp, err := m.surface.generated.CreateTaxVoucherRequestsWithTextBodyWithResponse(ctx, nil, client.CreateTaxVoucherRequestsTextRequestBody(csvContent))
 	if err != nil {
-		return "", wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	var raw requestIDRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return "", &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	return raw.toPublic(), nil
 }
@@ -643,14 +650,20 @@ func (m *RESTTaxVouchers) ActiveCountries(ctx context.Context) ([]string, error)
 	}
 	resp, err := m.surface.generated.GetActiveCountryListWithResponse(ctx, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw countriesRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -666,14 +679,20 @@ func (m *RESTTaxVouchers) Dividends(ctx context.Context, accountID AccountID, ye
 		CountryCode: countryCode,
 	})
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw dividendsRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -685,14 +704,20 @@ func (m *RESTTaxVouchers) AvailableYears(ctx context.Context) ([]string, error) 
 	}
 	resp, err := m.surface.generated.GetYearsWithResponse(ctx, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw yearsRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -704,10 +729,14 @@ func (m *RESTTaxVouchers) Download(ctx context.Context, requestID string) ([]byt
 	}
 	resp, err := m.surface.generated.DownloadFileWithResponse(ctx, requestID, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return resp.Body, nil
 }
@@ -719,13 +748,19 @@ func (m *RESTTaxVouchers) RequestState(ctx context.Context, requestID string) (*
 	}
 	resp, err := m.surface.generated.GetCurrentState1WithResponse(ctx, requestID, nil)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON200 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil body"}
+		e := &Error{Op: op, Message: "unexpected nil body"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return &TaxVoucherState{
 		RequestID:    strPtrVal(resp.JSON200.RequestId),

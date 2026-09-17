@@ -5,10 +5,17 @@ package internal
 
 import (
 	"context"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
 )
+
+// NopLogger returns a logger that discards all output. It is used as the
+// default by every component so callers never have to nil-check *slog.Logger.
+func NopLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
 
 // RequestInfo describes an outbound request for telemetry.
 type RequestInfo struct {
@@ -45,10 +52,10 @@ type Telemetry interface {
 // status, duration, request id) and invokes telemetry hooks. Bodies and headers
 // are never logged; error text is redacted.
 func Logging(logger *slog.Logger, hooks Telemetry) func(http.RoundTripper) http.RoundTripper {
+	if logger == nil {
+		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
 	return func(base http.RoundTripper) http.RoundTripper {
-		if logger == nil && hooks == nil {
-			return base
-		}
 		return RoundTripFunc(func(req *http.Request) (*http.Response, error) {
 			info := RequestInfo{
 				Method:    req.Method,
@@ -70,9 +77,7 @@ func Logging(logger *slog.Logger, hooks Telemetry) func(http.RoundTripper) http.
 			if hooks != nil {
 				hooks.OnRequestEnd(ctx, info, ResponseInfo{StatusCode: status, Duration: duration, Err: err})
 			}
-			if logger != nil {
-				logRequest(logger, info, status, duration, err)
-			}
+			logRequest(logger, info, status, duration, err)
 			return resp, err
 		})
 	}
@@ -88,20 +93,20 @@ func logRequest(logger *slog.Logger, info RequestInfo, status int, duration time
 	}
 	switch {
 	case err != nil:
-		logger.Warn("http request failed", append(attrs, "err", redact(err.Error()))...)
+		logger.Warn("ibkr.http failed", append(attrs, "err", redact(err.Error()))...)
 	case status >= 400:
-		logger.Warn("http request error", attrs...)
+		logger.Warn("ibkr.http error", attrs...)
 	default:
-		logger.Debug("http request", attrs...)
+		logger.Debug("ibkr.http request", attrs...)
 	}
 }
 
 // LogError logs a decoded *Error with operation context. The message is redacted.
 func LogError(logger *slog.Logger, e *Error) {
-	if logger == nil || e == nil {
+	if e == nil {
 		return
 	}
-	logger.Warn("ibkr error",
+	logger.Warn("ibkr.error",
 		"op", e.Op,
 		"code", e.Code,
 		"status", e.HTTPStatus,

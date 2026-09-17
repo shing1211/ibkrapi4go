@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 
 	"github.com/shing1211/ibkrapi4go/client"
+	"github.com/shing1211/ibkrapi4go/internal"
 )
 
 // RESTSSOSessions exposes SSO session management operations.
@@ -60,7 +61,9 @@ func (m *RESTSSOSessions) CreateBrowserSession(ctx context.Context, req SsoBrows
 	}
 	auth, err := m.surface.Token(ctx)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	payload := client.CreateBrowserSessionRequest{
 		Credential: req.Credential,
@@ -73,13 +76,19 @@ func (m *RESTSSOSessions) CreateBrowserSession(ctx context.Context, req SsoBrows
 		bytes.NewReader(jsonMarshal(payload)),
 	)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON200 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil body"}
+		e := &Error{Op: op, Message: "unexpected nil body"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	out := &BrowserSessionResponse{}
 	if resp.JSON200.Active != nil {
@@ -99,7 +108,9 @@ func (m *RESTSSOSessions) CreateSession(ctx context.Context, req SsoSessionReque
 	}
 	auth, err := m.surface.Token(ctx)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	payload := client.CreateSessionRequest{
 		Credential: req.Credential,
@@ -118,13 +129,19 @@ func (m *RESTSSOSessions) CreateSession(ctx context.Context, req SsoSessionReque
 		bytes.NewReader(jsonMarshal(payload)),
 	)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON200 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil body"}
+		e := &Error{Op: op, Message: "unexpected nil body"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	out := &SessionResponse{
 		AccessToken: resp.JSON200.AccessToken,
@@ -147,7 +164,9 @@ func (m *RESTSSOSessions) CreateSessionRaw(ctx context.Context, req SsoSessionRe
 	}
 	auth, err := m.surface.Token(ctx)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	payload := client.CreateSessionRequest{
 		Credential: req.Credential,

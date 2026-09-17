@@ -106,6 +106,9 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 	if opts.ReconnectMax <= 0 {
 		opts.ReconnectMax = 30 * time.Second
 	}
+	if opts.Logger == nil {
+		opts.Logger = NopLogger()
+	}
 	c := &WSConn{
 		wsURL:  wsURL,
 		opts:   opts,
@@ -248,9 +251,7 @@ func (c *WSConn) reconnect(attempt *int) error {
 			return ErrClosed
 		}
 		if err := c.dial(context.Background()); err != nil {
-			if c.opts.Logger != nil {
-				c.opts.Logger.Warn("ws: reconnect failed", "err", err)
-			}
+			c.opts.Logger.Warn("ibkr.ws reconnect failed", "err", err)
 			*attempt++
 			continue
 		}
@@ -276,8 +277,8 @@ func (c *WSConn) writeLoop() {
 				continue
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			if err := conn.Write(ctx, websocket.MessageText, b); err != nil && c.opts.Logger != nil {
-				c.opts.Logger.Warn("ws: write failed", "err", err)
+			if err := conn.Write(ctx, websocket.MessageText, b); err != nil {
+				c.opts.Logger.Warn("ibkr.ws write failed", "err", err)
 			}
 			cancel()
 		case <-c.stopCh:
@@ -300,9 +301,7 @@ func (c *WSConn) pingLoop() {
 			err := conn.Ping(ctx)
 			cancel()
 			if err != nil {
-				if c.opts.Logger != nil {
-					c.opts.Logger.Warn("ws: ping failed", "err", err)
-				}
+				c.opts.Logger.Warn("ibkr.ws ping failed", "err", err)
 				_ = conn.Close(websocket.StatusPolicyViolation, "ping timeout")
 			}
 		case <-c.stopCh:

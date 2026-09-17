@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/shing1211/ibkrapi4go/client"
+	"github.com/shing1211/ibkrapi4go/internal"
 )
 
 type RESTBanking struct {
@@ -96,14 +97,20 @@ func (b *RESTBanking) ClientInstruction(ctx context.Context, id int64) (*RESTCli
 	}
 	resp, err := b.surface.generated.GetClientInstructionsWithResponse(ctx, id)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw clientInstructionRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -115,14 +122,20 @@ func (b *RESTBanking) InstructionSet(ctx context.Context, id int64) (*RESTInstru
 	}
 	resp, err := b.surface.generated.GetInstructionSetsWithResponse(ctx, id)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw instructionSetRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -134,14 +147,20 @@ func (b *RESTBanking) Instruction(ctx context.Context, id int64) (*RESTInstructi
 	}
 	resp, err := b.surface.generated.GetInstructionsWithResponse(ctx, id)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw instructionRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -169,14 +188,20 @@ func (b *RESTBanking) QueryTransactions(ctx context.Context, req TransactionQuer
 	}
 	resp, err := b.surface.generated.CreateInstructionsQueryWithResponse(ctx, payload)
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	var raw transactionsRaw
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return raw.toPublic(), nil
 }
@@ -194,10 +219,14 @@ func (b *RESTBanking) CancelInstruction(ctx context.Context, req CancelInstructi
 	}
 	resp, err := b.surface.generated.CreateInstructionsCancelWithResponse(ctx, payload)
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return e
 	}
 	return nil
 }
@@ -217,10 +246,14 @@ func (b *RESTBanking) CancelInstructionsBulk(ctx context.Context, reqs []CancelI
 	}
 	resp, err := b.surface.generated.BulkInstructionsCancelWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := b.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(b.surface.owner.cfg.logger, e)
+		return e
 	}
 	return nil
 }
@@ -487,13 +520,19 @@ func (m *RESTExternalAssetTransfers) Transfer(ctx context.Context, req AssetTran
 
 	resp, err := m.surface.generated.CreateExternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return "", wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.JSON202 == nil {
-		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
 }
@@ -524,13 +563,19 @@ func (m *RESTExternalAssetTransfers) TransferBulk(ctx context.Context, reqs []As
 
 	resp, err := m.surface.generated.BulkExternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON202 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return extractBulkResults(resp.JSON202.InstructionResults), nil
 }
@@ -565,13 +610,19 @@ func (m *RESTExternalAssetTransfers) TransferV2(ctx context.Context, req AssetTr
 
 	resp, err := m.surface.generated.CreateExternalAssetTransfers2WithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return "", wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.JSON202 == nil {
-		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
 }
@@ -606,13 +657,19 @@ func (m *RESTExternalAssetTransfers) TransferBulkV2(ctx context.Context, reqs []
 
 	resp, err := m.surface.generated.BulkExternalAssetTransfers2WithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON202 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return extractBulkResults(resp.JSON202.InstructionResults), nil
 }
@@ -652,13 +709,19 @@ func (m *RESTInternalAssetTransfers) Transfer(ctx context.Context, req InternalA
 
 	resp, err := m.surface.generated.CreateInternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return "", wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.JSON202 == nil {
-		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
 }
@@ -697,13 +760,19 @@ func (m *RESTInternalAssetTransfers) TransferBulk(ctx context.Context, reqs []In
 
 	resp, err := m.surface.generated.BulkInternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON202 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return extractBulkResults(resp.JSON202.InstructionResults), nil
 }
@@ -759,13 +828,19 @@ func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransf
 
 	resp, err := m.surface.generated.CreateExternalCashTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return "", wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.JSON202 == nil {
-		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
 }
@@ -817,13 +892,19 @@ func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []Cas
 
 	resp, err := m.surface.generated.BulkExternalCashTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON202 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return extractBulkResults(resp.JSON202.InstructionResults), nil
 }
@@ -848,10 +929,14 @@ func (m *RESTExternalCashTransfers) QueryBalances(ctx context.Context, req CashT
 
 	resp, err := m.surface.generated.CreateExternalCashTransfersQueryWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 
 	// Parse the response
@@ -860,7 +945,9 @@ func (m *RESTExternalCashTransfers) QueryBalances(ctx context.Context, req CashT
 		Currency    string  `json:"currency"`
 	}
 	if err := json.Unmarshal(resp.Body, &result); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 
 	return &WithdrawableFundsResult{
@@ -904,13 +991,19 @@ func (m *RESTInternalCashTransfers) Transfer(ctx context.Context, req InternalCa
 
 	resp, err := m.surface.generated.CreateInternalCashTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return "", wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.JSON202 == nil {
-		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
 }
@@ -943,13 +1036,19 @@ func (m *RESTInternalCashTransfers) TransferBulk(ctx context.Context, reqs []Int
 
 	resp, err := m.surface.generated.BulkInternalCashTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON202 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return extractBulkResults(resp.JSON202.InstructionResults), nil
 }
@@ -993,13 +1092,19 @@ func (m *RESTBankInstructions) Create(ctx context.Context, req BankInstructionCr
 
 	resp, err := m.surface.generated.CreateBankInstructionsWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return "", wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	if resp.JSON202 == nil {
-		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return "", e
 	}
 	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
 }
@@ -1024,15 +1129,21 @@ func (m *RESTBankInstructions) Query(ctx context.Context, req BankInstructionQue
 
 	resp, err := m.surface.generated.CreateBankInstructionsQueryWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 
 	var result BankInstructionResult
 	if err := json.Unmarshal(resp.Body, &result); err != nil {
-		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return &result, nil
 }
@@ -1073,13 +1184,19 @@ func (m *RESTBankInstructions) CreateBulk(ctx context.Context, reqs []BankInstru
 
 	resp, err := m.surface.generated.BulkBankInstructionsWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
-		return nil, wrapOp(op, err)
+		e := wrapOp(op, err)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.HTTPResponse.StatusCode >= 400 {
-		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		e := m.surface.owner.errorFrom(resp.HTTPResponse, op)
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	if resp.JSON202 == nil {
-		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+		e := &Error{Op: op, Message: "unexpected nil 202 response"}
+		internal.LogError(m.surface.owner.cfg.logger, e)
+		return nil, e
 	}
 	return extractBulkResults(resp.JSON202.InstructionResults), nil
 }

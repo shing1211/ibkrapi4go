@@ -299,20 +299,27 @@ func NewClient(opts ...Option) (*Client, error) {
 	if cfg.restGatewayURL == "" {
 		cfg.restGatewayURL = DefaultRESTGatewayURL
 	}
+	if cfg.oauth2.Logger == nil {
+		cfg.oauth2.Logger = cfg.logger
+	}
 	if cfg.tokenSource == nil && (cfg.oauth2.ClientID != "" || cfg.oauth2.RefreshToken != "") {
 		cfg.tokenSource = internal.NewTokenSource(cfg.oauth2)
 	}
 	cfg.streamingLimits = cfg.streamingLimits.withDefaults()
 
 	base, jar := baseTransport(cfg)
-	if cfg.insecureSkipVerify && isNonLoopback(cfg.gatewayURL) && cfg.logger != nil {
-		cfg.logger.Warn("insecure TLS skip-verify enabled for non-loopback host",
+	if cfg.insecureSkipVerify && isNonLoopback(cfg.gatewayURL) {
+		cfg.logger.Warn("ibkr.config insecure TLS skip-verify enabled for non-loopback host",
 			"gateway", cfg.gatewayURL)
 	}
 
 	var limiter *internal.Limiter
 	if cfg.rateLimit > 0 || cfg.globalRateLimit > 0 {
 		limiter = internal.NewLimiter(cfg.rateLimit, cfg.rateBurst, cfg.globalRateLimit)
+		limiter.Logger = cfg.logger
+	}
+	if cfg.breaker != nil {
+		cfg.breaker.Logger = cfg.logger
 	}
 
 	var session *internal.Session
@@ -575,6 +582,9 @@ func applyEnv(cfg *config) {
 	}
 	if cfg.logger == nil {
 		cfg.logger = loggerFromEnv()
+	}
+	if cfg.logger == nil {
+		cfg.logger = internal.NopLogger()
 	}
 }
 
