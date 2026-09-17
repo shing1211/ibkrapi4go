@@ -31,13 +31,13 @@ make mock-gateway    # run the standalone mock IBKR gateway
 ## Hard rules
 
 1. **Do not edit `client/*.gen.go`.** Change `scripts/patch_spec.py` (spec
-   defects) or `scripts/patch_gen.py` (deterministic post-generation code
-   fixups) and regenerate. Committed generated files must match
+   defects) and regenerate. Committed generated files must match
    `make codegen-verify`.
-   > **Note:** The nil-`interface{}` panic class is fixed at the root in
-   > `scripts/patch_spec.py` (defect 4: inline query params with `type: null`
-   > are retyped to `type: string`). `scripts/patch_gen.py` is now a no-op kept
-   > for backward compatibility; a fresh generation needs no post-processing.
+   > **Note:** All codegen defects are fixed at the spec level, so no
+   > post-generation step is needed. In particular, the nil-`interface{}` panic
+   > class is fixed by `scripts/patch_spec.py` defect 4 (inline query params with
+   > `type: null` are retyped to `type: string`). `scripts/patch_gen.py` is a
+   > no-op kept for backward compatibility.
 2. **Never auto-retry order mutations.** See
    [ADR 0009](./docs/adr/0009-no-auto-retry-orders.md).
 3. **Money and quantities are `string`/`json.Number`, never `float64`.** See

@@ -4,6 +4,14 @@
 **Planner:** T6
 **Date:** 2026-09-17
 
+> **Resolved (2026-09-17):** The open item "D1 root cause (spec-patch)" (§2) and
+> open question 5 were closed by the
+> [`d1-root-cause`](../2026-09-17-d1-root-cause/) run (commit `b94e677`).
+> `scripts/patch_spec.py` defect 4 now retypes inline `type: null` query params
+> to `type: string`, the generated guards are gone, and `patch_gen.py` is a
+> no-op. Items C1–C6 below were addressed by the subsequent
+> `benchmarks-fuzz`, `ci-quality-gates`, and `docs-website` runs.
+
 ---
 
 ## 1. What Was Completed This Phase

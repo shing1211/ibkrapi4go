@@ -248,9 +248,24 @@ Exit criteria:
 - Redistribution of IBKR's OpenAPI spec (fetched at build time; gitignored).
 - A hosted/doc-site service.
 
+## Post-v0.1.0 maintenance
+
+The feature roadmap is complete: all 185 operations are implemented, the mock
+gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and the first
+tagged release (`v0.1.0`) is published on GitHub and mirrored to Gitee.
+
+All known correctness defects are closed, including the generated-client
+nil-`interface{}` panic class, which is now fixed at the spec level
+(`scripts/patch_spec.py` defect 4; see
+[docs/runs/2026-09-17-d1-root-cause](./runs/2026-09-17-d1-root-cause/)).
+
 ## Backlog (not scheduled)
 
-All items shipped. See individual run reports in [docs/runs/](./runs/index.md).
+No feature items are pending. Candidate forward-looking work (v1.0.0 readiness
+and API stabilization, upstream spec drift watch, real-world examples, community
+sustainment) is proposed in the latest
+[`next-phase.md`](./runs/2026-09-17-d1-root-cause/next-phase.md). See individual
+run reports in [docs/runs/](./runs/index.md).
 
 ---
 

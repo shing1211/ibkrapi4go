@@ -29,8 +29,9 @@ The spec is **not committed**; it is fetched at build time and cached under
 1. **Fetch** the spec to `specs/ibkr_spec.json` (or use the provided path).
 2. **Patch** it via `scripts/patch_spec.py` → `specs/ibkr_patched.json`.
 3. **Generate** with `oapi-codegen` using `oapi-codegen.yaml` → `client/client.gen.go`.
-4. **Fix up** the generated file via `scripts/patch_gen.py` (deterministic
-   post-generation patches; see below).
+
+All defects are handled in step 2. No post-generation fixing is required (see
+[Post-generation fixups](#post-generation-fixups)).
 
 The build-time toolchain is pinned in `go.mod` (tools) / `Makefile` (`make tools`).
 
@@ -104,8 +105,8 @@ output-options:
 
 Rules (enforced by `AGENTS.md` and CI):
 
-1. Never hand-edit `client/*.gen.go`. Change `patch_spec.py` (spec defects) or
-   `patch_gen.py` (post-generation fixups) and regenerate.
+1. Never hand-edit `client/*.gen.go`. Change `scripts/patch_spec.py` (spec
+   defects) and regenerate.
 2. `make codegen-verify` regenerates and fails if the committed output differs.
 
 ## Drift verification

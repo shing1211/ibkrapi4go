@@ -8,3 +8,4 @@
 | 2026-09-17 | [benchmarks-fuzz](./2026-09-17-benchmarks-fuzz/) | BUILD | complete | `c97a027` | `5037b9b` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-17 | [ci-quality-gates](./2026-09-17-ci-quality-gates/) | BUILD | complete | `09e9dfe` | `919b576` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-17 | [docs-website](./2026-09-17-docs-website/) | BUILD | complete | `83f040f` | `bee953b` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
+| 2026-09-17 | [d1-root-cause](./2026-09-17-d1-root-cause/) | BUILD | complete | `b94e677` | — | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
