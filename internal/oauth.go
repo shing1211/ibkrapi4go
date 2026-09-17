@@ -5,6 +5,7 @@ package internal
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,6 +36,16 @@ type OAuthConfig struct {
 	HTTPClient *http.Client
 	// EarlyRefresh refreshes this long before expiry. Defaults to 30s.
 	EarlyRefresh time.Duration
+
+	// JWTKey is the RSA private key for JWT-bearer token exchange.
+	// When set, the token source uses client_assertion grant (private_key_jwt)
+	// instead of client_credentials or refresh_token.
+	JWTKey *rsa.PrivateKey
+	// JWTKeyPEM is raw PEM-encoded RSA private key bytes.
+	// Mutually exclusive with JWTKey and JWTKeyFile.
+	JWTKeyPEM []byte
+	// JWTExpiry sets the JWT assertion expiry. Defaults to 60s.
+	JWTExpiry time.Duration
 }
 
 // TokenSource acquires and refreshes OAuth2 access tokens. It is safe for
@@ -42,6 +53,7 @@ type OAuthConfig struct {
 type TokenSource struct {
 	cfg    OAuthConfig
 	client *http.Client
+	jwtKey *rsa.PrivateKey
 
 	mu           sync.Mutex
 	token        string
@@ -63,7 +75,18 @@ func NewTokenSource(cfg OAuthConfig) *TokenSource {
 	if hc == nil {
 		hc = &http.Client{Timeout: 15 * time.Second}
 	}
-	return &TokenSource{cfg: cfg, client: hc, refreshToken: cfg.RefreshToken}
+	var jwtKey *rsa.PrivateKey
+	switch {
+	case cfg.JWTKey != nil:
+		jwtKey = cfg.JWTKey
+	case len(cfg.JWTKeyPEM) > 0:
+		var err error
+		jwtKey, err = ParsePrivateKeyFromPEM(cfg.JWTKeyPEM)
+		if err != nil {
+			jwtKey = nil
+		}
+	}
+	return &TokenSource{cfg: cfg, client: hc, jwtKey: jwtKey, refreshToken: cfg.RefreshToken}
 }
 
 // RefreshToken returns the current refresh token (which may have rotated).
@@ -124,6 +147,13 @@ func (ts *TokenSource) ForceRefresh(ctx context.Context) (string, error) {
 }
 
 func (ts *TokenSource) fetch(ctx context.Context) (string, time.Time, string, error) {
+	if ts.jwtKey != nil {
+		return ts.fetchWithJWTAssertion(ctx)
+	}
+	return ts.fetchWithSecret(ctx)
+}
+
+func (ts *TokenSource) fetchWithSecret(ctx context.Context) (string, time.Time, string, error) {
 	form := url.Values{}
 	form.Set("client_id", ts.cfg.ClientID)
 	form.Set("client_secret", ts.cfg.ClientSecret)
@@ -138,6 +168,69 @@ func (ts *TokenSource) fetch(ctx context.Context) (string, time.Time, string, er
 		form.Set("refresh_token", refresh)
 	} else {
 		form.Set("grant_type", "client_credentials")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ts.cfg.TokenURL,
+		strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", time.Time{}, "", &Error{Op: "OAuth.Token", Message: err.Error(), Err: err}
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := ts.client.Do(req)
+	if err != nil {
+		return "", time.Time{}, "", &Error{Op: "OAuth.Token", Message: err.Error(), Err: err}
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+
+	if resp.StatusCode >= 400 {
+		return "", time.Time{}, "", &Error{
+			Op:         "OAuth.Token",
+			Message:    fmt.Sprintf("token endpoint returned %d: %s", resp.StatusCode, redact(strings.TrimSpace(string(body)))),
+			HTTPStatus: resp.StatusCode,
+			Err:        statusSentinel[resp.StatusCode],
+		}
+	}
+
+	var tr struct {
+		AccessToken  string `json:"access_token"`
+		ExpiresIn    int64  `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+		TokenType    string `json:"token_type"`
+	}
+	if err := json.Unmarshal(body, &tr); err != nil {
+		return "", time.Time{}, "", &Error{Op: "OAuth.Token", Message: "decode token response: " + err.Error(), Err: err}
+	}
+	if tr.AccessToken == "" {
+		return "", time.Time{}, "", &Error{Op: "OAuth.Token", Message: "token response missing access_token", Err: ErrNotAuthenticated}
+	}
+	expiry := time.Now().Add(time.Duration(tr.ExpiresIn) * time.Second)
+	if tr.ExpiresIn <= 0 {
+		expiry = time.Now().Add(time.Minute)
+	}
+	return tr.AccessToken, expiry, tr.RefreshToken, nil
+}
+
+func (ts *TokenSource) fetchWithJWTAssertion(ctx context.Context) (string, time.Time, string, error) {
+	assertion, err := BuildJWTAssertion(JWTConfig{
+		ClientID:   ts.cfg.ClientID,
+		TokenURL:   ts.cfg.TokenURL,
+		PrivateKey: ts.jwtKey,
+		Expiry:     ts.cfg.JWTExpiry,
+	})
+	if err != nil {
+		return "", time.Time{}, "", &Error{Op: "OAuth.Token", Message: err.Error(), Err: err}
+	}
+
+	form := url.Values{}
+	form.Set("grant_type", "client_credentials")
+	form.Set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
+	form.Set("client_assertion", assertion)
+	form.Set("client_authentication_method", "private_key_jwt")
+	if ts.cfg.Scope != "" {
+		form.Set("scope", ts.cfg.Scope)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ts.cfg.TokenURL,

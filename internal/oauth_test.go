@@ -5,11 +5,17 @@ package internal
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -176,4 +182,144 @@ func TestTokenSource_Error(t *testing.T) {
 	if _, err := ts.Token(context.Background()); err == nil {
 		t.Fatal("Token = nil; want error")
 	}
+}
+
+func TestTokenSource_JWTAssertion(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("GenerateKey: %v", err)
+	}
+
+	var capturedAssertion, capturedGrantType string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		vals, _ := parseForm(string(body))
+		capturedGrantType = vals["grant_type"]
+		capturedAssertion = vals["client_assertion"]
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"access_token":%q,"expires_in":3600,"refresh_token":%q,"token_type":"Bearer"}`, "jwt-tok", "jwt-refresh")
+	}))
+	defer srv.Close()
+
+	ts := NewTokenSource(OAuthConfig{
+		TokenURL:  srv.URL,
+		ClientID:  "jwt-cid",
+		JWTKey:    privateKey,
+		JWTExpiry: 5 * time.Minute,
+	})
+
+	tok, err := ts.Token(context.Background())
+	if err != nil {
+		t.Fatalf("Token: %v", err)
+	}
+	if tok != "jwt-tok" {
+		t.Errorf("token = %q; want jwt-tok", tok)
+	}
+	if capturedGrantType != "client_credentials" {
+		t.Errorf("grant_type = %q; want client_credentials", capturedGrantType)
+	}
+	if capturedAssertion == "" {
+		t.Fatal("client_assertion is empty; want a JWT")
+	}
+	// Verify JWT structure: header.payload.signature
+	parts := strings.Split(capturedAssertion, ".")
+	if len(parts) != 3 {
+		t.Fatalf("assertion has %d parts; want 3 (header.payload.signature)", len(parts))
+	}
+	// Decode and verify header contains RS256
+	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		t.Fatalf("decode JWT header: %v", err)
+	}
+	if !strings.Contains(string(headerBytes), `"alg":"RS256"`) {
+		t.Errorf("JWT header = %s; want RS256 alg", string(headerBytes))
+	}
+}
+
+func TestTokenSource_JWTAssertion_SingleFlight(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("GenerateKey: %v", err)
+	}
+
+	var calls int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt64(&calls, 1)
+		time.Sleep(50 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"access_token":"tok-jwt","expires_in":3600}`)
+	}))
+	defer srv.Close()
+
+	ts := NewTokenSource(OAuthConfig{
+		TokenURL: srv.URL,
+		ClientID: "cid",
+		JWTKey:   privateKey,
+	})
+
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := ts.Token(context.Background()); err != nil {
+				t.Errorf("Token: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+	if calls != 1 {
+		t.Errorf("token requests = %d; want 1 (single-flight)", calls)
+	}
+}
+
+func TestTokenSource_JWTAssertion_PEM(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("GenerateKey: %v", err)
+	}
+
+	var capturedAssertion string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		vals, _ := parseForm(string(body))
+		capturedAssertion = vals["client_assertion"]
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"access_token":"tok-jwt","expires_in":3600}`)
+	}))
+	defer srv.Close()
+
+	// Encode private key as PKCS8 PEM
+	pemBytes, err := EncodePrivateKeyToPEM(privateKey)
+	if err != nil {
+		t.Fatalf("EncodePrivateKeyToPEM: %v", err)
+	}
+
+	ts := NewTokenSource(OAuthConfig{
+		TokenURL:  srv.URL,
+		ClientID:  "cid",
+		JWTKeyPEM: pemBytes,
+	})
+
+	_, err = ts.Token(context.Background())
+	if err != nil {
+		t.Fatalf("Token: %v", err)
+	}
+	if capturedAssertion == "" {
+		t.Fatal("client_assertion is empty")
+	}
+}
+
+// EncodePrivateKeyToPEM encodes an RSA private key to PEM format.
+func EncodePrivateKeyToPEM(key *rsa.PrivateKey) ([]byte, error) {
+	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	block := &pem.Block{Type: "PRIVATE KEY", Bytes: pkcs8}
+	out := &strings.Builder{}
+	if err := pem.Encode(out, block); err != nil {
+		return nil, err
+	}
+	return []byte(out.String()), nil
 }

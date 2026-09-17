@@ -5,8 +5,10 @@ package ibkr
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/shing1211/ibkrapi4go/client"
 	"github.com/shing1211/ibkrapi4go/internal"
@@ -162,7 +164,7 @@ type RESTRequests struct {
 
 // RESTRequestInfo holds metadata about a submitted request.
 type RESTRequestInfo struct {
-	ID        int64
+	ID         int64
 	ExecutedAt *string
 }
 
@@ -218,7 +220,6 @@ type TaxDocumentResponse struct {
 	// Gzip indicates whether Data is gzip-compressed.
 	Gzip bool
 }
-
 
 // AvailableTaxDocumentTypes holds the available tax form types for an account/year.
 type AvailableTaxDocumentTypes struct {
@@ -310,7 +311,7 @@ func (m *RESTTaxDocuments) Generate(ctx context.Context, req TaxDocumentRequest)
 	return &TaxDocumentResponse{
 		ContentType: ct,
 		Data:        []byte(*raw.Data.Value),
-		Gzip:       gzip,
+		Gzip:        gzip,
 	}, nil
 }
 
@@ -362,7 +363,7 @@ func (m *RESTTradeConfirmations) ListAvailable(ctx context.Context, id AccountID
 	}
 	auth, _ := m.surface.Token(ctx)
 	params := client.ListTradeConfirmationsAvailableParams{
-		AccountId:    string(id),
+		AccountId:     string(id),
 		Authorization: auth,
 	}
 	resp, err := m.surface.generated.ListTradeConfirmationsAvailableWithResponse(ctx, &params)
@@ -434,7 +435,7 @@ func (m *RESTTradeConfirmations) Generate(ctx context.Context, req TradeConfirma
 	return &TradeConfirmationResponse{
 		ContentType: ct,
 		Data:        []byte(*raw.Data.Value),
-		Gzip:       gzip,
+		Gzip:        gzip,
 	}, nil
 }
 
@@ -502,7 +503,7 @@ func (m *RESTStatements) Generate(ctx context.Context, req StatementRequest) (*S
 		AccountId: string(req.AccountID),
 		EndDate:   req.EndDate,
 		StartDate: req.StartDate,
-		Language: &lang,
+		Language:  &lang,
 		MimeType:  &type_,
 		Gzip:      &req.Gzip,
 	}
@@ -550,7 +551,7 @@ func (m *RESTStatements) Generate(ctx context.Context, req StatementRequest) (*S
 	return &StatementResponse{
 		ContentType: ct,
 		Data:        []byte(encoded),
-		Gzip:       gzip,
+		Gzip:        gzip,
 	}, nil
 }
 
@@ -579,7 +580,7 @@ func (m *RESTStatements) ListAvailable(ctx context.Context, id AccountID) (*Avai
 			Value *struct {
 				Annual  *[]string `json:"annual,omitempty"`
 				Monthly *[]string `json:"monthly,omitempty"`
-				Daily  *struct {
+				Daily   *struct {
 					StartDate *string `json:"startDate,omitempty"`
 					EndDate   *string `json:"endDate,omitempty"`
 				} `json:"daily,omitempty"`
@@ -607,4 +608,220 @@ func (m *RESTStatements) ListAvailable(ctx context.Context, id AccountID) (*Avai
 		}
 	}
 	return out, nil
+}
+
+// TaxVouchers returns the REST tax vouchers manager.
+func (s *RESTSurface) TaxVouchers() *RESTTaxVouchers { return &RESTTaxVouchers{surface: s} }
+
+type RESTTaxVouchers struct {
+	surface *RESTSurface
+}
+
+func (m *RESTTaxVouchers) CreateRequests(ctx context.Context, csvContent string) (string, error) {
+	const op = "TaxVouchers.CreateRequests"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return "", err
+	}
+	resp, err := m.surface.generated.CreateTaxVoucherRequestsWithTextBodyWithResponse(ctx, nil, client.CreateTaxVoucherRequestsTextRequestBody(csvContent))
+	if err != nil {
+		return "", wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	var raw requestIDRaw
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return "", &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+	}
+	return raw.toPublic(), nil
+}
+
+func (m *RESTTaxVouchers) ActiveCountries(ctx context.Context) ([]string, error) {
+	const op = "TaxVouchers.ActiveCountries"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	resp, err := m.surface.generated.GetActiveCountryListWithResponse(ctx, nil)
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	var raw countriesRaw
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+	}
+	return raw.toPublic(), nil
+}
+
+func (m *RESTTaxVouchers) Dividends(ctx context.Context, accountID AccountID, year, countryCode string) ([]TaxVoucherDividend, error) {
+	const op = "TaxVouchers.Dividends"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	resp, err := m.surface.generated.FetchDividends1WithResponse(ctx, &client.FetchDividends1Params{
+		CustAcctId:  string(accountID),
+		Year:        year,
+		CountryCode: countryCode,
+	})
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	var raw dividendsRaw
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+	}
+	return raw.toPublic(), nil
+}
+
+func (m *RESTTaxVouchers) AvailableYears(ctx context.Context) ([]string, error) {
+	const op = "TaxVouchers.AvailableYears"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	resp, err := m.surface.generated.GetYearsWithResponse(ctx, nil)
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	var raw yearsRaw
+	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+	}
+	return raw.toPublic(), nil
+}
+
+func (m *RESTTaxVouchers) Download(ctx context.Context, requestID string) ([]byte, error) {
+	const op = "TaxVouchers.Download"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	resp, err := m.surface.generated.DownloadFileWithResponse(ctx, requestID, nil)
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	return resp.Body, nil
+}
+
+func (m *RESTTaxVouchers) RequestState(ctx context.Context, requestID string) (*TaxVoucherState, error) {
+	const op = "TaxVouchers.RequestState"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+	resp, err := m.surface.generated.GetCurrentState1WithResponse(ctx, requestID, nil)
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON200 == nil {
+		return nil, &Error{Op: op, Message: "unexpected nil body"}
+	}
+	return &TaxVoucherState{
+		RequestID:    strPtrVal(resp.JSON200.RequestId),
+		RequestState: strPtrVal(resp.JSON200.RequestState),
+	}, nil
+}
+
+type TaxVoucherDividend struct {
+	CorpActionID   string
+	CountryCode    string
+	AccountID      AccountID
+	Amount         string
+	Fee            string
+	Quantity       string
+	RequestID      string
+	Year           int64
+	WithheldAmount string
+}
+
+type TaxVoucherState struct {
+	RequestID    string
+	RequestState string
+}
+
+type requestIDRaw struct {
+	RequestId *string `json:"requestId,omitempty"`
+}
+
+func (r *requestIDRaw) toPublic() string {
+	return strPtrVal(r.RequestId)
+}
+
+type countriesRaw struct {
+	Countries []string `json:"countries,omitempty"`
+}
+
+func (r *countriesRaw) toPublic() []string {
+	if r.Countries == nil {
+		return nil
+	}
+	return r.Countries
+}
+
+type yearsRaw struct {
+	Years []string `json:"years,omitempty"`
+}
+
+func (r *yearsRaw) toPublic() []string {
+	if r.Years == nil {
+		return nil
+	}
+	return r.Years
+}
+
+type dividendsRaw struct {
+	TaxVouchers []taxVoucherRaw `json:"taxVoucherRequests,omitempty"`
+}
+
+type taxVoucherRaw struct {
+	CorpactionId       *string  `json:"corpactionId,omitempty"`
+	CountryCode        *string  `json:"countryCode,omitempty"`
+	CustAcctId         *string  `json:"custAcctId,omitempty"`
+	DivAmount          *float32 `json:"divAmount,omitempty"`
+	Fee                *float32 `json:"fee,omitempty"`
+	MigratedCustAcctId *string  `json:"migratedCustAcctId,omitempty"`
+	Quantity           *float32 `json:"quantity,omitempty"`
+	RequestId          *string  `json:"requestId,omitempty"`
+	RequestState       *string  `json:"requestState,omitempty"`
+	WithHeldAmount     *float32 `json:"withHeldAmount,omitempty"`
+	Year               *int64   `json:"year,omitempty"`
+}
+
+func (r *dividendsRaw) toPublic() []TaxVoucherDividend {
+	if r.TaxVouchers == nil {
+		return nil
+	}
+	out := make([]TaxVoucherDividend, 0, len(r.TaxVouchers))
+	for _, t := range r.TaxVouchers {
+		out = append(out, TaxVoucherDividend{
+			CorpActionID:   strPtrVal(t.CorpactionId),
+			CountryCode:    strPtrVal(t.CountryCode),
+			AccountID:      AccountID(strPtrVal(t.CustAcctId)),
+			Amount:         float32ToStr(t.DivAmount),
+			Fee:            float32ToStr(t.Fee),
+			Quantity:       float32ToStr(t.Quantity),
+			RequestID:      strPtrVal(t.RequestId),
+			Year:           int64PtrVal(t.Year),
+			WithheldAmount: float32ToStr(t.WithHeldAmount),
+		})
+	}
+	return out
+}
+
+func float32ToStr(p *float32) string {
+	if p == nil {
+		return ""
+	}
+	return strconv.FormatFloat(float64(*p), 'f', -1, 32)
 }

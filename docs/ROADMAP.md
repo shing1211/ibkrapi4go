@@ -142,28 +142,54 @@ Notes:
 - The circuit breaker is disabled by default; telemetry carries no OpenTelemetry
   dependency (ADR 0004).
 
-## Phase 5 — OAuth2 surface (post-v1) *(foundation complete; managers incremental)*
+## Phase 5 — OAuth2 surface (post-v1) *(in progress; ~40 of 70 ops delivered)*
 
 Deliverables:
 
 - [x] `internal/oauth.go` — OAuth2 token acquisition/refresh with single-flight
-  refresh and refresh-token rotation; `Client.REST()` surface bound to the IB
-  REST host with `Authorization: Bearer` injection.
-- [x] `pkg/ibkr/rest.go` — `RESTSurface` + `RESTAccounts` (`Details`).
+  refresh, refresh-token rotation, and JWT-bearer assertion (`fetchWithSecret`,
+  `fetchWithJWTAssertion`).
+- [x] `internal/jwt.go` — RS256 JWT signing for `private_key_jwt` grant
+  (pure stdlib, PKCS8/PKCS1 PEM parsing).
+- [x] `pkg/ibkr/oauth.go` — JWT key options: `WithOAuth2JWTKey`,
+  `WithOAuth2JWTKeyFile`, `WithOAuth2JWTKeyPEM`, `WithOAuth2JWTExpiry`.
+- [x] `pkg/ibkr/rest.go` — `RESTSurface` + `RESTAccounts` (`Details`) + `RESTTaxVouchers`.
+- [x] `pkg/ibkr/rest_accounts.go` — 13 account ops: `List`, `Details`,
+  `LoginMessages`, `AccountStatusBulk`, `KycURL`, `LoginMessagesForAccount`,
+  `AccountStatus`, `AccountTasks`, `UpdateAccountStatus`, `UpdateAccountTasks`,
+  `CreateAccount`, `CreateAccountDocument`, `CreateAccountTask`.
+- [x] `pkg/ibkr/rest_requests.go` — 2 request ops: `ListRequests`,
+  `UpdateRequestStatus`.
+- [x] `pkg/ibkr/rest_banking.go` — 8 banking ops: `ClientInstruction`,
+  `InstructionSet`, `Instruction`, `QueryTransactions`, `CancelInstruction`,
+  `CancelInstructionsBulk` + sub-managers (stubs for transfers).
+- [x] `pkg/ibkr/rest_utilities.go` — 6 utility ops: `Enumerations`,
+  `ComplexAssetTransferBrokers`, `Forms`, `RequiredForms`,
+  `ParticipatingBanks`, `ValidateUsername`.
+- [x] `pkg/ibkr/restrictions.go` — 2 restriction ops: `AccountRestrictions`,
+  `UserRestrictions`.
+- [x] `pkg/ibkr/rest_balances.go` — 1 balance op: `Query`.
+- [ ] Write ops with polymorphic instruction bodies (external/internal asset
+  transfers, cash transfers, bank instructions) — require Signed JWT params
+  (Phase 6).
 - [ ] Remaining `/gw/api/v1` and `/gw/api/v2` managers (incremental).
 
 Exit criteria:
 
 - [x] Separate ADR accepted ([ADR 0011](./adr/0011-oauth2-surface.md)).
-- [x] Token refresh and rotation tested.
+- [x] Token refresh, rotation, and JWT assertion tested.
+- [ ] Live-gateway verification.
 
 Notes:
 
-- No new runtime dependency: token acquisition uses `net/http` form encoding
-  (ADR 0004); no OAuth2 library or OpenTelemetry SDK is added.
+- No new runtime dependency: token acquisition and JWT signing use pure stdlib
+  (`net/http`, `crypto/rsa`, `crypto/sha256`) per ADR 0004.
 - Credentials may come from `WithOAuth2*` options or `IBKR_CLIENT_ID` /
   `IBKR_CLIENT_SECRET` / `IBKR_CLIENT_REFRESH_TOKEN`.
-- Pending live-gateway verification.
+- Write ops with complex polymorphic instruction unions (transfers, bank
+  instructions) are deferred to Phase 6 when Signed JWT infrastructure is ready.
+- Operations requiring `Authorization` header with Signed JWT in params
+  (`getMasterRestrictionIds`, `getListDetails`, etc.) are deferred to Phase 6.
 
 ## Non-goals
 

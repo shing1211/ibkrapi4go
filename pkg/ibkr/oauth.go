@@ -4,7 +4,11 @@
 package ibkr
 
 import (
+	"crypto/rsa"
+	"io"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/shing1211/ibkrapi4go/internal"
 )
@@ -66,6 +70,63 @@ func WithOAuth2Scope(scope string) Option {
 func WithOAuth2TokenURL(url string) Option {
 	return func(c *config) error {
 		c.oauth2.TokenURL = url
+		return nil
+	}
+}
+
+// WithOAuth2JWTKey sets the RSA private key for JWT-bearer token exchange
+// (private_key_jwt grant type). Use this when the REST API requires
+// Signed JWT authentication instead of client credentials or refresh token.
+func WithOAuth2JWTKey(key *rsa.PrivateKey) Option {
+	return func(c *config) error {
+		c.oauth2.JWTKey = key
+		return nil
+	}
+}
+
+// WithOAuth2JWTKeyFile loads an RSA private key from a PEM file for
+// JWT-bearer token exchange.
+func WithOAuth2JWTKeyFile(path string) Option {
+	return func(c *config) error {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return &ConfigError{Field: "JWTKeyFile", Message: "read key file: " + err.Error()}
+		}
+		c.oauth2.JWTKeyPEM = data
+		return nil
+	}
+}
+
+// WithOAuth2JWTKeyPEM sets raw PEM-encoded RSA private key bytes for
+// JWT-bearer token exchange.
+func WithOAuth2JWTKeyPEM(pemData []byte) Option {
+	return func(c *config) error {
+		c.oauth2.JWTKeyPEM = pemData
+		return nil
+	}
+}
+
+// WithOAuth2JWTKeyReader loads an RSA private key from an io.Reader for
+// JWT-bearer token exchange. The reader must return PEM-encoded data.
+func WithOAuth2JWTKeyReader(r io.Reader) Option {
+	return func(c *config) error {
+		data, err := io.ReadAll(r)
+		if err != nil {
+			return &ConfigError{Field: "JWTKeyReader", Message: "read key data: " + err.Error()}
+		}
+		c.oauth2.JWTKeyPEM = data
+		return nil
+	}
+}
+
+// WithOAuth2JWTExpiry sets the JWT assertion expiry duration. Defaults to 60s.
+func WithOAuth2JWTExpiry(duration string) Option {
+	return func(c *config) error {
+		d, err := time.ParseDuration(duration)
+		if err != nil {
+			return &ConfigError{Field: "JWTExpiry", Message: "parse duration: " + err.Error()}
+		}
+		c.oauth2.JWTExpiry = d
 		return nil
 	}
 }
