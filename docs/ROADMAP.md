@@ -13,8 +13,8 @@ time. Scope for v1 is the CPAPI (`ssoBearer`) surface only — see
 | 2 | Portfolio, orders, contracts, market data | CPAPI |
 | 3 | WebSocket streaming | CPAPI |
 | 4 | Hardening: rate limits, retries, observability, docs | CPAPI |
-| 5 | OAuth2 surface: read ops (~40 ops) | IB REST |
-| 6 | OAuth2 surface: write ops, SSO, Echo, Restrictions (~30 ops) | IB REST |
+| 5 | OAuth2 surface: read ops (~48 ops) | IB REST |
+| 6 | OAuth2 surface: write ops, SSO, Echo, Restrictions (~57 ops) | IB REST |
 | — | Non-goals | — |
 
 The spec contains 185 operations: 115 on CPAPI (`ssoBearer`) and 70 on IB REST
@@ -112,7 +112,7 @@ Exit criteria:
 
 ## Phase 5 — OAuth2 surface: read ops *(complete)*
 
-Deliverables (~40 ops):
+Deliverables (~48 of 70 oauth2Bearer ops):
 
 - [x] `internal/oauth.go` — OAuth2 token acquisition/refresh with single-flight
   refresh, refresh-token rotation, and JWT-bearer assertion (`fetchWithSecret`,
@@ -122,34 +122,34 @@ Deliverables (~40 ops):
 - [x] `pkg/ibkr/oauth.go` — JWT key options: `WithOAuth2JWTKey`,
   `WithOAuth2JWTKeyFile`, `WithOAuth2JWTKeyPEM`, `WithOAuth2JWTExpiry`.
 - [x] `pkg/ibkr/rest.go` — `RESTSurface` + `RESTAccounts` (`Details`) + `RESTTaxVouchers`.
-- [x] `pkg/ibkr/rest_accounts.go` — 13 account ops: `List`, `Details`,
-  `LoginMessages`, `AccountStatusBulk`, `KycURL`, `LoginMessagesForAccount`,
-  `AccountStatus`, `AccountTasks`, `UpdateAccountStatus`, `UpdateAccountTasks`,
-  `CreateAccount`, `CreateAccountDocument`, `CreateAccountTask`.
-- [x] `pkg/ibkr/rest_requests.go` — 2 request ops: `ListRequests`,
-  `UpdateRequestStatus`.
-- [x] `pkg/ibkr/rest_banking.go` — 8 banking ops: `ClientInstruction`,
+- [x] `pkg/ibkr/rest_accounts.go` — 14 account ops: `List`, `Details`,
+  `LoginMessages`, `BulkStatus`, `KycURL`, `LoginMessagesForAccount`,
+  `Status`, `Tasks`, `Update`, `Create`, `SubmitDocument`, `UpdateStatus`,
+  `UpdateTasks`, `AssignTask`.
+- [x] `pkg/ibkr/rest_requests.go` — 3 request ops: `ListRequests`,
+  `UpdateRequestStatus`, `GetStatus`.
+- [x] `pkg/ibkr/rest_banking.go` — 6 read ops: `ClientInstruction`,
   `InstructionSet`, `Instruction`, `QueryTransactions`, `CancelInstruction`,
-  `CancelInstructionsBulk` + sub-managers (stubs for transfers).
+  `CancelInstructionsBulk` + transfer sub-managers (stubs; write ops deferred).
 - [x] `pkg/ibkr/rest_utilities.go` — 6 utility ops: `Enumerations`,
   `ComplexAssetTransferBrokers`, `Forms`, `RequiredForms`,
   `ParticipatingBanks`, `ValidateUsername`.
 - [x] `pkg/ibkr/restrictions.go` — 2 restriction ops: `AccountRestrictions`,
   `UserRestrictions`.
 - [x] `pkg/ibkr/rest_balances.go` — 1 balance op: `Query`.
-- [x] `pkg/ibkr/rest_statements.go` — statement ops: `Generate`, `ListAvailable`.
-- [x] `pkg/ibkr/rest_taxdocuments.go` — tax document ops: `Generate`, `ListAvailable`.
-- [x] `pkg/ibkr/rest_tradeconfirmations.go` — trade confirmation ops: `Generate`, `ListAvailable`.
+- [x] `pkg/ibkr/rest.go` — statement ops: `Generate`, `ListAvailable`.
+- [x] `pkg/ibkr/rest.go` — tax document ops: `Generate`, `ListAvailable`.
+- [x] `pkg/ibkr/rest.go` — trade confirmation ops: `Generate`, `ListAvailable`.
 
-## Phase 6 — OAuth2 surface: write ops, SSO, Echo, Restrictions *(in progress)*
+## Phase 6 — OAuth2 surface: write ops, SSO, Echo, Restrictions *(complete)*
 
-Deliverables (~30 ops, 3 of 4 PRs complete):
+Deliverables (~57 of 70 oauth2Bearer ops; 13 deferred):
 
 **PR 1 — SSO Sessions + Echo (complete):**
 - [x] `pkg/ibkr/rest_sso.go` — SSO session management: `CreateBrowserSession`, `CreateSession` (2 ops).
 - [x] `pkg/ibkr/rest_echo.go` — Echo utilities: `ListEchoHttps`, `CreateEchoSignedJwt` (2 ops).
 
-**PR 2 — Transfer write ops (deferred to future work):**
+**PR 2 — Transfer write ops (deferred):**
 - [ ] External asset transfers: `Transfer`, `TransferBulk`, `TransferV2`, `TransferBulkV2` (4 ops)
 - [ ] Internal asset transfers: `Transfer`, `TransferBulk` (2 ops)
 - [ ] External cash transfers: `Transfer`, `TransferBulk`, `QueryBalances` (3 ops)
@@ -161,9 +161,9 @@ Deliverables (~30 ops, 3 of 4 PRs complete):
 - [x] `MasterRestrictionIDs`, `MasterListIDs`, `ListDetails`, `RestrictionDetails`, `RestrictionScope` (5 ops)
 - [x] `ApplyCSV`, `VerifyCSV` (2 ops)
 
-**PR 4 — Docs sweep (pending):**
-- [ ] Final ROADMAP update
-- [ ] Verify all checks pass
+**PR 4 — Docs sweep (complete):**
+- [x] Final ROADMAP update
+- [x] Verify all checks pass
 
 Notes:
 
