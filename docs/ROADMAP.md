@@ -1,8 +1,9 @@
 # Roadmap
 
 Phased plan for ibkrapi4go. Phases are gated by **exit criteria**, not calendar
-time. Scope for v1 is the CPAPI (`ssoBearer`) surface only — see
-[ADR 0005](./adr/0005-v1-scope.md).
+time. The v1 effort originally targeted the CPAPI (`ssoBearer`) surface only
+(see the superseded [ADR 0005](./adr/0005-v1-scope.md)); Phases 5–7 added the
+`oauth2Bearer` surface, so all 185 operations are now implemented.
 
 ## Scope
 
@@ -16,6 +17,7 @@ time. Scope for v1 is the CPAPI (`ssoBearer`) surface only — see
 | 5 | OAuth2 surface: read ops (~48 ops) | IB REST |
 | 6 | OAuth2 surface: write ops, SSO, Echo, Restrictions (~57 ops) | IB REST |
 | 7 | Remaining CPAPI surface (~81 ops) | CPAPI |
+| 8 | In-repo mock gateway (test/development) | Both |
 | — | Non-goals | — |
 
 The spec contains 185 operations: 115 on CPAPI (`ssoBearer`) and 70 on IB REST
@@ -216,6 +218,28 @@ Notes:
 - Total coverage: 185/185 operations (115 CPAPI + 70 IB REST).
 - All managers registered in `Client` with accessor methods.
 - All checks pass: `make check`, `make test-race`, `make docs-check`, `make license-check`.
+
+## Phase 8 — In-repo mock gateway *(complete)*
+
+Usage is documented in [MOCK-GATEWAY.md](./MOCK-GATEWAY.md); the decision is
+recorded in [ADR 0014](./adr/0014-mock-gateway.md).
+
+Deliverables:
+
+- [x] `internal/mockgateway` — dependency-free mock of both API surfaces
+  (185/185 operations), the OAuth2 token endpoint, scriptable fault injection,
+  request recording, and a scripted WebSocket hub.
+- [x] `cmd/ibkr-mock-gateway` — standalone binary serving CPAPI, IB REST,
+  OAuth2, and streaming on a single port, with scenario/latency/seed/TLS flags
+  and graceful shutdown.
+- [x] `examples/mock` and `make mock-gateway` — runnable end-to-end demo that
+  points the SDK at the mock.
+
+Exit criteria:
+
+- [x] `go run ./cmd/ibkr-mock-gateway` serves both surfaces on one port.
+- [x] The example connects, initializes a session, and lists accounts.
+- [x] No new dependencies.
 
 ## Non-goals
 

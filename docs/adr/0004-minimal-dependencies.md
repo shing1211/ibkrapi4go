@@ -18,7 +18,7 @@ Keep the runtime dependency set minimal and justified:
 | `github.com/coder/websocket` | WebSocket client | yes |
 | `golang.org/x/time/rate` | Rate limiting | yes |
 | `github.com/oapi-codegen/runtime` | Helpers used by generated code | yes |
-| `github.com/stretchr/testify` | Tests | no (test) |
+| `go.uber.org/goleak` | Goroutine leak detection | no (test) |
 | `oapi-codegen` | Codegen CLI | no (build) |
 
 - No web framework (this is a client, not a server; stdlib `net/http` suffices).

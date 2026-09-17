@@ -44,11 +44,14 @@ project fills that gap with a typed, OpenAPI-driven, idiomatic Go client.
 pkg/ibkr/          Public API: Client, managers, options, errors
       │
       ▼
-internal/          transport, session, ratelimit, retry, ws
+internal/          transport, session, oauth, ratelimit, retry, ws, metrics
       │
       ▼
 client/            Generated OpenAPI types + HTTP client (DO NOT EDIT)
 ```
+
+`internal/mockgateway` is a server-side test/development aid, not part of the
+request path above; `cmd/ibkr-mock-gateway` and `examples/mock` use it.
 
 Generated code never leaks to callers. Managers adapt generated request/response
 types to stable public types (see [design/04-generated-wrapping.md](./design/04-generated-wrapping.md)).
@@ -94,7 +97,10 @@ ibkrapi4go/
 │   ├── retry.go         # safe-method retry + Retry-After
 │   ├── observability.go # request logging, redaction, telemetry hooks
 │   ├── breaker.go       # optional circuit breaker
-│   └── errors.go        # *Error type, sentinels, ConfigError
+│   ├── errors.go        # *Error type, sentinels, ConfigError
+│   └── mockgateway/     # in-repo mock of both API surfaces (test/dev aid)
+├── cmd/                 # standalone binaries (ibkr-mock-gateway)
+├── examples/            # runnable examples (mock)
 ├── scripts/
 └── docs/
 ```
@@ -141,9 +147,10 @@ code, message, HTTP status, and request metadata not containing secrets.
 
 ## Testing strategy
 
-See [TESTING.md](./TESTING.md): unit tests against `httptest`, WebSocket tests
-against `wstest`/local server, integration tests against a paper gateway, and a
-codegen reproducibility check.
+See [TESTING.md](./TESTING.md): unit tests against `httptest`, manager and
+WebSocket tests against the in-repo mock gateway
+([`internal/mockgateway`](./MOCK-GATEWAY.md)), integration tests against a paper
+gateway, and a codegen reproducibility check.
 
 ## Non-goals (v1)
 

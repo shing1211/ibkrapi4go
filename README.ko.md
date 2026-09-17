@@ -21,7 +21,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 이 문서는 영어 [README](./README.md)의 커뮤니티 번역입니다. **영어판이 정본입니다.**
-> 동기화 / Last synced: c5d6706
+> 동기화 / Last synced: 177e5be
 
 ## 목차
 
@@ -149,6 +149,7 @@ ibkrapi4go/
 | [docs/SPEC.md](./docs/SPEC.md) | 정본 엔드포인트 색인 (표면 + 인증) |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 계층, 구성, 미들웨어 |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 종료 기준이 있는 단계별 계획 |
+| [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | 저장소 내 모의 게이트웨이 (테스트, 예제, 독립 실행 파일) |
 | [docs/AUTH.md](./docs/AUTH.md) | 두 가지 인증 모델 |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 명세 가져오기, 패치, 생성, 검증 |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 용어집 |

@@ -21,7 +21,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本書は英語版 [README](./README.md) のコミュニティ翻訳です。**英語版が正式です。**
-> 同期 / Last synced: c5d6706
+> 同期 / Last synced: 177e5be
 
 ## 目次
 
@@ -149,6 +149,7 @@ ibkrapi4go/
 | [docs/SPEC.md](./docs/SPEC.md) | 正式なエンドポイント索引（サーフェス + 認証） |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | レイヤリング、構成、ミドルウェア |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 終了条件付きの段階的計画 |
+| [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | リポジトリ内モックゲートウェイ（テスト、サンプル、単体バイナリ） |
 | [docs/AUTH.md](./docs/AUTH.md) | 2 つの認証モデル |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 仕様の取得、パッチ、生成、検証 |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 用語集 |

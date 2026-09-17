@@ -20,7 +20,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本文件是英文 [README](./README.md) 的社区翻译。**英文版本为准。**
-> 同步于 / Last synced: c5d6706
+> 同步于 / Last synced: 177e5be
 
 ## 目录
 
@@ -146,6 +146,7 @@ ibkrapi4go/
 | [docs/SPEC.md](./docs/SPEC.md) | 规范接口索引（表面 + 认证） |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 分层、组合、中间件 |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 带退出标准的分阶段计划 |
+| [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | 仓库内模拟网关（测试、示例、独立二进制） |
 | [docs/AUTH.md](./docs/AUTH.md) | 两种认证模型 |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 规范获取、修补、生成、验证 |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 术语表 |

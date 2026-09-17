@@ -55,7 +55,7 @@ blocks on a slow consumer.
 
 ## Testing
 
-- Local `httptest` WebSocket server.
+- Mock gateway WebSocket hub (`internal/mockgateway`) behind `httptest`.
 - Reconnect test: server drops once, asserts re-subscription.
 - Overflow test: slow consumer, asserts oldest-dropped and counter.
 - `goleak` after `Close`.

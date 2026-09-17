@@ -122,7 +122,8 @@ larger buffer or persist server-side.
 
 ## Testing
 
-- Local WebSocket server: subscribe → receive → unsubscribe.
+- Mock gateway WebSocket hub ([MOCK-GATEWAY.md](./MOCK-GATEWAY.md)): subscribe →
+  receive → unsubscribe.
 - Reconnect test with a server that drops the connection once.
 - Buffer-overflow test asserts the drop policy and counter.
 - `goleak` asserts no goroutines survive `Close()`.

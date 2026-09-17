@@ -20,7 +20,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本文件是英文 [README](./README.md) 的社群翻譯。**英文版本為準。**
-> 同步於 / Last synced: c5d6706
+> 同步於 / Last synced: 177e5be
 
 ## 目錄
 
@@ -146,6 +146,7 @@ ibkrapi4go/
 | [docs/SPEC.md](./docs/SPEC.md) | 規範介面索引（表面 + 認證） |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 分層、組合、中介軟體 |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 含退出標準的分階段計畫 |
+| [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | 倉庫內模擬閘道（測試、範例、獨立二進位） |
 | [docs/AUTH.md](./docs/AUTH.md) | 兩種認證模型 |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 規範取得、修補、產生、驗證 |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | 術語表 |

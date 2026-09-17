@@ -146,6 +146,7 @@ ibkrapi4go/
 | [docs/SPEC.md](./docs/SPEC.md) | Canonical endpoint index (surface + auth) |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Layering, composition, middleware |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Phased plan with exit criteria |
+| [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | In-repo mock gateway for tests, examples, and a standalone binary |
 | [docs/AUTH.md](./docs/AUTH.md) | The two auth models |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | Spec fetch, patch, generate, verify |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | Terminology |

@@ -8,8 +8,8 @@ Testing strategy for ibkrapi4go.
 |------|----------|-----------|---------------|------------|
 | Unit | `*_test.go` next to source | — | No | ✅ |
 | Session | `internal/session_test.go` | — | No (fakeAPI) | ✅ |
-| Manager e2e | `pkg/ibkr/*_test.go` | — | No (httptest) | ✅ |
-| WebSocket | `pkg/ibkr/ws_test.go` | — | No (local WS server) | ✅ |
+| Manager e2e | `pkg/ibkr/*_test.go` | — | No (mockgateway) | ✅ |
+| WebSocket | `pkg/ibkr/ws_test.go` | — | No (mockgateway WS hub) | ✅ |
 | Codegen | `scripts/validate_codegen.sh` | — | No | ✅ (scheduled too) |
 | Integration | `test/` (planned; not yet present) | `integration` | Yes (paper) | On demand |
 
@@ -26,9 +26,23 @@ Fixtures:
 
 ## WebSocket tests
 
-- Run a local `httptest` server that upgrades to WebSocket and echoes frames.
+- Run the in-repo mock gateway's WebSocket hub (`internal/mockgateway`) behind an
+  `httptest.Server`.
 - Cover: subscribe → receive → unsubscribe, reconnect after forced drop, buffer
   overflow policy, and `goleak` after `Close`.
+
+## Mock gateway
+
+`internal/mockgateway` is an in-repo, dependency-free mock of both API surfaces
+(all 185 operations in [SPEC.md](./SPEC.md)), the OAuth2 token endpoint, and the
+WebSocket stream, with scriptable faults and request recording. Manager and
+WebSocket tests run against it through `httptest`; the same server backs the
+`cmd/ibkr-mock-gateway` binary and `examples/mock`. See
+[MOCK-GATEWAY.md](./MOCK-GATEWAY.md) for the API.
+
+The mock is a test/development aid, not a conformance suite: fixtures are
+synthetic, auth is validated at the shape/flow level, and a paper-account
+integration tier is still required.
 
 ## Concurrency & leaks
 
@@ -105,7 +119,8 @@ on a schedule, because the upstream spec can change without a commit here.
 
 ## Fakes
 
-- Prefer a hand-written fake gateway (`httptest`) over interface mocks.
+- Prefer the in-repo mock gateway (`internal/mockgateway`) or a hand-written
+  `httptest` fake over interface mocks.
 - Where mocks are needed, use small interfaces so fakes are easy.
 
 ## What we do not do
@@ -113,7 +128,7 @@ on a schedule, because the upstream spec can change without a commit here.
 - No tests that require network access in CI.
 - No golden-file tests over generated code (use `codegen-verify` instead).
 - No live-account tests.
-- Streaming is unit-tested against a local WebSocket server; live-gateway
+- Streaming is unit-tested against the mock gateway WebSocket hub; live-gateway
   verification is pending.
 
 ## Required cases (minimum)

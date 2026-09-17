@@ -42,6 +42,8 @@ make check
 ├── client/          # Generated code — DO NOT EDIT MANUALLY
 ├── pkg/ibkr/        # Public SDK — edit here for API changes
 ├── internal/        # Internal implementation — breaking changes OK
+├── cmd/             # Standalone binaries (ibkr-mock-gateway)
+├── examples/        # Runnable examples (mock)
 ├── docs/            # Reference, design, ADRs
 ├── scripts/         # Codegen + validation scripts
 └── specs/           # Cached OpenAPI spec (gitignored)

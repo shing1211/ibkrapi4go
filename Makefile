@@ -11,7 +11,7 @@ OAPI_CODEGEN_VERSION ?= v2.8.0
 
 .PHONY: help tools fmt vet test test-race coverage check \
         codegen codegen-verify docs-spec docs-check \
-        license license-check clean
+        license license-check mock-gateway clean
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -57,6 +57,9 @@ docs-spec: ## Regenerate docs/SPEC.md from the spec
 docs-check: ## Check markdown links and README translations
 	python3 scripts/check_links.py
 	python3 scripts/check_i18n.py
+
+mock-gateway: ## Run the standalone mock IBKR gateway
+	$(GO) run ./cmd/ibkr-mock-gateway
 
 license: ## Apply SPDX headers to sources
 	@if [ -f go.mod ]; then \

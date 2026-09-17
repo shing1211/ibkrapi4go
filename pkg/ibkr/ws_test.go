@@ -5,81 +5,23 @@ package ibkr
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"net/http"
 	"net/http/httptest"
-	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/coder/websocket"
+	"github.com/shing1211/ibkrapi4go/internal/mockgateway"
 )
 
-type wsServerConfig struct {
-	dropFirstConn bool
-	onSubscribe   func(c *websocket.Conn, conids []int, fields []string)
-}
-
-func newWSServer(t *testing.T, cfg wsServerConfig) *httptest.Server {
+// newWSServer starts the mockgateway WebSocket endpoint with the given script
+// and returns its test server. A nil script uses the default behavior: one tick
+// per subscribed conid.
+func newWSServer(t *testing.T, script *mockgateway.StreamScript) *httptest.Server {
 	t.Helper()
-	var conns atomic.Int64
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
-		if err != nil {
-			return
-		}
-		n := conns.Add(1)
-		if cfg.dropFirstConn && n == 1 {
-			// Read one subscribe frame, then drop the connection.
-			_, data, err := c.Read(context.Background())
-			if err == nil && cfg.onSubscribe != nil {
-				method, conids, fields := parseWSFrame(data)
-				if method == "subscribe" {
-					cfg.onSubscribe(c, conids, fields)
-				}
-			}
-			_ = c.Close(websocket.StatusInternalError, "drop")
-			return
-		}
-		for {
-			_, data, err := c.Read(context.Background())
-			if err != nil {
-				return
-			}
-			method, conids, fields := parseWSFrame(data)
-			if method != "subscribe" || len(conids) == 0 {
-				continue
-			}
-			if cfg.onSubscribe != nil {
-				cfg.onSubscribe(c, conids, fields)
-				continue
-			}
-			sendWSUpdate(c, conids[0], "31", "150.25")
-		}
-	}))
-	t.Cleanup(srv.Close)
-	return srv
-}
-
-func parseWSFrame(data []byte) (method string, conids []int, fields []string) {
-	var f struct {
-		Method string `json:"method"`
-		Params struct {
-			Conids []int    `json:"conids"`
-			Fields []string `json:"fields"`
-		} `json:"params"`
-	}
-	_ = json.Unmarshal(data, &f)
-	return f.Method, f.Params.Conids, f.Params.Fields
-}
-
-func sendWSUpdate(c *websocket.Conn, conid int, field, value string) {
-	frame := map[string]any{"conid": conid, field: value, "_updated": time.Now().Unix()}
-	b, _ := json.Marshal(frame)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	_ = c.Write(ctx, websocket.MessageText, b)
+	srv := mockgateway.New(mockgateway.WithStreamScript(script))
+	ts := httptest.NewServer(srv.Handler())
+	t.Cleanup(ts.Close)
+	return ts
 }
 
 func recvUpdate(sub *Subscription, d time.Duration) (Update, bool) {
@@ -92,7 +34,7 @@ func recvUpdate(sub *Subscription, d time.Duration) (Update, bool) {
 }
 
 func TestWS_SubscribeReceiveClose(t *testing.T) {
-	srv := newWSServer(t, wsServerConfig{})
+	srv := newWSServer(t, nil)
 	cli, err := NewClient(WithGatewayURL(srv.URL))
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
@@ -122,7 +64,7 @@ func TestWS_SubscribeReceiveClose(t *testing.T) {
 }
 
 func TestWS_ReconnectResubscribes(t *testing.T) {
-	srv := newWSServer(t, wsServerConfig{dropFirstConn: true})
+	srv := newWSServer(t, &mockgateway.StreamScript{DropFirstConnection: true})
 	cli, err := NewClient(
 		WithGatewayURL(srv.URL),
 		WithStreamingLimits(StreamingLimits{ReconnectBase: 10 * time.Millisecond, ReconnectMax: 50 * time.Millisecond}),
@@ -161,7 +103,7 @@ func TestWS_ReconnectResubscribes(t *testing.T) {
 
 func TestWS_MetricsConnectsAndReconnects(t *testing.T) {
 	m := NewInMemoryMetrics()
-	srv := newWSServer(t, wsServerConfig{dropFirstConn: true})
+	srv := newWSServer(t, &mockgateway.StreamScript{DropFirstConnection: true})
 	cli, err := NewClient(
 		WithGatewayURL(srv.URL),
 		WithMetrics(m),
@@ -209,11 +151,15 @@ func TestWS_MetricsConnectsAndReconnects(t *testing.T) {
 
 func TestWS_BufferOverflowDropsOldest(t *testing.T) {
 	const burst = 64
-	srv := newWSServer(t, wsServerConfig{onSubscribe: func(c *websocket.Conn, conids []int, fields []string) {
-		for i := 0; i < burst; i++ {
-			sendWSUpdate(c, conids[0], "31", "150.25")
-		}
-	}})
+	srv := newWSServer(t, &mockgateway.StreamScript{
+		OnSubscribe: func(conids []int, _ []string) []mockgateway.Tick {
+			ticks := make([]mockgateway.Tick, 0, burst)
+			for i := 0; i < burst; i++ {
+				ticks = append(ticks, mockgateway.Tick{ConID: conids[0], Field: "31", Value: "150.25"})
+			}
+			return ticks
+		},
+	})
 	cli, err := NewClient(WithGatewayURL(srv.URL), WithStreamingLimits(StreamingLimits{BufferSize: 4}))
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
@@ -241,7 +187,7 @@ func TestWS_BufferOverflowDropsOldest(t *testing.T) {
 }
 
 func TestWS_Limits(t *testing.T) {
-	srv := newWSServer(t, wsServerConfig{})
+	srv := newWSServer(t, nil)
 	cli, err := NewClient(WithGatewayURL(srv.URL), WithStreamingLimits(StreamingLimits{
 		MaxConIDsPerRequest: 2,
 		MaxFieldsPerRequest: 2,

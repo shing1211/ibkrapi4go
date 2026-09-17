@@ -21,7 +21,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > Este documento es una traducción comunitaria del [README](./README.md) en inglés.
-> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: c5d6706
+> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: 177e5be
 
 ## Tabla de contenidos
 
@@ -151,6 +151,7 @@ ibkrapi4go/
 | [docs/SPEC.md](./docs/SPEC.md) | Índice canónico de endpoints (superficie + autenticación) |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Capas, composición, middleware |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Plan por fases con criterios de salida |
+| [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | Pasarela simulada del repositorio (pruebas, ejemplos, binario independiente) |
 | [docs/AUTH.md](./docs/AUTH.md) | Los dos modelos de autenticación |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | Obtención, parcheo, generación y verificación |
 | [docs/GLOSSARY.md](./docs/GLOSSARY.md) | Terminología |

@@ -25,6 +25,7 @@ make codegen-verify  # fail if generated code differs from committed
 make license         # apply SPDX headers
 make license-check   # verify SPDX headers
 make docs-check      # check markdown links + README translations
+make mock-gateway    # run the standalone mock IBKR gateway
 ```
 
 ## Hard rules
@@ -55,6 +56,7 @@ make docs-check      # check markdown links + README translations
 | Module contracts | `docs/design/` |
 | Spec patching | `scripts/patch_spec.py` |
 | Codegen | `scripts/codegen.sh`, `oapi-codegen.yaml` |
+| Mock gateway | `internal/mockgateway/`, `cmd/ibkr-mock-gateway/`, `docs/MOCK-GATEWAY.md` |
 | Translations | `README.*.md`, `TRANSLATING.md`, `scripts/check_i18n.py` |
 
 ## Before opening a PR

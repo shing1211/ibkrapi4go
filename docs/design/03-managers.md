@@ -68,6 +68,7 @@ quote, err := cli.MarketData().Snapshot(ctx, conid, fields)
 
 ## Testing
 
-Each manager has table-driven tests against `httptest` fixtures, asserting the
-outbound request (path, query, body) and the mapped response, including error
-paths and pagination.
+Each manager has table-driven tests against the in-repo mock gateway
+(`internal/mockgateway`) served via `httptest`, asserting the outbound request
+(path, query, body) and the mapped response, including error paths and
+pagination.

@@ -39,14 +39,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ibkr.<subsystem>` message prefixes, per-component nil-safety (a logger is
   never nil after construction), and redaction of tokens, cookies, and
   `Authorization` headers. See [docs/LOGGING.md](./docs/LOGGING.md).
+- **Dependency-free metrics layer:** an OTel-shaped `Metrics` interface with
+  `InMemoryMetrics`/`NopMetrics`, `WithMetrics`, and documented `ibkr.*` metric
+  names for HTTP, orders, rate limiting, circuit breaking, WebSocket, and OAuth.
+  See [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) and
+  [ADR 0013](./docs/adr/0013-metrics.md).
+- **In-repo mock IBKR gateway:** `internal/mockgateway` serves both API surfaces
+  and the WebSocket stream (185/185 operations) with scriptable faults, request
+  recording, deterministic fixtures, and shape-level auth, with no new
+  dependency; `cmd/ibkr-mock-gateway`, `examples/mock`, and `make mock-gateway`
+  drive it. See [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) and
+  [ADR 0014](./docs/adr/0014-mock-gateway.md). Manager and WebSocket tests now
+  run against it. The mock is a development/testing aid, not a conformance
+  suite.
 - Initialized the Go module (`go.mod`) and committed the generated OpenAPI
   client (`client/client.gen.go`, package `client`), with a deterministic SPDX
   header and a reproducible `make codegen-verify` check.
 - Project documentation set: `SPEC.md`, `ARCHITECTURE.md`, `AUTH.md`,
   `SESSIONS.md`, `ERRORS.md`, `RATE-LIMITING.md`, `STREAMING.md`, `LOGGING.md`,
-  `CODEGEN.md`, `TESTING.md`, `RELEASING.md`, `CONFIG.md`, `GLOSSARY.md`,
-  `ROADMAP.md`.
-- Architecture Decision Records (`docs/adr/0001`–`0012`).
+  `OBSERVABILITY.md`, `CODEGEN.md`, `TESTING.md`, `MOCK-GATEWAY.md`,
+  `RELEASING.md`, `CONFIG.md`, `GLOSSARY.md`, `ROADMAP.md`.
+- Architecture Decision Records (`docs/adr/0001`–`0014`).
 - Per-module design contracts (`docs/design/01`–`09`).
 - `scripts/patch_spec.py`: generalized OpenAPI spec patcher (path-parameter
   reconciliation, operation-ID de-duplication, Go type-name collision fixes).

@@ -19,6 +19,7 @@ a new ADR, not editing the old one.
 | [0011](./0011-oauth2-surface.md) | OAuth2 / IB REST surface | Accepted |
 | [0012](./0012-test-dependencies.md) | Test-only dependencies (`goleak`) | Accepted |
 | [0013](./0013-metrics.md) | Dependency-free metrics interface | Accepted |
+| [0014](./0014-mock-gateway.md) | In-repo mock IBKR gateway | Accepted |
 
 Template:
 
@@ -30,4 +31,5 @@ Template:
 ## Context
 ## Decision
 ## Consequences
+## Alternatives considered
 ```
