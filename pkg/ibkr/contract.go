@@ -4,6 +4,7 @@
 package ibkr
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -253,6 +254,470 @@ func (m *TradeManager) Strikes(ctx context.Context, conid ConID, secType, month 
 		return out
 	}
 	return &Strikes{Call: nums(raw.Call), Put: nums(raw.Put)}, nil
+}
+
+// TradingSchedule holds a trading schedule entry.
+type TradingSchedule struct {
+	// Market is the market name.
+	Market string `json:"market"`
+	// Hours are the trading hours.
+	Hours string `json:"hours"`
+}
+
+// InfoAndRules holds combined contract information and rules.
+type InfoAndRules struct {
+	// ConID is the contract identifier.
+	ConID ConID `json:"conId"`
+	// Symbol is the ticker symbol.
+	Symbol string `json:"symbol"`
+	// Rules holds the trading rules.
+	Rules *ContractRules `json:"rules,omitempty"`
+}
+
+// CurrencyPair holds a currency pair exchange rate.
+type CurrencyPair struct {
+	// ConID is the contract identifier.
+	ConID ConID `json:"conId"`
+	// SourceCurrency is the source currency.
+	SourceCurrency string `json:"sourceCurrency"`
+	// TargetCurrency is the target currency.
+	TargetCurrency string `json:"targetCurrency"`
+	// ExchangeRate is the exchange rate.
+	ExchangeRate string `json:"exchangeRate"`
+}
+
+// ExchangeRate holds an exchange rate between two currencies.
+type ExchangeRate struct {
+	// FromCurrency is the source currency.
+	FromCurrency string `json:"fromCurrency"`
+	// ToCurrency is the target currency.
+	ToCurrency string `json:"toCurrency"`
+	// Rate is the exchange rate.
+	Rate string `json:"rate"`
+}
+
+// BondFilter holds bond filter criteria.
+type BondFilter struct {
+	// InstrumentID is the instrument identifier.
+	InstrumentID string `json:"instrumentId"`
+	// Coupon is the coupon rate.
+	Coupon string `json:"coupon"`
+	// MaturityDate is the maturity date.
+	MaturityDate string `json:"maturityDate"`
+}
+
+// SecDefInfo holds security definition information.
+type SecDefInfo struct {
+	// ConID is the contract identifier.
+	ConID ConID `json:"conId"`
+	// Symbol is the ticker symbol.
+	Symbol string `json:"symbol"`
+	// SecurityType is the security type.
+	SecurityType string `json:"securityType"`
+	// Exchange is the listing exchange.
+	Exchange string `json:"exchange"`
+	// Currency is the instrument currency.
+	Currency string `json:"currency"`
+}
+
+// SymbolSearchResult holds a contract symbol search result.
+type SymbolSearchResult struct {
+	// ConID is the contract identifier.
+	ConID ConID `json:"conId"`
+	// Symbol is the ticker symbol.
+	Symbol string `json:"symbol"`
+	// CompanyName is the issuer/company name.
+	CompanyName string `json:"companyName"`
+	// SecType is the security type.
+	SecType string `json:"secType"`
+	// Exchange is the listing exchange.
+	Exchange string `json:"exchange"`
+}
+
+// ConidByExchange holds a contract ID resolved by exchange.
+type ConidByExchange struct {
+	// ConID is the contract identifier.
+	ConID ConID `json:"conId"`
+	// Symbol is the ticker symbol.
+	Symbol string `json:"symbol"`
+	// Exchange is the listing exchange.
+	Exchange string `json:"exchange"`
+	// SecurityType is the security type.
+	SecurityType string `json:"securityType"`
+}
+
+// FutureBySymbol holds a future contract resolved by symbol.
+type FutureBySymbol struct {
+	// ConID is the contract identifier.
+	ConID ConID `json:"conId"`
+	// Symbol is the ticker symbol.
+	Symbol string `json:"symbol"`
+	// Expiry is the expiry date.
+	Expiry string `json:"expiry"`
+	// Exchange is the listing exchange.
+	Exchange string `json:"exchange"`
+}
+
+// InstrumentDefinition holds detailed instrument definition data.
+type InstrumentDefinition struct {
+	// ConID is the contract identifier.
+	ConID ConID `json:"conId"`
+	// Symbol is the ticker symbol.
+	Symbol string `json:"symbol"`
+	// CompanyName is the issuer/company name.
+	CompanyName string `json:"companyName"`
+	// SecurityType is the security type.
+	SecurityType string `json:"securityType"`
+	// Exchange is the listing exchange.
+	Exchange string `json:"exchange"`
+	// Currency is the instrument currency.
+	Currency string `json:"currency"`
+}
+
+// StockBySymbol holds a stock contract resolved by symbol.
+type StockBySymbol struct {
+	// ConID is the contract identifier.
+	ConID ConID `json:"conId"`
+	// Symbol is the ticker symbol.
+	Symbol string `json:"symbol"`
+	// Exchange is the listing exchange.
+	Exchange string `json:"exchange"`
+	// SecurityType is the security type.
+	SecurityType string `json:"securityType"`
+}
+
+// GetTradingSchedule returns the trading schedule for a given contract.
+func (m *TradeManager) GetTradingSchedule(ctx context.Context, conid ConID, exchange *string) (*TradingSchedule, error) {
+	const op = "Trade.GetTradingSchedule"
+	params := &client.GetTradingScheduleParams{
+		Conid:    strconv.Itoa(int(conid)),
+		Exchange: exchange,
+	}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetTradingSchedule(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	return &TradingSchedule{
+		Market: rawToString(raw, "market"),
+		Hours:  rawToString(raw, "hours"),
+	}, nil
+}
+
+// GetAlgosByInstrument returns available algo types for a contract.
+func (m *TradeManager) GetAlgosByInstrument(ctx context.Context, conid ConID) (json.RawMessage, error) {
+	const op = "Trade.GetAlgosByInstrument"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetAlgosByInstrument(ctx, strconv.Itoa(int(conid)), nil)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var result json.RawMessage
+	if err := decodeJSON(resp, op, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetInfoAndRules returns combined information and rules for a contract.
+func (m *TradeManager) GetInfoAndRules(ctx context.Context, conid ConID) (*InfoAndRules, error) {
+	const op = "Trade.GetInfoAndRules"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetInfoAndRules(ctx, strconv.Itoa(int(conid)))
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	return &InfoAndRules{
+		ConID:  ConID(jsonNumberToInt(jsonNumber(raw["conId"]))),
+		Symbol: rawToString(raw, "symbol"),
+	}, nil
+}
+
+// GetCurrencyPairs returns currency pair exchange rates for a given currency.
+func (m *TradeManager) GetCurrencyPairs(ctx context.Context, currency string) ([]CurrencyPair, error) {
+	const op = "Trade.GetCurrencyPairs"
+	params := &client.GetCurrencyPairsParams{Currency: currency}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetCurrencyPairs(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]CurrencyPair, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, CurrencyPair{
+			ConID:          ConID(jsonNumberToInt(jsonNumber(item["conId"]))),
+			SourceCurrency: rawToString(item, "sourceCurrency"),
+			TargetCurrency: rawToString(item, "targetCurrency"),
+			ExchangeRate:   rawToString(item, "exchangeRate"),
+		})
+	}
+	return out, nil
+}
+
+// GetExchangeRates returns exchange rates for a currency pair.
+func (m *TradeManager) GetExchangeRates(ctx context.Context, source, target string) ([]ExchangeRate, error) {
+	const op = "Trade.GetExchangeRates"
+	params := &client.GetExchangeRatesParams{Source: source, Target: target}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetExchangeRates(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]ExchangeRate, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, ExchangeRate{
+			FromCurrency: rawToString(item, "fromCurrency"),
+			ToCurrency:   rawToString(item, "toCurrency"),
+			Rate:         rawToString(item, "rate"),
+		})
+	}
+	return out, nil
+}
+
+// GetBondFilters returns bond filter results for a given symbol and issuer.
+func (m *TradeManager) GetBondFilters(ctx context.Context, symbol, issuerID string) ([]BondFilter, error) {
+	const op = "Trade.GetBondFilters"
+	params := &client.GetBondFiltersParams{Symbol: symbol, IssuerId: issuerID}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetBondFilters(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]BondFilter, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, BondFilter{
+			InstrumentID: rawToString(item, "instrumentId"),
+			Coupon:       rawToString(item, "coupon"),
+			MaturityDate: rawToString(item, "maturityDate"),
+		})
+	}
+	return out, nil
+}
+
+// GetContractInfo searches for contracts by criteria.
+func (m *TradeManager) GetContractInfo(ctx context.Context, conid ConID) ([]SecDefInfo, error) {
+	const op = "Trade.GetContractInfo"
+	cid := strconv.Itoa(int(conid))
+	params := &client.GetContractInfoParams{Conid: &cid}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetContractInfo(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]SecDefInfo, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, SecDefInfo{
+			ConID:        ConID(jsonNumberToInt(jsonNumber(item["conId"]))),
+			Symbol:       rawToString(item, "symbol"),
+			SecurityType: rawToString(item, "securityType"),
+			Exchange:     rawToString(item, "exchange"),
+			Currency:     rawToString(item, "currency"),
+		})
+	}
+	return out, nil
+}
+
+// GetContractSymbolsFromBody searches for contracts using POST body parameters.
+func (m *TradeManager) GetContractSymbolsFromBody(ctx context.Context, symbol string) ([]SymbolSearchResult, error) {
+	const op = "Trade.GetContractSymbolsFromBody"
+	bodyJSON := map[string]interface{}{"symbol": symbol}
+	body, err := json.Marshal(bodyJSON)
+	if err != nil {
+		return nil, &Error{Op: op, Message: "encode request: " + err.Error(), Err: err}
+	}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetContractSymbolsFromBodyWithBody(ctx,
+			"application/json", bytes.NewReader(body))
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]SymbolSearchResult, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, SymbolSearchResult{
+			ConID:       ConID(jsonNumberToInt(jsonNumber(item["conid"]))),
+			Symbol:      rawToString(item, "symbol"),
+			CompanyName: rawToString(item, "companyName"),
+			SecType:     rawToString(item, "secType"),
+			Exchange:    rawToString(item, "exchange"),
+		})
+	}
+	return out, nil
+}
+
+// GetConidsByExchange returns contract IDs for instruments on a given exchange.
+func (m *TradeManager) GetConidsByExchange(ctx context.Context, exchange string) ([]ConidByExchange, error) {
+	const op = "Trade.GetConidsByExchange"
+	params := &client.GetConidsByExchangeParams{Exchange: exchange}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetConidsByExchange(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]ConidByExchange, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, ConidByExchange{
+			ConID:        ConID(jsonNumberToInt(jsonNumber(item["conid"]))),
+			Symbol:       rawToString(item, "symbol"),
+			Exchange:     rawToString(item, "exchange"),
+			SecurityType: rawToString(item, "securityType"),
+		})
+	}
+	return out, nil
+}
+
+// GetFutureBySymbol returns future contracts for a given symbol.
+func (m *TradeManager) GetFutureBySymbol(ctx context.Context, symbols string, exchange *string) ([]FutureBySymbol, error) {
+	const op = "Trade.GetFutureBySymbol"
+	params := &client.GetFutureBySymbolParams{Symbols: symbols, Exchange: exchange}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetFutureBySymbol(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	// The response is typically a map of symbol -> array of futures
+	var out []FutureBySymbol
+	for _, v := range raw {
+		var items []map[string]json.RawMessage
+		if json.Unmarshal(v, &items) == nil {
+			for _, item := range items {
+				out = append(out, FutureBySymbol{
+					ConID:    ConID(jsonNumberToInt(jsonNumber(item["conid"]))),
+					Symbol:   rawToString(item, "symbol"),
+					Expiry:   rawToString(item, "expiry"),
+					Exchange: rawToString(item, "exchange"),
+				})
+			}
+		}
+	}
+	return out, nil
+}
+
+// GetInstrumentDefinition returns instrument definitions for given contract IDs.
+func (m *TradeManager) GetInstrumentDefinition(ctx context.Context, conids string) ([]InstrumentDefinition, error) {
+	const op = "Trade.GetInstrumentDefinition"
+	params := &client.GetInstrumentDefinitionParams{Conids: conids}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetInstrumentDefinition(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]InstrumentDefinition, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, InstrumentDefinition{
+			ConID:        ConID(jsonNumberToInt(jsonNumber(item["conid"]))),
+			Symbol:       rawToString(item, "symbol"),
+			CompanyName:  rawToString(item, "companyName"),
+			SecurityType: rawToString(item, "securityType"),
+			Exchange:     rawToString(item, "exchange"),
+			Currency:     rawToString(item, "currency"),
+		})
+	}
+	return out, nil
+}
+
+// GetTradingScheduleBySymbol returns the trading schedule for a given symbol.
+func (m *TradeManager) GetTradingScheduleBySymbol(ctx context.Context, assetClass, symbol string) (*TradingSchedule, error) {
+	const op = "Trade.GetTradingScheduleBySymbol"
+	params := &client.GetTradingSchedule2Params{
+		AssetClass: assetClass,
+		Symbol:     symbol,
+	}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetTradingSchedule2(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	return &TradingSchedule{
+		Market: rawToString(raw, "market"),
+		Hours:  rawToString(raw, "hours"),
+	}, nil
+}
+
+// GetStockBySymbol returns stock contracts for a given symbol.
+func (m *TradeManager) GetStockBySymbol(ctx context.Context, symbols string) ([]StockBySymbol, error) {
+	const op = "Trade.GetStockBySymbol"
+	params := &client.GetStockBySymbolParams{Symbols: symbols}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetStockBySymbol(ctx, params)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	var out []StockBySymbol
+	for _, v := range raw {
+		var items []map[string]json.RawMessage
+		if json.Unmarshal(v, &items) == nil {
+			for _, item := range items {
+				out = append(out, StockBySymbol{
+					ConID:        ConID(jsonNumberToInt(jsonNumber(item["conid"]))),
+					Symbol:       rawToString(item, "symbol"),
+					Exchange:     rawToString(item, "exchange"),
+					SecurityType: rawToString(item, "securityType"),
+				})
+			}
+		}
+	}
+	return out, nil
 }
 
 // --- raw adapters -----------------------------------------------------------

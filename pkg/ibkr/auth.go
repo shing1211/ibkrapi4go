@@ -5,6 +5,8 @@ package ibkr
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
 	"time"
 )
 
@@ -52,6 +54,20 @@ func (m *SessionManager) State() SessionState {
 	return m.client.session.State()
 }
 
+// SessionValidation holds the result of a session validation check.
+type SessionValidation struct {
+	// Valid reports whether the session is valid.
+	Valid bool
+	// Message is the validation message.
+	Message string
+}
+
+// SessionToken holds the current session token.
+type SessionToken struct {
+	// Token is the session token.
+	Token string
+}
+
 // Status fetches the current brokerage session status from the gateway.
 func (m *SessionManager) Status(ctx context.Context) (*AuthStatus, error) {
 	if err := m.client.checkOpen(); err != nil {
@@ -79,4 +95,41 @@ func (m *SessionManager) Status(ctx context.Context) (*AuthStatus, error) {
 		st.Token = tok
 	}
 	return st, nil
+}
+
+// GetSessionValidation validates the current session.
+func (m *SessionManager) GetSessionValidation(ctx context.Context) (*SessionValidation, error) {
+	const op = "Session.GetSessionValidation"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetSessionValidation(ctx)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	return &SessionValidation{
+		Valid:   rawToBool(raw, "valid"),
+		Message: rawToString(raw, "message"),
+	}, nil
+}
+
+// GetSessionToken returns the current session token.
+func (m *SessionManager) GetSessionToken(ctx context.Context) (*SessionToken, error) {
+	const op = "Session.GetSessionToken"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetSessionToken(ctx)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	return &SessionToken{
+		Token: rawToString(raw, "token"),
+	}, nil
 }

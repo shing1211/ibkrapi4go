@@ -246,11 +246,21 @@ type Client struct {
 	restMu sync.Mutex
 	rest   *RESTSurface
 
-	sessionManager    *SessionManager
-	accountManager    *AccountManager
-	portfolioManager  *PortfolioManager
-	tradeManager      *TradeManager
-	marketDataManager *MarketDataManager
+	sessionManager        *SessionManager
+	accountManager        *AccountManager
+	portfolioManager      *PortfolioManager
+	tradeManager          *TradeManager
+	marketDataManager     *MarketDataManager
+	tradingAccountManager *TradingAccountManager
+	alertManager          *AlertManager
+	forecastManager       *ForecastManager
+	scannerManager        *ScannerManager
+	allocationManager     *AllocationManager
+	modelManager          *ModelManager
+	fyiManager            *FYIManager
+	oauthManager          *OAuthManager
+	watchlistManager      *WatchlistManager
+	performanceManager    *PerformanceManager
 }
 
 // NewClient builds a Client from functional options, falling back to environment
@@ -352,6 +362,16 @@ func NewClient(opts ...Option) (*Client, error) {
 	c.portfolioManager = &PortfolioManager{client: c}
 	c.tradeManager = &TradeManager{client: c}
 	c.marketDataManager = &MarketDataManager{client: c}
+	c.tradingAccountManager = &TradingAccountManager{client: c}
+	c.alertManager = &AlertManager{client: c}
+	c.forecastManager = &ForecastManager{client: c}
+	c.scannerManager = &ScannerManager{client: c}
+	c.allocationManager = &AllocationManager{client: c}
+	c.modelManager = &ModelManager{client: c}
+	c.fyiManager = &FYIManager{client: c}
+	c.oauthManager = &OAuthManager{client: c}
+	c.watchlistManager = &WatchlistManager{client: c}
+	c.performanceManager = &PerformanceManager{client: c}
 	return c, nil
 }
 
@@ -369,6 +389,36 @@ func (c *Client) Trade() *TradeManager { return c.tradeManager }
 
 // MarketData returns the market-data manager.
 func (c *Client) MarketData() *MarketDataManager { return c.marketDataManager }
+
+// TradingAccount returns the trading account manager.
+func (c *Client) TradingAccount() *TradingAccountManager { return c.tradingAccountManager }
+
+// Alert returns the alert manager.
+func (c *Client) Alert() *AlertManager { return c.alertManager }
+
+// Forecast returns the forecast manager.
+func (c *Client) Forecast() *ForecastManager { return c.forecastManager }
+
+// Scanner returns the scanner manager.
+func (c *Client) Scanner() *ScannerManager { return c.scannerManager }
+
+// Allocation returns the allocation manager.
+func (c *Client) Allocation() *AllocationManager { return c.allocationManager }
+
+// Model returns the model portfolio manager.
+func (c *Client) Model() *ModelManager { return c.modelManager }
+
+// FYI returns the FYI notification manager.
+func (c *Client) FYI() *FYIManager { return c.fyiManager }
+
+// OAuth returns the OAuth manager.
+func (c *Client) OAuth() *OAuthManager { return c.oauthManager }
+
+// Watchlist returns the watchlist manager.
+func (c *Client) Watchlist() *WatchlistManager { return c.watchlistManager }
+
+// Performance returns the performance analyst manager.
+func (c *Client) Performance() *PerformanceManager { return c.performanceManager }
 
 // GatewayURL returns the configured gateway base URL.
 func (c *Client) GatewayURL() string { return c.cfg.gatewayURL }

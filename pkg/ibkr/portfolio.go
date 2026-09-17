@@ -403,6 +403,91 @@ type summaryValueRaw struct {
 	IsNull   bool            `json:"isNull"`
 }
 
+// ComboPosition holds a combo (basket) position.
+type ComboPosition struct {
+	// AccountID is the owning account.
+	AccountID AccountID
+	// ConID is the contract identifier.
+	ConID ConID
+	// Symbol is the ticker symbol.
+	Symbol string
+	// Position is the position size.
+	Position string
+}
+
+// GetAllAccountsForConid returns all accounts holding a given contract.
+func (m *PortfolioManager) GetAllAccountsForConid(ctx context.Context, conid ConID) ([]PortfolioAccount, error) {
+	const op = "Portfolio.GetAllAccountsForConid"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetAllAccountsForConid(ctx, int64(conid))
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []accountAttributesRaw
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	return accountsFromRaw(raw), nil
+}
+
+// GetManySubaccounts returns subaccounts across all accounts.
+func (m *PortfolioManager) GetManySubaccounts(ctx context.Context) ([]PortfolioAccount, error) {
+	const op = "Portfolio.GetManySubaccounts"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetManySubaccounts(ctx, nil)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []accountAttributesRaw
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	return accountsFromRaw(raw), nil
+}
+
+// GetComboPositions returns combo (basket) positions for an account.
+func (m *PortfolioManager) GetComboPositions(ctx context.Context, account AccountID) ([]ComboPosition, error) {
+	const op = "Portfolio.GetComboPositions"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetComboPositions(ctx, string(account), nil)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []map[string]json.RawMessage
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]ComboPosition, 0, len(raw))
+	for _, item := range raw {
+		out = append(out, ComboPosition{
+			AccountID: AccountID(firstNonEmpty(rawToString(item, "acctId"), string(account))),
+			ConID:     ConID(jsonNumberToInt(jsonNumber(item["conid"]))),
+			Symbol:    rawToString(item, "symbol"),
+			Position:  rawToString(item, "position"),
+		})
+	}
+	return out, nil
+}
+
+// GetUncachedPositions returns uncached positions for an account.
+func (m *PortfolioManager) GetUncachedPositions(ctx context.Context, account AccountID) ([]Position, error) {
+	const op = "Portfolio.GetUncachedPositions"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetUncachedPositions(ctx, string(account), nil)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw []positionRaw
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	return positionsFromRaw(account, raw), nil
+}
+
 // numbersToStrings converts a JSON-number map to a decimal-string map.
 func numbersToStrings(in map[string]json.Number) map[string]string {
 	if in == nil {
