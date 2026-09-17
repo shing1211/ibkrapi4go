@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-pre--alpha-red?style=flat-square" alt="Status">
+  <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
 </p>
 
 > **⚠️ 비공식 & 프리알파.** ibkrapi4go는 Interactive Brokers Web API를 위한

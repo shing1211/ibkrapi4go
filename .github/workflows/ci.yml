@@ -40,6 +40,17 @@ jobs:
         if: steps.hasmod.outputs.present == 'yes'
         run: go test ./... -race -count=1
 
+      - name: Run tests with coverage
+        if: steps.hasmod.outputs.present == 'yes'
+        run: go test -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage to codecov
+        if: steps.hasmod.outputs.present == 'yes'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.out
+          fail_ci_if_error: false
+
       - name: Skip notice
         if: steps.hasmod.outputs.present == 'no'
         run: echo "No go.mod yet; public SDK not implemented. Skipping build/test."

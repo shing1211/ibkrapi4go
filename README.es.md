@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-pre--alpha-red?style=flat-square" alt="Status">
+  <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
 </p>
 
 > **⚠️ No oficial y pre-alfa.** ibkrapi4go es un SDK de Go de la comunidad para la

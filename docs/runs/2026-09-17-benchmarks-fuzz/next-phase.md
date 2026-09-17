@@ -28,7 +28,7 @@ Remaining backlog (ROADMAP.md): **coverage badge, pre-commit hooks, GitHub Discu
 |------|-------------|
 | **Coverage badge** | Add `go test -coverprofile=coverage.out ./...` to CI, upload to
   `codecov.io` or `coveralls.io` via GitHub Actions `upload-artifact` step; add
-  `[![Coverage](...)](https://codecov.io/...)` to README. No new deps. |
+  codecov badge to README. No new deps. |
 | **Pre-commit CI gate** | Add a `.github/workflows/pre-commit.yml` that runs
   `gofmt -s -l .`, `go vet ./...`, `make check` on every push and PR. Fast
   (~30s). Catches regressions before CI. |
