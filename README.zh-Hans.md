@@ -10,8 +10,8 @@
 </p>
 
 > **⚠️ 非官方 & 早期预览版。** ibkrapi4go 是社区维护的 Interactive Brokers
-> Web API Go SDK，**与 Interactive Brokers 无任何隶属关系**。项目仍在开发中，
-> 公开包尚未实现。请阅读 [DISCLAIMER.md](./DISCLAIMER.md) 与
+> Web API Go SDK，**与 Interactive Brokers 无任何隶属关系**。全部 185 个 API
+> 操作已实现（115 CPAPI + 70 IB REST）。请阅读 [DISCLAIMER.md](./DISCLAIMER.md) 与
 > [docs/ROADMAP.md](./docs/ROADMAP.md)。
 
 > **Go 原生 · 类型安全 · OpenAPI 驱动。** 面向 Interactive Brokers Web API 的
@@ -20,7 +20,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本文件是英文 [README](./README.md) 的社区翻译。**英文版本为准。**
-> 同步于 / Last synced: 36b57cf
+> 同步于 / Last synced: 48bdde6
 
 ## 目录
 
@@ -45,12 +45,12 @@
 | 规划与文档 | ✅ 完成 |
 | OpenAPI 代码生成验证 | ✅ 已验证（见 [docs/CODEGEN.md](./docs/CODEGEN.md)） |
 | `client/` 生成代码 | ✅ 已提交（生成） |
-| `pkg/ibkr` 公开 API | 🚧 未实现 |
-| `internal/` 实现 | 🚧 未实现 |
-| 测试 / 示例 | 🚧 未实现 |
+| `pkg/ibkr` 公开 API | ✅ 已实现（185/185 操作） |
+| `internal/` 实现 | ✅ 已实现 |
+| 测试 / 示例 | ✅ 已实现 |
 
-当前仓库包含**生成的 OpenAPI 客户端**、文档与代码生成工具。尚无手写的 SDK
-代码（`pkg/ibkr`、`internal/`）。构建计划见 [docs/ROADMAP.md](./docs/ROADMAP.md)。
+当前仓库包含**生成的 OpenAPI 客户端**、文档与代码生成工具。全部 185 个 API
+操作已实现。构建计划见 [docs/ROADMAP.md](./docs/ROADMAP.md)。
 
 ## 两套 API
 
@@ -63,7 +63,7 @@ IBKR OpenAPI 规范（v2.39.0）实际描述了**两套 API 表面，使用两�
 | IB REST API | `/gw/api/v1/*`、`/gw/api/v2/*`、`/oauth2/*` | 70 | `oauth2Bearer` |
 | **合计** | | **185** | |
 
-**SDK v1 仅针对 CPAPI（`ssoBearer`）**，`oauth2Bearer` 表面推迟到后续阶段。
+**SDK v1 仅针对 CPAPI（`ssoBearer`）**，`oauth2Bearer` 表面已在第 5-6 阶段实现。
 参见 [ADR 0001](./docs/adr/0001-two-api-surfaces.md) 与
 [ADR 0005](./docs/adr/0005-v1-scope.md)。
 
@@ -77,7 +77,7 @@ go get github.com/shing1211/ibkrapi4go/pkg/ibkr
 
 ## 规划用法
 
-> 以下 API 为**目标设计**，**尚未实现**，仅用于说明预期的使用体验，当前无法编译。
+> 以下 API 为**目标设计**，仅用于说明预期的使用体验。实际实现见 `pkg/ibkr/`。
 
 ```go
 package main
@@ -132,8 +132,8 @@ Client Portal Gateway 通过**交互式**方式认证（浏览器登录 + 2FA）
 ```
 ibkrapi4go/
 ├── client/          # 生成的 OpenAPI 类型 + HTTP 客户端（请勿编辑）
-├── pkg/ibkr/        # 公开 SDK 表面（规划中）
-├── internal/        # 私有实现（规划中）
+├── pkg/ibkr/        # 公开 SDK 表面
+├── internal/        # 私有实现
 ├── docs/            # 设计、参考、ADR
 ├── scripts/         # 代码生成 + 校验
 └── specs/           # 缓存的 OpenAPI 规范（已 gitignore）

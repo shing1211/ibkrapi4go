@@ -11,7 +11,7 @@
 
 > **⚠️ Unofficial & pre-alpha.** ibkrapi4go is a community Go SDK for the
 > Interactive Brokers Web API. It is **not affiliated with Interactive Brokers**.
-> It is under active development: the public packages are not yet implemented.
+> All 185 API operations are implemented (115 CPAPI + 70 IB REST).
 > See [DISCLAIMER.md](./DISCLAIMER.md) and [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 > **Go-native. Type-safe. OpenAPI-driven.** An idiomatic Go client for the
@@ -43,13 +43,13 @@
 | Planning & documentation | ✅ Complete |
 | OpenAPI codegen validation | ✅ Verified (see [docs/CODEGEN.md](./docs/CODEGEN.md)) |
 | `client/` generated code | ✅ Committed (generated) |
-| `pkg/ibkr` public API | 🚧 Not implemented |
-| `internal/` implementation | 🚧 Not implemented |
-| Tests / examples | 🚧 Not implemented |
+| `pkg/ibkr` public API | ✅ Implemented (185/185 operations) |
+| `internal/` implementation | ✅ Implemented |
+| Tests / examples | ✅ Implemented |
 
 This repository contains the **generated OpenAPI client**, documentation, and
-codegen tooling. No hand-written SDK code exists yet (`pkg/ibkr`, `internal/`).
-See [docs/ROADMAP.md](./docs/ROADMAP.md) for the build plan.
+codegen tooling. All 185 API operations are implemented across both CPAPI and IB REST
+surfaces. See [docs/ROADMAP.md](./docs/ROADMAP.md) for the build plan.
 
 ## The Two APIs
 
@@ -63,7 +63,7 @@ different authentication schemes**. They are not interchangeable:
 | **Total** | | **185** | |
 
 **v1 of this SDK targets CPAPI (`ssoBearer`) only.** The `oauth2Bearer` surface
-is deferred to a later phase. See [ADR 0001](./docs/adr/0001-two-api-surfaces.md)
+was implemented in Phases 5-6. See [ADR 0001](./docs/adr/0001-two-api-surfaces.md)
 and [ADR 0005](./docs/adr/0005-v1-scope.md).
 
 ## Install
@@ -74,10 +74,10 @@ go get github.com/shing1211/ibkrapi4go/pkg/ibkr
 
 Requires **Go 1.26+** and a running [IBKR Client Portal Gateway](https://www.interactivebrokers.com/api/).
 
-## Planned Usage
+## Usage
 
-> The API below is the **target design** and is **not yet implemented**. It is
-> shown to communicate the intended ergonomics. It will not compile today.
+> The API below shows the target design. See `pkg/ibkr/` for the actual
+> implementation.
 
 ```go
 package main
@@ -133,8 +133,8 @@ See [docs/AUTH.md](./docs/AUTH.md) and [docs/SESSIONS.md](./docs/SESSIONS.md).
 ```
 ibkrapi4go/
 ├── client/          # Generated OpenAPI types + HTTP client (DO NOT EDIT)
-├── pkg/ibkr/        # Public SDK surface (planned)
-├── internal/        # Private implementation (planned)
+├── pkg/ibkr/        # Public SDK surface
+├── internal/        # Private implementation
 ├── docs/            # Design, reference, ADRs
 ├── scripts/         # Codegen + validation
 └── specs/           # Cached OpenAPI spec (gitignored)

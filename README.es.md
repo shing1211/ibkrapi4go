@@ -10,8 +10,8 @@
 </p>
 
 > **⚠️ No oficial y pre-alfa.** ibkrapi4go es un SDK de Go de la comunidad para la
-> Interactive Brokers Web API. **No está afiliado a Interactive Brokers.** Está en
-> desarrollo activo: los paquetes públicos aún no están implementados.
+> Interactive Brokers Web API. **No está afiliado a Interactive Brokers.** Las 185
+> operaciones de la API están implementadas (115 CPAPI + 70 IB REST).
 > Consulta [DISCLAIMER.md](./DISCLAIMER.md) y [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 > **Nativo de Go · Con tipos seguros · Basado en OpenAPI.** Un cliente Go idiomático
@@ -21,7 +21,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > Este documento es una traducción comunitaria del [README](./README.md) en inglés.
-> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: 36b57cf
+> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: 48bdde6
 
 ## Tabla de contenidos
 
@@ -46,13 +46,13 @@
 | Planificación y documentación | ✅ Completo |
 | Validación de generación de código OpenAPI | ✅ Verificado ([docs/CODEGEN.md](./docs/CODEGEN.md)) |
 | Código generado en `client/` | ✅ Incluido en el repositorio (generado) |
-| API pública `pkg/ibkr` | 🚧 No implementada |
-| Implementación `internal/` | 🚧 No implementada |
-| Pruebas / ejemplos | 🚧 No implementados |
+| API pública `pkg/ibkr` | ✅ Implementada (185/185 operaciones) |
+| Implementación `internal/` | ✅ Implementada |
+| Pruebas / ejemplos | ✅ Implementados |
 
 Este repositorio contiene el **cliente OpenAPI generado**, documentación y
-herramientas de generación de código. Todavía no existe código SDK escrito a mano
-(`pkg/ibkr`, `internal/`). Consulta [docs/ROADMAP.md](./docs/ROADMAP.md) para el plan
+herramientas de generación de código. Las 185 operaciones de la API están
+implementadas. Consulta [docs/ROADMAP.md](./docs/ROADMAP.md) para el plan
 de construcción.
 
 ## Las dos API
@@ -67,7 +67,7 @@ API con dos esquemas de autenticación distintos**. No son intercambiables:
 | **Total** | | **185** | |
 
 **La v1 de este SDK solo cubre CPAPI (`ssoBearer`).** La superficie `oauth2Bearer`
-se pospone a una fase posterior. Consulta [ADR 0001](./docs/adr/0001-two-api-surfaces.md)
+se implementó en las fases 5-6. Consulta [ADR 0001](./docs/adr/0001-two-api-surfaces.md)
 y [ADR 0005](./docs/adr/0005-v1-scope.md).
 
 ## Instalación
@@ -80,8 +80,8 @@ Requiere **Go 1.26+** y un [IBKR Client Portal Gateway](https://www.interactiveb
 
 ## Uso previsto
 
-> La API siguiente es el **diseño objetivo** y **aún no está implementada**. Se
-> muestra para comunicar la ergonomía prevista. Hoy no compila.
+> La API siguiente es el **diseño objetivo**. Consulta `pkg/ibkr/` para la
+> implementación actual.
 
 ```go
 package main
@@ -137,8 +137,8 @@ Consulta [docs/AUTH.md](./docs/AUTH.md) y [docs/SESSIONS.md](./docs/SESSIONS.md)
 ```
 ibkrapi4go/
 ├── client/          # Tipos OpenAPI generados + cliente HTTP (NO EDITAR)
-├── pkg/ibkr/        # Superficie pública del SDK (prevista)
-├── internal/        # Implementación privada (prevista)
+├── pkg/ibkr/        # Superficie pública del SDK
+├── internal/        # Implementación privada
 ├── docs/            # Diseño, referencia, ADR
 ├── scripts/         # Generación de código + validación
 └── specs/           # Especificación OpenAPI en caché (gitignore)

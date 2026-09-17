@@ -11,7 +11,7 @@
 
 > **⚠️ 비공식 & 프리알파.** ibkrapi4go는 Interactive Brokers Web API를 위한
 > 커뮤니티 Go SDK입니다. **Interactive Brokers와 아무런 제휴 관계가 없습니다.**
-> 활발히 개발 중이며 공개 패키지는 아직 구현되지 않았습니다.
+> 모든 185개 API 오퍼레이션이 구현되었습니다 (115 CPAPI + 70 IB REST).
 > [DISCLAIMER.md](./DISCLAIMER.md)와 [docs/ROADMAP.md](./docs/ROADMAP.md)를 참고하세요.
 
 > **Go 네이티브 · 타입 안전 · OpenAPI 기반.** Interactive Brokers Web API를 위한
@@ -21,7 +21,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 이 문서는 영어 [README](./README.md)의 커뮤니티 번역입니다. **영어판이 정본입니다.**
-> 동기화 / Last synced: 36b57cf
+> 동기화 / Last synced: 48bdde6
 
 ## 목차
 
@@ -46,12 +46,12 @@
 | 기획 및 문서 | ✅ 완료 |
 | OpenAPI 코드 생성 검증 | ✅ 검증됨 ([docs/CODEGEN.md](./docs/CODEGEN.md)) |
 | `client/` 생성 코드 | ✅ 커밋됨 (생성) |
-| `pkg/ibkr` 공개 API | 🚧 미구현 |
-| `internal/` 구현 | 🚧 미구현 |
-| 테스트 / 예제 | 🚧 미구현 |
+| `pkg/ibkr` 공개 API | ✅ 구현됨 (185/185 오퍼레이션) |
+| `internal/` 구현 | ✅ 구현됨 |
+| 테스트 / 예제 | ✅ 구현됨 |
 
 현재 저장소에는 **생성된 OpenAPI 클라이언트**, 문서, 코드 생성 도구가 포함되어
-있습니다. 아직 직접 작성한 SDK 코드(`pkg/ibkr`, `internal/`)는 없습니다. 계획은
+있습니다. 모든 185개 API 오퍼레이션이 구현되었습니다. 계획은
 [docs/ROADMAP.md](./docs/ROADMAP.md)를 참고하세요.
 
 ## 두 개의 API
@@ -65,8 +65,8 @@ IBKR OpenAPI 명세(v2.39.0)는 실제로 **서로 다른 인증 방식을 가�
 | IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | 70 | `oauth2Bearer` |
 | **합계** | | **185** | |
 
-**SDK v1은 CPAPI(`ssoBearer`)만 대상으로 합니다.** `oauth2Bearer` 표면은 이후
-단계로 미룹니다. [ADR 0001](./docs/adr/0001-two-api-surfaces.md)과
+**SDK v1은 CPAPI(`ssoBearer`)만 대상으로 합니다.** `oauth2Bearer` 표면은
+단계 5-6에서 구현되었습니다. [ADR 0001](./docs/adr/0001-two-api-surfaces.md)과
 [ADR 0005](./docs/adr/0005-v1-scope.md)를 참고하세요.
 
 ## 설치
@@ -79,8 +79,7 @@ go get github.com/shing1211/ibkrapi4go/pkg/ibkr
 
 ## 사용 예정
 
-> 아래 API는 **목표 설계**이며 **아직 구현되지 않았습니다**. 의도한 사용성을
-> 보여주기 위한 것으로 현재는 컴파일되지 않습니다.
+> 아래 API는 **목표 설계**입니다. 실제 구현은 `pkg/ibkr/`를 참고하세요.
 
 ```go
 package main
@@ -136,8 +135,8 @@ Client Portal Gateway는 **대화형**으로 인증됩니다(브라우저 로그
 ```
 ibkrapi4go/
 ├── client/          # 생성된 OpenAPI 타입 + HTTP 클라이언트 (편집 금지)
-├── pkg/ibkr/        # 공개 SDK 표면 (예정)
-├── internal/        # 내부 구현 (예정)
+├── pkg/ibkr/        # 공개 SDK 표면
+├── internal/        # 내부 구현
 ├── docs/            # 설계, 레퍼런스, ADR
 ├── scripts/         # 코드 생성 + 검증
 └── specs/           # 캐시된 OpenAPI 명세 (gitignore)

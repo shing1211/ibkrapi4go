@@ -11,7 +11,7 @@
 
 > **⚠️ 非公式 & プレアルファ版。** ibkrapi4go は Interactive Brokers Web API 向けの
 > コミュニティ製 Go SDK です。**Interactive Brokers とは一切関係ありません。**
-> 活発に開発中で、公開パッケージはまだ実装されていません。
+> すべての 185 の API オペレーションが実装済みです（115 CPAPI + 70 IB REST）。
 > [DISCLAIMER.md](./DISCLAIMER.md) と [docs/ROADMAP.md](./docs/ROADMAP.md) をご覧ください。
 
 > **Go ネイティブ · 型安全 · OpenAPI 駆動。** Interactive Brokers Web API 向けの
@@ -21,7 +21,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本書は英語版 [README](./README.md) のコミュニティ翻訳です。**英語版が正式です。**
-> 同期 / Last synced: 36b57cf
+> 同期 / Last synced: 48bdde6
 
 ## 目次
 
@@ -46,13 +46,13 @@
 | 計画とドキュメント | ✅ 完了 |
 | OpenAPI コード生成の検証 | ✅ 検証済み（[docs/CODEGEN.md](./docs/CODEGEN.md)） |
 | `client/` 生成コード | ✅ コミット済み（生成） |
-| `pkg/ibkr` 公開 API | 🚧 未実装 |
-| `internal/` 実装 | 🚧 未実装 |
-| テスト / サンプル | 🚧 未実装 |
+| `pkg/ibkr` 公開 API | ✅ 実装済み（185/185 オペレーション） |
+| `internal/` 実装 | ✅ 実装済み |
+| テスト / サンプル | ✅ 実装済み |
 
 現在のリポジトリには**生成済みの OpenAPI クライアント**、ドキュメント、
-コード生成ツールが含まれます。手書きの SDK コード（`pkg/ibkr`、`internal/`）は
-まだありません。計画は [docs/ROADMAP.md](./docs/ROADMAP.md) を参照してください。
+コード生成ツールが含まれます。すべての 185 の API オペレーションが実装済みです。
+計画は [docs/ROADMAP.md](./docs/ROADMAP.md) を参照してください。
 
 ## 2 つの API
 
@@ -66,7 +66,7 @@ IBKR OpenAPI 仕様（v2.39.0）は、実際には**異なる認証方式を持�
 | **合計** | | **185** | |
 
 **SDK v1 は CPAPI（`ssoBearer`）のみを対象とします。** `oauth2Bearer` サーフェスは
-後続フェーズに延期されます。[ADR 0001](./docs/adr/0001-two-api-surfaces.md) と
+フェーズ 5-6 で実装されました。[ADR 0001](./docs/adr/0001-two-api-surfaces.md) と
 [ADR 0005](./docs/adr/0005-v1-scope.md) を参照してください。
 
 ## インストール
@@ -79,8 +79,7 @@ go get github.com/shing1211/ibkrapi4go/pkg/ibkr
 
 ## 使用例
 
-> 以下の API は**目標設計**であり、**未実装**です。想定される使い勝手を示すための
-> もので、現時点ではコンパイルできません。
+> 以下の API は**目標設計**です。実際の実装は `pkg/ibkr/` を参照してください。
 
 ```go
 package main
@@ -136,8 +135,8 @@ Client Portal Gateway は**対話的に**認証されます（ブラウザログ
 ```
 ibkrapi4go/
 ├── client/          # 生成された OpenAPI 型 + HTTP クライアント（編集禁止）
-├── pkg/ibkr/        # 公開 SDK サーフェス（予定）
-├── internal/        # 内部実装（予定）
+├── pkg/ibkr/        # 公開 SDK サーフェス
+├── internal/        # 内部実装
 ├── docs/            # 設計、リファレンス、ADR
 ├── scripts/         # コード生成 + 検証
 └── specs/           # キャッシュされた OpenAPI 仕様（gitignore 済み）

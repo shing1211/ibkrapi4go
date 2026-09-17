@@ -1,6 +1,6 @@
 # 0005 — v1 targets the CPAPI surface only
 
-- Status: Accepted
+- Status: Superseded
 - Date: 2026-09-16
 
 ## Context
@@ -8,8 +8,8 @@
 The spec covers 185 operations across two surfaces (see
 [ADR 0001](./0001-two-api-surfaces.md)). Covering both, plus WebSocket streaming,
 plus hardening, is a large effort. The `oauth2Bearer` surface requires an OAuth2
-client with token refresh and a different host — a distinct problem from the
-local `ssoBearer` gateway.
+client with token refresh and a different host — a distinct problem from the local
+`ssoBearer` gateway.
 
 Most user-facing use cases (accounts, positions, orders, quotes, streaming) live
 on CPAPI.
@@ -30,3 +30,9 @@ on CPAPI.
 - Some advertised spec capabilities are unavailable until later phases; the
   README/docs must say so.
 - The endpoint subset is tracked in [../ROADMAP.md](../ROADMAP.md).
+
+## Superseded
+
+As of commit `48bdde6`, **all 185 operations are implemented** (115 CPAPI + 70 IB REST).
+Phases 5-6 implemented the `oauth2Bearer` surface; Phase 7 completed the remaining CPAPI
+operations. This ADR is retained for historical context.
