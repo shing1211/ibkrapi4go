@@ -250,8 +250,9 @@ Exit criteria:
 
 ## Backlog (not scheduled)
 
-Coverage badge, pre-commit hooks, GitHub Discussions, `FUNDING.yml`, docs website.
-Benchmarks and fuzz tests shipped in the 2026-09-17 benchmarks+fuzz run.
+GitHub Discussions (requires manual enablement: `Settings → Features → Discussions`).
+Coverage badge, pre-commit hooks, FUNDING.yml shipped in the 2026-09-17 ci-quality-gates run.
+Docs website shipped in the 2026-09-17 docs-website run (GitHub Pages from `main:/docs`).
 
 ---
 

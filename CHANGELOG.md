@@ -71,6 +71,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `go vet ./...`, and `make check` run on every push and PR; parallel to the main
   CI workflow (~30s).
 - **FUNDING.yml (`.github/FUNDING.yml`):** GitHub Sponsors link for `shing1211`.
+- **Docs website (`docs/index.html`):** branded GitHub Pages landing page served from
+  the `docs/` folder at `https://shing1211.github.io/ibkrapi4go/`; pure HTML/CSS,
+  zero new dependencies, zero build step. Enable at `Settings → Pages → Source:
+  main branch, /docs folder`.
 - Initialized the Go module (`go.mod`) and committed the generated OpenAPI
   client (`client/client.gen.go`, package `client`), with a deterministic SPDX
   header and a reproducible `make codegen-verify` check.

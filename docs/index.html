@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ibkrapi4go — Official Interactive Brokers API Go SDK</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-orange: #d29922;
+      --code-bg: #1c2128;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 2rem 0;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .logo span { color: var(--accent); }
+
+    header .tagline {
+      margin-top: 0.5rem;
+      color: var(--text-muted);
+      font-size: 1.05rem;
+    }
+
+    /* ── Badges ── */
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      justify-content: center;
+      margin-top: 1.2rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    .badge-go    { background: #00add8; color: #fff; }
+    .badge-apache{ background: #4a7fc1; color: #fff; }
+    .badge-ops   { background: var(--accent-orange); color: #000; }
+    .badge-schemas { background: var(--accent); color: #fff; }
+    .badge-status { background: #f85149; color: #fff; }
+
+    /* ── Hero install ── */
+    .hero-install {
+      margin-top: 1.5rem;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.9rem;
+      display: inline-block;
+    }
+
+    .hero-install .dollar { color: var(--accent-green); margin-right: 0.5rem; }
+
+    /* ── Section titles ── */
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-top: 2.5rem;
+    }
+
+    /* ── Cards grid ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+    }
+
+    .card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+
+    .card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+    }
+
+    .card a {
+      font-size: 0.82rem;
+      color: var(--accent);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    /* ── Links section ── */
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .quick-links a {
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      margin-top: 3rem;
+      padding: 1.5rem 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a { color: var(--text-muted); }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .cards { grid-template-columns: 1fr; }
+      .badges { gap: 0.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="logo">ibkr<span>api4</span>go</div>
+    <p class="tagline">Official Interactive Brokers API Go SDK</p>
+    <div class="badges">
+      <span class="badge badge-go">Go 1.26+</span>
+      <span class="badge badge-apache">Apache-2.0</span>
+      <span class="badge badge-ops">185/185 operations</span>
+      <span class="badge badge-schemas">443 schemas</span>
+      <span class="badge badge-status">pre-alpha</span>
+    </div>
+    <div class="hero-install">
+      <span class="dollar">$</span>go get github.com/shing1211/ibkrapi4go/pkg/ibkr
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <h2>Documentation</h2>
+  <div class="cards">
+
+    <div class="card">
+      <h3>SPEC.md</h3>
+      <p>Canonical endpoint index — 185 operations across both API surfaces</p>
+      <a href="./SPEC.md">SPEC.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ARCHITECTURE.md</h3>
+      <p>Layering, design principles, transport chain, and package layout</p>
+      <a href="./ARCHITECTURE.md">ARCHITECTURE.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>AUTH.md</h3>
+      <p>Client Portal API vs IB REST auth models — SSO bearer and OAuth2</p>
+      <a href="./AUTH.md">AUTH.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>SESSIONS.md</h3>
+      <p>Session lifecycle — initialize, tickle, logout</p>
+      <a href="./SESSIONS.md">SESSIONS.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>LOGGING.md</h3>
+      <p>Request/response logging and redaction of sensitive fields</p>
+      <a href="./LOGGING.md">LOGGING.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>OBSERVABILITY.md</h3>
+      <p>Metrics, tracing hooks, and telemetry integration</p>
+      <a href="./OBSERVABILITY.md">OBSERVABILITY.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>MOCK-GATEWAY.md</h3>
+      <p>In-repo mock gateway for tests, examples, and standalone binary</p>
+      <a href="./MOCK-GATEWAY.md">MOCK-GATEWAY.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>RATE-LIMITING.md</h3>
+      <p>Per-endpoint and global token-bucket rate limiting</p>
+      <a href="./RATE-LIMITING.md">RATE-LIMITING.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>STREAMING.md</h3>
+      <p>Real-time WebSocket market data — channel-based API</p>
+      <a href="./STREAMING.md">STREAMING.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>TESTING.md</h3>
+      <p>Unit, manager, WebSocket, and integration testing strategy</p>
+      <a href="./TESTING.md">TESTING.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ERRORS.md</h3>
+      <p>Error types, IBKR error envelope parsing, and sentinel errors</p>
+      <a href="./ERRORS.md">ERRORS.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ROADMAP.md</h3>
+      <p>Phased build plan with exit criteria and future direction</p>
+      <a href="./ROADMAP.md">ROADMAP.md →</a>
+    </div>
+
+  </div>
+
+  <h2>Architecture Decision Records</h2>
+  <div class="cards">
+
+    <div class="card">
+      <h3>ADR index</h3>
+      <p>All design decisions — rationale, tradeoffs, and context</p>
+      <a href="./adr/">adr/ →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0001 — Two API surfaces</h3>
+      <p>CPAPI (ssoBearer) vs IB REST (oauth2Bearer) are distinct</p>
+      <a href="./adr/0001-two-api-surfaces.md">adr/0001-two-api-surfaces.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0008 — Numeric precision</h3>
+      <p>Money and quantities are string/json.Number, never float64</p>
+      <a href="./adr/0008-numeric-precision.md">adr/0008-numeric-precision.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0009 — No auto-retry orders</h3>
+      <p>Order mutations never retry automatically</p>
+      <a href="./adr/0009-no-auto-retry-orders.md">adr/0009-no-auto-retry-orders.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0011 — OAuth2 surface</h3>
+      <p>IB REST oauth2Bearer surface added in Phases 5–6</p>
+      <a href="./adr/0011-oauth2-surface.md">adr/0011-oauth2-surface.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0014 — Mock gateway</h3>
+      <p>Server-side test/development aid for both API surfaces</p>
+      <a href="./adr/0014-mock-gateway.md">adr/0014-mock-gateway.md →</a>
+    </div>
+
+  </div>
+
+  <h2>Quick Links</h2>
+  <div class="quick-links">
+    <a href="https://github.com/shing1211/ibkrapi4go">GitHub Repository →</a>
+    <a href="https://github.com/shing1211/ibkrapi4go/issues">Issue Tracker →</a>
+    <a href="https://github.com/shing1211/ibkrapi4go/blob/main/LICENSE">License (Apache-2.0) →</a>
+    <a href="https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr">pkg.go.dev →</a>
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p>ibkrapi4go &mdash; Apache License 2.0 &mdash; &copy; 2026 shing1211</p>
+  </div>
+</footer>
+
+</body>
+</html>
