@@ -48,11 +48,11 @@ func TestRESTExternalAssetTransfers_Transfer(t *testing.T) {
 
 	transferID, err := rest.Banking().ExternalTransfers().Transfer(context.Background(), AssetTransferRequest{
 		AccountID:             "U1234567",
-		ClientInstructionID:   1,
+		ClientInstructionID:   "1",
 		ContraBrokerAccountID: "12345678A",
 		ContraBrokerDtcCode:   "534",
 		Direction:             "IN",
-		Quantity:              100,
+		Quantity:              "100",
 		ConID:                 459200101,
 	})
 	if err != nil {
@@ -101,11 +101,11 @@ func TestRESTInternalAssetTransfers_Transfer(t *testing.T) {
 	}
 
 	transferID, err := rest.Banking().InternalTransfers().Transfer(context.Background(), InternalAssetTransferRequest{
-		ClientInstructionID: 1,
+		ClientInstructionID: "1",
 		SourceAccountID:     "U1234567",
 		TargetAccountID:     "U7654321",
 		ConID:               459200101,
-		TransferQuantity:    100,
+		TransferQuantity:    "100",
 	})
 	if err != nil {
 		t.Fatalf("Transfer: %v", err)
@@ -154,8 +154,8 @@ func TestRESTExternalCashTransfers_Transfer(t *testing.T) {
 
 	transferID, err := rest.Banking().CashTransfers().Transfer(context.Background(), CashTransferRequest{
 		AccountID:             "U1234567",
-		ClientInstructionID:   1,
-		Amount:                1000,
+		ClientInstructionID:   "1",
+		Amount:                "1000",
 		Currency:              "USD",
 		BankInstructionMethod: "WIRE",
 	}, true)
@@ -205,10 +205,10 @@ func TestRESTInternalCashTransfers_Transfer(t *testing.T) {
 	}
 
 	transferID, err := rest.Banking().InternalCash().Transfer(context.Background(), InternalCashTransferRequest{
-		ClientInstructionID: 1,
+		ClientInstructionID: "1",
 		SourceAccountID:     "U1234567",
 		TargetAccountID:     "U7654321",
-		Amount:              500,
+		Amount:              "500",
 		Currency:            "USD",
 	})
 	if err != nil {
@@ -316,11 +316,11 @@ func TestRESTExternalAssetTransfers_TransferBulk(t *testing.T) {
 	results, err := rest.Banking().ExternalTransfers().TransferBulk(context.Background(), []AssetTransferRequest{
 		{
 			AccountID:             "U1234567",
-			ClientInstructionID:   1,
+			ClientInstructionID:   "1",
 			ContraBrokerAccountID: "12345678A",
 			ContraBrokerDtcCode:   "534",
 			Direction:             "IN",
-			Quantity:              100,
+			Quantity:              "100",
 			ConID:                 459200101,
 		},
 	})

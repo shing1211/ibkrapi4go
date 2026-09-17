@@ -9,11 +9,30 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"time"
 
 	"github.com/shing1211/ibkrapi4go/client"
 	"github.com/shing1211/ibkrapi4go/internal"
 )
+
+// strToF32 converts a decimal string (ADR 0008) to float32 for the generated
+// client payload. It returns 0 on error; callers are responsible for validating
+// input before calling.
+func strToF32(s string) float32 {
+	v, _ := strconv.ParseFloat(s, 32)
+	return float32(v)
+}
+
+// strPtrToF32Ptr converts an optional decimal string to *float32 for the generated
+// client payload.
+func strPtrToF32Ptr(s *string) *float32 {
+	if s == nil {
+		return nil
+	}
+	v := strToF32(*s)
+	return &v
+}
 
 type RESTBanking struct {
 	surface *RESTSurface
@@ -414,11 +433,11 @@ func mustMarshal(v interface{}) io.Reader {
 // AssetTransferRequest represents a request to transfer assets externally (FOP, DWAC, etc.)
 type AssetTransferRequest struct {
 	AccountID             AccountID
-	ClientInstructionID   float32
+	ClientInstructionID   string
 	ContraBrokerAccountID string
 	ContraBrokerDtcCode   string
 	Direction             string // "IN" or "OUT"
-	Quantity              float32
+	Quantity              string
 	ConID                 int64
 	// For V2 only
 	Positions []PositionV2Request
@@ -427,17 +446,17 @@ type AssetTransferRequest struct {
 // PositionV2Request represents a position for V2 transfers
 type PositionV2Request struct {
 	ConID    int64
-	Quantity float32
+	Quantity string
 }
 
 // InternalAssetTransferRequest represents a request to transfer assets between IBKR accounts
 type InternalAssetTransferRequest struct {
-	ClientInstructionID float32
+	ClientInstructionID string
 	SourceAccountID     AccountID
 	TargetAccountID     AccountID
 	ConID               int64
-	TransferQuantity    float32
-	TransferPrice       *float32
+	TransferQuantity    string
+	TransferPrice       *string
 	TradeDate           *string
 	SettleDate          *string
 }
@@ -445,8 +464,8 @@ type InternalAssetTransferRequest struct {
 // CashTransferRequest represents a request to transfer cash externally (deposit/withdrawal)
 type CashTransferRequest struct {
 	AccountID             AccountID
-	ClientInstructionID   float32
-	Amount                float32
+	ClientInstructionID   string
+	Amount                string
 	Currency              string
 	BankInstructionMethod string // "ACH", "WIRE", "eDDA", "OPEN_BANKING"
 	BankInstructionName   *string
@@ -454,10 +473,10 @@ type CashTransferRequest struct {
 
 // InternalCashTransferRequest represents a request to transfer cash between IBKR accounts
 type InternalCashTransferRequest struct {
-	ClientInstructionID float32
+	ClientInstructionID string
 	SourceAccountID     AccountID
 	TargetAccountID     AccountID
-	Amount              float32
+	Amount              string
 	Currency            string
 	ClientNote          *string
 }
@@ -505,11 +524,11 @@ func (m *RESTExternalAssetTransfers) Transfer(ctx context.Context, req AssetTran
 	instr := client.CreateExternalAssetTransfersJSONBody_Instruction{}
 	_ = instr.FromFopInstruction(client.FopInstruction{
 		AccountId:             string(req.AccountID),
-		ClientInstructionId:   req.ClientInstructionID,
+		ClientInstructionId:   strToF32(req.ClientInstructionID),
 		ContraBrokerAccountId: req.ContraBrokerAccountID,
 		ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 		Direction:             client.FopInstructionDirection(req.Direction),
-		Quantity:              req.Quantity,
+		Quantity:              strToF32(req.Quantity),
 		TradingInstrument:     makeTradingInstrumentRef(req.ConID),
 	})
 
@@ -552,11 +571,11 @@ func (m *RESTExternalAssetTransfers) TransferBulk(ctx context.Context, reqs []As
 	for i, req := range reqs {
 		payload.Instructions[i] = client.FopInstruction{
 			AccountId:             string(req.AccountID),
-			ClientInstructionId:   req.ClientInstructionID,
+			ClientInstructionId:   strToF32(req.ClientInstructionID),
 			ContraBrokerAccountId: req.ContraBrokerAccountID,
 			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 			Direction:             client.FopInstructionDirection(req.Direction),
-			Quantity:              req.Quantity,
+			Quantity:              strToF32(req.Quantity),
 			TradingInstrument:     makeTradingInstrumentRef(req.ConID),
 		}
 	}
@@ -590,13 +609,13 @@ func (m *RESTExternalAssetTransfers) TransferV2(ctx context.Context, req AssetTr
 	instr := client.CreateExternalAssetTransfers2JSONBody_Instruction{}
 	positions := make([]client.TradingInstrumentV2, len(req.Positions))
 	for i, pos := range req.Positions {
-		positions[i] = client.TradingInstrumentV2{Quantity: pos.Quantity}
+		positions[i] = client.TradingInstrumentV2{Quantity: strToF32(pos.Quantity)}
 		_ = positions[i].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: float32(pos.ConID)})
 	}
 
 	_ = instr.FromFopInstructionV2(client.FopInstructionV2{
 		AccountId:             string(req.AccountID),
-		ClientInstructionId:   req.ClientInstructionID,
+		ClientInstructionId:   strToF32(req.ClientInstructionID),
 		ContraBrokerAccountId: req.ContraBrokerAccountID,
 		ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 		Direction:             client.FopInstructionV2Direction(req.Direction),
@@ -642,12 +661,12 @@ func (m *RESTExternalAssetTransfers) TransferBulkV2(ctx context.Context, reqs []
 	for i, req := range reqs {
 		positions := make([]client.TradingInstrumentV2, len(req.Positions))
 		for j, pos := range req.Positions {
-			positions[j] = client.TradingInstrumentV2{Quantity: pos.Quantity}
+			positions[j] = client.TradingInstrumentV2{Quantity: strToF32(pos.Quantity)}
 			_ = positions[j].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: float32(pos.ConID)})
 		}
 		payload.Instructions[i] = client.FopInstructionV2{
 			AccountId:             string(req.AccountID),
-			ClientInstructionId:   req.ClientInstructionID,
+			ClientInstructionId:   strToF32(req.ClientInstructionID),
 			ContraBrokerAccountId: req.ContraBrokerAccountID,
 			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 			Direction:             client.FopInstructionV2Direction(req.Direction),
@@ -686,14 +705,14 @@ func (m *RESTInternalAssetTransfers) Transfer(ctx context.Context, req InternalA
 	}
 
 	instr := client.InternalPositionTransferInstruction{
-		ClientInstructionId: req.ClientInstructionID,
+		ClientInstructionId: strToF32(req.ClientInstructionID),
 		SourceAccountId:     string(req.SourceAccountID),
 		TargetAccountId:     string(req.TargetAccountID),
 		TradingInstrument:   makeTradingInstrumentRef(req.ConID),
-		TransferQuantity:    req.TransferQuantity,
+		TransferQuantity:    strToF32(req.TransferQuantity),
 	}
 	if req.TransferPrice != nil {
-		instr.TransferPrice = req.TransferPrice
+		instr.TransferPrice = strPtrToF32Ptr(req.TransferPrice)
 	}
 	if req.TradeDate != nil {
 		instr.TradeDate = req.TradeDate
@@ -740,14 +759,14 @@ func (m *RESTInternalAssetTransfers) TransferBulk(ctx context.Context, reqs []In
 
 	for i, req := range reqs {
 		instr := client.InternalPositionTransferInstruction{
-			ClientInstructionId: req.ClientInstructionID,
+			ClientInstructionId: strToF32(req.ClientInstructionID),
 			SourceAccountId:     string(req.SourceAccountID),
 			TargetAccountId:     string(req.TargetAccountID),
 			TradingInstrument:   makeTradingInstrumentRef(req.ConID),
-			TransferQuantity:    req.TransferQuantity,
+			TransferQuantity:    strToF32(req.TransferQuantity),
 		}
 		if req.TransferPrice != nil {
-			instr.TransferPrice = req.TransferPrice
+			instr.TransferPrice = strPtrToF32Ptr(req.TransferPrice)
 		}
 		if req.TradeDate != nil {
 			instr.TradeDate = req.TradeDate
@@ -793,9 +812,9 @@ func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransf
 	if isDeposit {
 		depositInstr := client.DepositFundsInstruction{
 			AccountId:             string(req.AccountID),
-			Amount:                req.Amount,
+			Amount:                strToF32(req.Amount),
 			BankInstructionMethod: client.DepositFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
-			ClientInstructionId:   req.ClientInstructionID,
+			ClientInstructionId:   strToF32(req.ClientInstructionID),
 			Currency:              req.Currency,
 		}
 		if req.BankInstructionName != nil {
@@ -805,10 +824,10 @@ func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransf
 	} else {
 		withdrawInstr := client.WithdrawFundsInstruction{
 			AccountId:             string(req.AccountID),
-			Amount:                req.Amount,
+			Amount:                strToF32(req.Amount),
 			BankInstructionMethod: client.WithdrawFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
 			BankInstructionName:   derefStr(req.BankInstructionName),
-			ClientInstructionId:   req.ClientInstructionID,
+			ClientInstructionId:   strToF32(req.ClientInstructionID),
 			Currency:              req.Currency,
 		}
 		_ = instr.FromWithdrawFundsInstruction(withdrawInstr)
@@ -868,9 +887,9 @@ func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []Cas
 		if isDeposit {
 			depositInstr := client.DepositFundsInstruction{
 				AccountId:             string(req.AccountID),
-				Amount:                req.Amount,
+				Amount:                strToF32(req.Amount),
 				BankInstructionMethod: client.DepositFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
-				ClientInstructionId:   req.ClientInstructionID,
+				ClientInstructionId:   strToF32(req.ClientInstructionID),
 				Currency:              req.Currency,
 			}
 			if req.BankInstructionName != nil {
@@ -880,10 +899,10 @@ func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []Cas
 		} else {
 			withdrawInstr := client.WithdrawFundsInstruction{
 				AccountId:             string(req.AccountID),
-				Amount:                req.Amount,
+				Amount:                strToF32(req.Amount),
 				BankInstructionMethod: client.WithdrawFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
 				BankInstructionName:   derefStr(req.BankInstructionName),
-				ClientInstructionId:   req.ClientInstructionID,
+				ClientInstructionId:   strToF32(req.ClientInstructionID),
 				Currency:              req.Currency,
 			}
 			payload.Instructions[i] = withdrawInstr
@@ -974,8 +993,8 @@ func (m *RESTInternalCashTransfers) Transfer(ctx context.Context, req InternalCa
 	}
 
 	instr := client.InternalCashTransferInstruction{
-		Amount:              req.Amount,
-		ClientInstructionId: req.ClientInstructionID,
+		Amount:              strToF32(req.Amount),
+		ClientInstructionId: strToF32(req.ClientInstructionID),
 		Currency:            req.Currency,
 		SourceAccountId:     string(req.SourceAccountID),
 		TargetAccountId:     string(req.TargetAccountID),
@@ -1022,8 +1041,8 @@ func (m *RESTInternalCashTransfers) TransferBulk(ctx context.Context, reqs []Int
 
 	for i, req := range reqs {
 		instr := client.InternalCashTransferInstruction{
-			Amount:              req.Amount,
-			ClientInstructionId: req.ClientInstructionID,
+			Amount:              strToF32(req.Amount),
+			ClientInstructionId: strToF32(req.ClientInstructionID),
 			Currency:            req.Currency,
 			SourceAccountId:     string(req.SourceAccountID),
 			TargetAccountId:     string(req.TargetAccountID),

@@ -20,6 +20,9 @@ a new ADR, not editing the old one.
 | [0012](./0012-test-dependencies.md) | Test-only dependencies (`goleak`) | Accepted |
 | [0013](./0013-metrics.md) | Dependency-free metrics interface | Accepted |
 | [0014](./0014-mock-gateway.md) | In-repo mock IBKR gateway | Accepted |
+| [0015](./0015-stability.md) | Public API surface and stability contract | Accepted |
+| [0016](./0016-error-taxonomy.md) | Error handling philosophy | Accepted |
+| [0017](./0017-logging.md) | Logging interface | Accepted |
 
 Template:
 
