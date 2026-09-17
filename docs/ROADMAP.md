@@ -13,7 +13,8 @@ time. Scope for v1 is the CPAPI (`ssoBearer`) surface only — see
 | 2 | Portfolio, orders, contracts, market data | CPAPI |
 | 3 | WebSocket streaming | CPAPI |
 | 4 | Hardening: rate limits, retries, observability, docs | CPAPI |
-| 5 | OAuth2 surface (`/gw/*`) | IB REST |
+| 5 | OAuth2 surface: read ops (~40 ops) | IB REST |
+| 6 | OAuth2 surface: write ops, SSO, Echo, Restrictions (~30 ops) | IB REST |
 | — | Non-goals | — |
 
 The spec contains 185 operations: 115 on CPAPI (`ssoBearer`) and 70 on IB REST
@@ -142,9 +143,9 @@ Notes:
 - The circuit breaker is disabled by default; telemetry carries no OpenTelemetry
   dependency (ADR 0004).
 
-## Phase 5 — OAuth2 surface (post-v1) *(in progress; ~40 of 70 ops delivered)*
+## Phase 5 — OAuth2 surface: read ops *(complete)*
 
-Deliverables:
+Deliverables (~40 ops):
 
 - [x] `internal/oauth.go` — OAuth2 token acquisition/refresh with single-flight
   refresh, refresh-token rotation, and JWT-bearer assertion (`fetchWithSecret`,
@@ -169,10 +170,9 @@ Deliverables:
 - [x] `pkg/ibkr/restrictions.go` — 2 restriction ops: `AccountRestrictions`,
   `UserRestrictions`.
 - [x] `pkg/ibkr/rest_balances.go` — 1 balance op: `Query`.
-- [ ] Write ops with polymorphic instruction bodies (external/internal asset
-  transfers, cash transfers, bank instructions) — require Signed JWT params
-  (Phase 6).
-- [ ] Remaining `/gw/api/v1` and `/gw/api/v2` managers (incremental).
+- [x] `pkg/ibkr/rest_statements.go` — statement ops: `Generate`, `ListAvailable`.
+- [x] `pkg/ibkr/rest_taxdocuments.go` — tax document ops: `Generate`, `ListAvailable`.
+- [x] `pkg/ibkr/rest_tradeconfirmations.go` — trade confirmation ops: `Generate`, `ListAvailable`.
 
 Exit criteria:
 
@@ -180,16 +180,39 @@ Exit criteria:
 - [x] Token refresh, rotation, and JWT assertion tested.
 - [ ] Live-gateway verification.
 
+## Phase 6 — OAuth2 surface: write ops, SSO, Echo, Restrictions *(in progress)*
+
+Deliverables (~30 ops, 4 of 4 PRs):
+
+**PR 1 — SSO Sessions + Echo (complete):**
+- [x] `pkg/ibkr/rest_sso.go` — SSO session management: `CreateBrowserSession`, `CreateSession` (2 ops).
+- [x] `pkg/ibkr/rest_echo.go` — Echo utilities: `ListEchoHttps`, `CreateEchoSignedJwt` (2 ops).
+
+**PR 2 — Transfer write ops (pending):**
+- [ ] External asset transfers: `Transfer`, `TransferBulk`, `TransferV2`, `TransferBulkV2` (4 ops)
+- [ ] Internal asset transfers: `Transfer`, `TransferBulk` (2 ops)
+- [ ] External cash transfers: `Transfer`, `TransferBulk`, `QueryBalances` (3 ops)
+- [ ] Internal cash transfers: `Transfer`, `TransferBulk` (2 ops)
+- [ ] Bank instructions: `Create`, `Query`, `CreateBulk` (3 ops)
+- [ ] `BulkInstructionsCancel` (1 op)
+
+**PR 3 — Restrictions with Signed JWT (pending):**
+- [ ] `MasterRestrictionIDs`, `MasterListIDs`, `ListDetails`, `RestrictionDetails`, `RestrictionScope` (5 ops)
+- [ ] `ApplyCSV`, `VerifyCSV` (2 ops)
+
+**PR 4 — Docs sweep (pending):**
+- [ ] Final ROADMAP update
+- [ ] Verify all checks pass
+
+Exit criteria:
+
+- [ ] Live-gateway verification.
+
 Notes:
 
-- No new runtime dependency: token acquisition and JWT signing use pure stdlib
-  (`net/http`, `crypto/rsa`, `crypto/sha256`) per ADR 0004.
-- Credentials may come from `WithOAuth2*` options or `IBKR_CLIENT_ID` /
-  `IBKR_CLIENT_SECRET` / `IBKR_CLIENT_REFRESH_TOKEN`.
-- Write ops with complex polymorphic instruction unions (transfers, bank
-  instructions) are deferred to Phase 6 when Signed JWT infrastructure is ready.
-- Operations requiring `Authorization` header with Signed JWT in params
-  (`getMasterRestrictionIds`, `getListDetails`, etc.) are deferred to Phase 6.
+- Write ops require Signed JWT params; Phase 6 infrastructure enables these.
+- Transfer operations use polymorphic `instruction` union bodies with
+  `From*` methods to construct the correct variant.
 
 ## Non-goals
 
