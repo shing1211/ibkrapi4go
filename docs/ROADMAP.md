@@ -133,7 +133,7 @@ Deliverables (~48 of 70 oauth2Bearer ops):
   `UpdateRequestStatus`, `GetStatus`.
 - [x] `pkg/ibkr/rest_banking.go` — 6 read ops: `ClientInstruction`,
   `InstructionSet`, `Instruction`, `QueryTransactions`, `CancelInstruction`,
-  `CancelInstructionsBulk` + transfer sub-managers (stubs; write ops deferred).
+  `CancelInstructionsBulk` + transfer sub-managers (write ops completed in Phase 6).
 - [x] `pkg/ibkr/rest_utilities.go` — 6 utility ops: `Enumerations`,
   `ComplexAssetTransferBrokers`, `Forms`, `RequiredForms`,
   `ParticipatingBanks`, `ValidateUsername`.

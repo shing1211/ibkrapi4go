@@ -18,14 +18,17 @@ func NewClient(opts ...Option) (*Client, error)
 
 ```go
 type Client struct {
-    cfg       Config
-    http      *http.Client      // transport chain
-    session   *Session          // state machine + tickle
-    account   *AccountManager
-    portfolio *PortfolioManager
-    trade     *TradeManager
-    marketData *MarketDataManager
-    ws        *wsConn           // lazily dialed
+    cfg        Config
+    http       *http.Client      // transport chain
+    session    *Session          // state machine + tickle
+    generated  *client.ClientWithResponses
+    // CPAPI managers
+    sessionManager, accountManager, portfolioManager, tradeManager,
+    marketDataManager, tradingAccountManager, alertManager, forecastManager,
+    scannerManager, allocationManager, modelManager, fyiManager,
+    oauthManager, watchlistManager, performanceManager
+    rest       *RESTSurface      // lazily dialed (oauth2Bearer)
+    ws         *wsConn           // lazily dialed
 }
 ```
 
@@ -37,6 +40,17 @@ func (c *Client) Account() *AccountManager
 func (c *Client) Portfolio() *PortfolioManager
 func (c *Client) Trade() *TradeManager
 func (c *Client) MarketData() *MarketDataManager
+func (c *Client) TradingAccount() *TradingAccountManager
+func (c *Client) Alert() *AlertManager
+func (c *Client) Forecast() *ForecastManager
+func (c *Client) Scanner() *ScannerManager
+func (c *Client) Allocation() *AllocationManager
+func (c *Client) Model() *ModelManager
+func (c *Client) FYI() *FYIManager
+func (c *Client) OAuth() *OAuthManager
+func (c *Client) Watchlist() *WatchlistManager
+func (c *Client) Performance() *PerformanceManager
+func (c *Client) REST() (*RESTSurface, error)   // IB REST (oauth2Bearer)
 ```
 
 Managers are created once and are safe to reuse.

@@ -20,14 +20,14 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本文件是英文 [README](./README.md) 的社群翻譯。**英文版本為準。**
-> 同步於 / Last synced: 48bdde6
+> 同步於 / Last synced: c5d6706
 
 ## 目錄
 
 - [狀態](#狀態)
 - [兩套 API](#兩套-api)
 - [安裝](#安裝)
-- [規劃用法](#規劃用法)
+- [用法](#用法)
 - [認證](#認證)
 - [套件結構](#套件結構)
 - [倉庫文件](#倉庫文件)
@@ -63,9 +63,9 @@ IBKR OpenAPI 規範（v2.39.0）實際上描述了**兩套 API 表面，使用�
 | IB REST API | `/gw/api/v1/*`、`/gw/api/v2/*`、`/oauth2/*` | 70 | `oauth2Bearer` |
 | **合計** | | **185** | |
 
-**SDK v1 僅針對 CPAPI（`ssoBearer`）**，`oauth2Bearer` 表面已在第 5-6 階段實作。
+SDK 最初僅涵蓋 CPAPI（`ssoBearer`）；`oauth2Bearer` 表面已在第 5-6 階段實作。
 參見 [ADR 0001](./docs/adr/0001-two-api-surfaces.md) 與
-[ADR 0005](./docs/adr/0005-v1-scope.md)。
+[ADR 0011](./docs/adr/0011-oauth2-surface.md)。
 
 ## 安裝
 
@@ -75,9 +75,9 @@ go get github.com/shing1211/ibkrapi4go/pkg/ibkr
 
 需要 **Go 1.26+**，以及正在執行的 [IBKR Client Portal Gateway](https://www.interactivebrokers.com/api/)。
 
-## 規劃用法
+## 用法
 
-> 以下 API 為**目標設計**，僅用於說明預期的使用體驗。實際實作見 `pkg/ibkr/`。
+一個最小的 Client Portal API (CPAPI) 範例：
 
 ```go
 package main

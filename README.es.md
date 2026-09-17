@@ -21,14 +21,14 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > Este documento es una traducción comunitaria del [README](./README.md) en inglés.
-> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: 48bdde6
+> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: c5d6706
 
 ## Tabla de contenidos
 
 - [Estado](#estado)
 - [Las dos API](#las-dos-api)
 - [Instalación](#instalación)
-- [Uso previsto](#uso-previsto)
+- [Uso](#uso)
 - [Autenticación](#autenticación)
 - [Estructura de paquetes](#estructura-de-paquetes)
 - [Documentación del repositorio](#documentación-del-repositorio)
@@ -66,9 +66,10 @@ API con dos esquemas de autenticación distintos**. No son intercambiables:
 | IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | 70 | `oauth2Bearer` |
 | **Total** | | **185** | |
 
-**La v1 de este SDK solo cubre CPAPI (`ssoBearer`).** La superficie `oauth2Bearer`
-se implementó en las fases 5-6. Consulta [ADR 0001](./docs/adr/0001-two-api-surfaces.md)
-y [ADR 0005](./docs/adr/0005-v1-scope.md).
+La v1 se limitaba inicialmente a CPAPI (`ssoBearer`); la superficie
+`oauth2Bearer` se publicó en las fases 5-6. Consulta
+[ADR 0001](./docs/adr/0001-two-api-surfaces.md) y
+[ADR 0011](./docs/adr/0011-oauth2-surface.md).
 
 ## Instalación
 
@@ -78,10 +79,9 @@ go get github.com/shing1211/ibkrapi4go/pkg/ibkr
 
 Requiere **Go 1.26+** y un [IBKR Client Portal Gateway](https://www.interactivebrokers.com/api/) en ejecución.
 
-## Uso previsto
+## Uso
 
-> La API siguiente es el **diseño objetivo**. Consulta `pkg/ibkr/` para la
-> implementación actual.
+Un ejemplo mínimo de la Client Portal API (CPAPI):
 
 ```go
 package main

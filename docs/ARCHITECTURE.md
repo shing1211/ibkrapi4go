@@ -1,7 +1,7 @@
 # Architecture
 
 Design decisions, tradeoffs, and implementation rationale.
-Status: **Pre-alpha — v1 targets CPAPI.**
+Status: **Pre-alpha — all 185 operations implemented (115 CPAPI + 70 IB REST).**
 
 ## Dependencies
 
@@ -10,7 +10,7 @@ Status: **Pre-alpha — v1 targets CPAPI.**
 | `github.com/coder/websocket` | WebSocket client — context-aware, idiomatic, maintained |
 | `golang.org/x/time/rate` | Rate limiting (token bucket) |
 | `github.com/oapi-codegen/runtime` | Runtime helpers used by generated code |
-| `github.com/stretchr/testify` | Test assertions (test-only) |
+| `go.uber.org/goleak` | Goroutine leak detection (test-only) |
 | `oapi-codegen` (CLI) | OpenAPI → Go codegen (build-time only) |
 
 No web frameworks. No DI frameworks. Standard `net/http` for all HTTP client
@@ -27,8 +27,9 @@ project fills that gap with a typed, OpenAPI-driven, idiomatic Go client.
    regenerated, not hand-maintained. Tradeoff: the spec has defects, patched in
    `scripts/patch_spec.py` (see [CODEGEN.md](./CODEGEN.md)).
 2. **Two surfaces, explicitly.** `/v1/api` (`ssoBearer`) and `/gw/api/*`
-   (`oauth2Bearer`) are distinct; v1 targets the former. See
-   [ADR 0001](./adr/0001-two-api-surfaces.md).
+   (`oauth2Bearer`) are distinct and both implemented. See
+   [ADR 0001](./adr/0001-two-api-surfaces.md) and
+   [ADR 0011](./adr/0011-oauth2-surface.md).
 3. **Idiomatic Go, not OpenAPI-native.** Generated code is a starting point; the
    public API wraps it in managers.
 4. **Session is a state machine.** See [SESSIONS.md](./SESSIONS.md).
@@ -58,29 +59,42 @@ types to stable public types (see [design/04-generated-wrapping.md](./design/04-
 ibkrapi4go/
 ├── client/            # Generated (DO NOT EDIT)
 ├── pkg/ibkr/
-│   ├── client.go      # NewClient, options, Close
+│   ├── client.go      # Client, NewClient, options, Close, accessors
 │   ├── auth.go        # SessionManager
 │   ├── account.go     # AccountManager
 │   ├── portfolio.go   # PortfolioManager
-│   ├── contract.go    # contract lookups (on TradeManager)
+│   ├── contract.go    # TradeManager + contract lookups
 │   ├── trade.go       # TradeManager (orders)
 │   ├── marketdata.go  # MarketDataManager
+│   ├── trading_accounts.go  # TradingAccountManager
+│   ├── alerts.go      # AlertManager
+│   ├── events.go      # ForecastManager (event contracts)
+│   ├── scanner.go     # ScannerManager
+│   ├── allocation.go  # AllocationManager
+│   ├── models.go      # ModelManager
+│   ├── notifications.go # FYIManager
+│   ├── oauth1.go      # OAuthManager (OAuth1)
+│   ├── watchlists.go  # WatchlistManager
+│   ├── performance.go # PerformanceManager
+│   ├── rest.go        # RESTSurface (accounts, statements, requests, tax docs, confirmations, tax vouchers)
+│   ├── rest_*.go      # REST banking, utilities, balances, restrictions, SSO, echo
 │   ├── response.go    # netDo + json.Number decoding helpers
 │   ├── ids.go         # ConID, Field, Side, OrderType, TimeInForce
 │   ├── pagination.go  # PositionIterator
 │   ├── ws.go          # streaming Subscription (coder/websocket)
 │   ├── oauth.go       # OAuth2 options for the REST surface
-│   ├── rest.go        # RESTSurface (/gw/api/*, oauth2Bearer)
 │   └── doc.go
 ├── internal/
 │   ├── transport.go     # middleware chain (request id, UA, auth, errors, timeout)
 │   ├── session.go       # state machine + tickle
+│   ├── ws.go            # WebSocket connection management
+│   ├── oauth.go         # OAuth2 token source (secret + private_key_jwt)
+│   ├── jwt.go           # RS256 JWT assertions for the OAuth2 surface
 │   ├── ratelimit.go     # per-endpoint + global token buckets
 │   ├── retry.go         # safe-method retry + Retry-After
 │   ├── observability.go # request logging, redaction, telemetry hooks
 │   ├── breaker.go       # optional circuit breaker
-│   ├── ws.go            # WebSocket connection management
-│   └── oauth.go         # OAuth2 token source (client credentials/refresh)
+│   └── errors.go        # *Error type, sentinels, ConfigError
 ├── scripts/
 └── docs/
 ```
@@ -133,13 +147,14 @@ codegen reproducibility check.
 
 ## Non-goals (v1)
 
-TWS/FIX protocols, account opening/KYC, the `/gw/*` OAuth2 surface, and
-GraphQL. See [ROADMAP.md](./ROADMAP.md).
+TWS/FIX protocols, account opening/KYC, and GraphQL. See
+[ROADMAP.md](./ROADMAP.md). The `/gw/*` OAuth2 surface was added in Phases 5–6
+and is no longer a non-goal.
 
 ## Future
 
-- v2: `/gw/*` OAuth2 surface + refresh.
-- v2: multiple concurrent sessions / gateways.
+- Multiple concurrent sessions / gateways.
+- Optional higher-level convenience helpers.
 
 ---
 

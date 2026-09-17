@@ -62,7 +62,7 @@ With `oapi-codegen` **v2.8.0** and the patched spec:
 | `go build` | ✅ clean |
 
 > This number replaces an earlier, unverified claim that "184/185 endpoints
-> generate cleanly". The true story is: **all 185** generate, but only after four
+> generate cleanly". The true story is: **all 185** generate, but only after three
 > classes of spec patches.
 
 ## Generated files

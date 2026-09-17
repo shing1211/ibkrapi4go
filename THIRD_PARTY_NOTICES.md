@@ -9,7 +9,7 @@ the following third-party Go modules. These are normal Go module dependencies
 | `github.com/coder/websocket` | ISC | WebSocket client (runtime) |
 | `golang.org/x/time/rate` | BSD-3-Clause | Token-bucket rate limiting (runtime) |
 | `github.com/oapi-codegen/runtime` | Apache-2.0 | Runtime helpers used by generated client (runtime, generated) |
-| `github.com/stretchr/testify` | MIT | Test assertions (test-only) |
+| `go.uber.org/goleak` | MIT | Goroutine leak detection (test-only) |
 | `github.com/oapi-codegen/oapi-codegen/v2` | Apache-2.0 | Code generator (build-time only) |
 
 ## Generated code

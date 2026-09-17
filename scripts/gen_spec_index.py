@@ -79,7 +79,7 @@ def main() -> None:
     out.append(f"| IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | {ops['IB REST']} | `oauth2Bearer` |")
     out.append(f"| **Total** | | **{total}** | |")
     out.append("")
-    out.append("SDK v1 targets **CPAPI** only. See [ADR 0001](./adr/0001-two-api-surfaces.md).")
+    out.append(f"Both surfaces are implemented: {ops['CPAPI']} CPAPI (`ssoBearer`) + {ops['IB REST']} IB REST (`oauth2Bearer`). See [ADR 0001](./adr/0001-two-api-surfaces.md) and [ADR 0011](./adr/0011-oauth2-surface.md).")
     out.append("")
     out.append("---")
     out.append("")

@@ -25,7 +25,7 @@
 - [Status](#status)
 - [The Two APIs](#the-two-apis)
 - [Install](#install)
-- [Planned Usage](#planned-usage)
+- [Usage](#usage)
 - [Authentication](#authentication)
 - [Package Layout](#package-layout)
 - [Repository Docs](#repository-docs)
@@ -62,9 +62,9 @@ different authentication schemes**. They are not interchangeable:
 | IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | 70 | `oauth2Bearer` |
 | **Total** | | **185** | |
 
-**v1 of this SDK targets CPAPI (`ssoBearer`) only.** The `oauth2Bearer` surface
-was implemented in Phases 5-6. See [ADR 0001](./docs/adr/0001-two-api-surfaces.md)
-and [ADR 0005](./docs/adr/0005-v1-scope.md).
+v1 originally scoped CPAPI (`ssoBearer`) only; the `oauth2Bearer` surface shipped
+in Phases 5-6. See [ADR 0001](./docs/adr/0001-two-api-surfaces.md) and
+[ADR 0011](./docs/adr/0011-oauth2-surface.md).
 
 ## Install
 
@@ -76,8 +76,7 @@ Requires **Go 1.26+** and a running [IBKR Client Portal Gateway](https://www.int
 
 ## Usage
 
-> The API below shows the target design. See `pkg/ibkr/` for the actual
-> implementation.
+A minimal Client Portal API (CPAPI) example:
 
 ```go
 package main

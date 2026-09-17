@@ -51,8 +51,9 @@ Unknown values are preserved (not dropped) so forward compatibility holds.
 
 ## Enforcement
 
-- `golangci-lint` `depguard` rule: `client` may only be imported from
-  `pkg/ibkr` and `internal`.
+- `client` may only be imported from `pkg/ibkr` and `internal`. This is enforced
+  by review, not by a linter (see `.golangci.yml`), to avoid false positives in
+  tests.
 - Reviewers reject PRs that leak generated types through exported signatures.
 
 ## Never edit generated code

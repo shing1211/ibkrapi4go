@@ -21,14 +21,14 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 이 문서는 영어 [README](./README.md)의 커뮤니티 번역입니다. **영어판이 정본입니다.**
-> 동기화 / Last synced: 48bdde6
+> 동기화 / Last synced: c5d6706
 
 ## 목차
 
 - [상태](#상태)
 - [두 개의 API](#두-개의-api)
 - [설치](#설치)
-- [사용 예정](#사용-예정)
+- [사용법](#사용법)
 - [인증](#인증)
 - [패키지 구조](#패키지-구조)
 - [저장소 문서](#저장소-문서)
@@ -65,9 +65,9 @@ IBKR OpenAPI 명세(v2.39.0)는 실제로 **서로 다른 인증 방식을 가�
 | IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | 70 | `oauth2Bearer` |
 | **합계** | | **185** | |
 
-**SDK v1은 CPAPI(`ssoBearer`)만 대상으로 합니다.** `oauth2Bearer` 표면은
+SDK는 처음에 CPAPI(`ssoBearer`)만 대상으로 했으며, `oauth2Bearer` 표면은
 단계 5-6에서 구현되었습니다. [ADR 0001](./docs/adr/0001-two-api-surfaces.md)과
-[ADR 0005](./docs/adr/0005-v1-scope.md)를 참고하세요.
+[ADR 0011](./docs/adr/0011-oauth2-surface.md)를 참고하세요.
 
 ## 설치
 
@@ -77,9 +77,9 @@ go get github.com/shing1211/ibkrapi4go/pkg/ibkr
 
 **Go 1.26+** 와 실행 중인 [IBKR Client Portal Gateway](https://www.interactivebrokers.com/api/)가 필요합니다.
 
-## 사용 예정
+## 사용법
 
-> 아래 API는 **목표 설계**입니다. 실제 구현은 `pkg/ibkr/`를 참고하세요.
+최소한의 Client Portal API (CPAPI) 예제:
 
 ```go
 package main

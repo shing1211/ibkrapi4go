@@ -1,4 +1,4 @@
-# 0010 — Test-only dependencies
+# 0012 — Test-only dependencies
 
 - Status: Accepted
 - Date: 2026-09-16

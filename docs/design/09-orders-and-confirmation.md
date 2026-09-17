@@ -23,7 +23,7 @@ flow and safety rules.
 - Confirmation is **explicit**: the manager does not silently auto-confirm
   warnings. The caller decides.
 
-## Public API (planned)
+## Public API
 
 ```go
 type OrderRequest struct {

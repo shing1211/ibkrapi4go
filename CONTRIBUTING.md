@@ -154,7 +154,7 @@ in [docs/CODEGEN.md](./docs/CODEGEN.md).
 | Test Type | Location | Runs In CI | Needs Account |
 |-----------|----------|------------|---------------|
 | Unit tests | `*_test.go` alongside source | ✅ | No |
-| Integration tests | `test/` (`-tags=integration`) | On demand | Paper account |
+| Integration tests | `test/` (`-tags=integration`, planned) | On demand | Paper account |
 | Codegen validation | `scripts/` | ✅ | No |
 
 See [docs/TESTING.md](./docs/TESTING.md).

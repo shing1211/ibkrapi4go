@@ -22,7 +22,11 @@ IBKR returns decimals as JSON strings to preserve precision. `float64` is binary
 floating point and cannot represent many decimal values exactly; decoding a price
 into `float64` can alter it. For order prices and quantities that is unacceptable.
 
-## Helpers
+## Helpers (not yet provided)
+
+Money and quantities are currently carried as raw `string` values and compared by
+the caller; the SDK does not ship arithmetic helpers yet. If/when they are added,
+the intended shape is:
 
 ```go
 package amounts

@@ -21,7 +21,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本書は英語版 [README](./README.md) のコミュニティ翻訳です。**英語版が正式です。**
-> 同期 / Last synced: 48bdde6
+> 同期 / Last synced: c5d6706
 
 ## 目次
 
@@ -65,9 +65,9 @@ IBKR OpenAPI 仕様（v2.39.0）は、実際には**異なる認証方式を持�
 | IB REST API | `/gw/api/v1/*`、`/gw/api/v2/*`、`/oauth2/*` | 70 | `oauth2Bearer` |
 | **合計** | | **185** | |
 
-**SDK v1 は CPAPI（`ssoBearer`）のみを対象とします。** `oauth2Bearer` サーフェスは
-フェーズ 5-6 で実装されました。[ADR 0001](./docs/adr/0001-two-api-surfaces.md) と
-[ADR 0005](./docs/adr/0005-v1-scope.md) を参照してください。
+SDK は当初 CPAPI（`ssoBearer`）のみを対象としていました。`oauth2Bearer`
+サーフェスはフェーズ 5-6 で実装されました。[ADR 0001](./docs/adr/0001-two-api-surfaces.md)
+と [ADR 0011](./docs/adr/0011-oauth2-surface.md) を参照してください。
 
 ## インストール
 
@@ -79,7 +79,7 @@ go get github.com/shing1211/ibkrapi4go/pkg/ibkr
 
 ## 使用例
 
-> 以下の API は**目標設計**です。実際の実装は `pkg/ibkr/` を参照してください。
+最小限の Client Portal API (CPAPI) の例：
 
 ```go
 package main

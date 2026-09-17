@@ -2,7 +2,7 @@
 
 > Source: `https://api.ibkr.com/gw/api/v3/api-docs`
 > Title: IB REST API | Version: 2.39.0 | OpenAPI: 3.0.0
-> Endpoints: 185 | Schemas: 443 | Tags: 27 | Generated: 2026-09-16
+> Endpoints: 185 | Schemas: 443 | Tags: 27 | Generated: 2026-09-17
 
 > **Canonical counts.** All endpoint/schema numbers in this repository
 > derive from this file. Regenerate with `scripts/gen_spec_index.py` — do
@@ -26,7 +26,7 @@
 | IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | 70 | `oauth2Bearer` |
 | **Total** | | **185** | |
 
-SDK v1 targets **CPAPI** only. See [ADR 0001](./adr/0001-two-api-surfaces.md).
+Both surfaces are implemented: 115 CPAPI (`ssoBearer`) + 70 IB REST (`oauth2Bearer`). See [ADR 0001](./adr/0001-two-api-surfaces.md) and [ADR 0011](./adr/0011-oauth2-surface.md).
 
 ---
 

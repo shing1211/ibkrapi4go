@@ -11,7 +11,7 @@ Testing strategy for ibkrapi4go.
 | Manager e2e | `pkg/ibkr/*_test.go` | — | No (httptest) | ✅ |
 | WebSocket | `pkg/ibkr/ws_test.go` | — | No (local WS server) | ✅ |
 | Codegen | `scripts/validate_codegen.sh` | — | No | ✅ (scheduled too) |
-| Integration | `test/` | `integration` | Yes (paper) | On demand |
+| Integration | `test/` (planned; not yet present) | `integration` | Yes (paper) | On demand |
 
 ## Unit tests
 
@@ -43,6 +43,9 @@ Fixtures:
 - Run with `-race` in CI (`make test-race`).
 
 ## Integration tests
+
+No integration test files are committed yet; this tier is reserved. When added
+they carry the `integration` build tag:
 
 ```go
 //go:build integration

@@ -1,14 +1,15 @@
 # Authentication
 
 IBKR has **two authentication models**, corresponding to the two API surfaces
-(see [GLOSSARY.md](./GLOSSARY.md) and [ADR 0002](./adr/0002-auth-models.md)).
-SDK v1 implements only the `ssoBearer` model.
+(see [GLOSSARY.md](./GLOSSARY.md), [ADR 0002](./adr/0002-auth-models.md), and
+[ADR 0011](./adr/0011-oauth2-surface.md)). The SDK implements both: CPAPI
+(`ssoBearer`) and the IB REST API (`oauth2Bearer`).
 
 ## Model comparison
 
-| | `ssoBearer` (v1) | `oauth2Bearer` (deferred) |
+| | `ssoBearer` (CPAPI) | `oauth2Bearer` (IB REST) |
 |---|---|---|
-| Surface | `/v1/api/*` | `/gw/api/v1/*`, `/gw/api/v2/*` |
+| Surface | `/v1/api/*` | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` |
 | Where | Local Client Portal Gateway | `api.ibkr.com` |
 | Login | Interactive (browser + 2FA) | OAuth2 token endpoint |
 | SDK holds | Session token from gateway | Access + refresh tokens |
@@ -27,29 +28,32 @@ For `ssoBearer`, the user logs in to the gateway in a browser. The SDK then:
 2. Keeps it alive via the tickle loop (see [SESSIONS.md](./SESSIONS.md)).
 3. Reacts to expiry by asking the caller to re-authenticate in the browser.
 
-## Interface (planned)
+## CPAPI session interface
+
+`Client.Session()` returns a `*SessionManager`:
 
 ```go
-type SessionManager interface {
-    // Initialize establishes a brokerage session on an already-authenticated
-    // gateway. Returns ErrNotAuthenticated if the gateway has no browser session.
-    Initialize(ctx context.Context) error
-
-    // Status reports the current brokerage session state.
-    Status(ctx context.Context) (SessionStatus, error)
-
-    // Logout terminates the gateway session and stops the tickle loop.
-    Logout(ctx context.Context) error
-}
+func (m *SessionManager) Initialize(ctx context.Context) error
+func (m *SessionManager) Close(ctx context.Context) error   // best-effort logout
+func (m *SessionManager) State() SessionState
+func (m *SessionManager) Status(ctx context.Context) (*AuthStatus, error)
 ```
 
 The SDK does **not** open a browser or drive a login flow. Interactive
 authentication is out of scope; users authenticate the gateway themselves.
 
-## OAuth2 (deferred)
+## OAuth2 (IB REST surface)
 
-The `oauth2Bearer` flow (token request, refresh, rotation) will be specified in
-a later ADR when the `/gw/*` surface is implemented. It is **not** part of v1.
+The hosted `/gw/*` surface uses an OAuth2 bearer token obtained from the token
+endpoint (`https://api.ibkr.com/oauth2/api/v1/token`). The token source in
+`internal/oauth.go` supports the `client_credentials` and `refresh_token`
+grants, plus `private_key_jwt` (`client_assertion`) via `internal/jwt.go`. It
+refreshes before expiry, serializes concurrent refreshes (single-flight), and
+rotates the refresh token when the server returns a new one. Tokens live in
+memory only. Configure it with `WithOAuth2ClientCredentials`,
+`WithOAuth2RefreshToken`, and the `WithOAuth2JWTKey*` options (or the
+`IBKR_CLIENT_ID` / `IBKR_CLIENT_SECRET` / `IBKR_CLIENT_REFRESH_TOKEN`
+environment variables). See [ADR 0011](./adr/0011-oauth2-surface.md).
 
 ## Secrets handling
 

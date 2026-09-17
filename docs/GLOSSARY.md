@@ -7,13 +7,14 @@ the original planning docs conflated several of them.
 
 **Client Portal API (CPAPI)**
 The legacy `/v1/api/*` surface served by the locally-run Client Portal Gateway.
-Authenticated with `ssoBearer`. 115 operations in spec v2.39.0. **This is the
-target of SDK v1.**
+Authenticated with `ssoBearer`. 115 operations in spec v2.39.0. Implemented in
+full.
 
 **IB REST API**
 The newer `/gw/api/v1/*` and `/gw/api/v2/*` surface served by `api.ibkr.com`.
-Authenticated with `oauth2Bearer`. 70 operations (including `/oauth2/*`). Deferred
-past v1.
+Authenticated with `oauth2Bearer`. 70 operations (including `/oauth2/*`).
+Implemented in full (Phases 5–6); see
+[ADR 0011](./adr/0011-oauth2-surface.md).
 
 **Client Portal Gateway (CPGW)**
 A Java application distributed by Interactive Brokers that runs locally (default

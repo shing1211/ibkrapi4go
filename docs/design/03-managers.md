@@ -3,17 +3,23 @@
 Managers are the public, domain-facing API. Each wraps a slice of the generated
 client and returns stable public types.
 
-## Managers (v1, CPAPI)
+## Managers (CPAPI)
 
 | Manager | Scope | Methods (implemented) |
 |---------|-------|-----------------------|
 | `AccountManager` | accounts & summaries | `List`, `Summary`, `PnL` |
-| `PortfolioManager` | positions & ledger | `Accounts`, `Subaccounts`, `Positions`, `PositionsPaginated`, `Position`, `Ledger`, `Allocation`, `Summary`, `Meta`, `Invalidate` |
-| `TradeManager` | orders & contracts | `Submit`, `Confirm`, `WhatIf`, `Modify`, `Cancel`, `OpenOrders`, `OrderStatus`, `Trades`, `SearchContracts`, `ContractInfo`, `ContractRules`, `Strikes` |
-| `MarketDataManager` | quotes & history | `Snapshot`, `History`, `Unsubscribe`, `UnsubscribeAll` |
+| `PortfolioManager` | positions & ledger | `Accounts`, `Subaccounts`, `Positions`, `PositionsPaginated`, `Position`, `Ledger`, `Allocation`, `Summary`, `Meta`, `Invalidate`, `GetAllAccountsForConid`, `GetManySubaccounts`, `GetComboPositions`, `GetUncachedPositions` |
+| `TradeManager` | orders & contracts | `Submit`, `Confirm`, `WhatIf`, `Modify`, `Cancel`, `OpenOrders`, `OrderStatus`, `Trades`, `SearchContracts`, `ContractInfo`, `ContractRules`, `Strikes`, plus extended contract ops (`GetInfoAndRules`, `GetTradingSchedule`, `GetCurrencyPairs`, `GetExchangeRates`, `GetBondFilters`, `GetAlgosByInstrument`, `GetStockBySymbol`, ...) |
+| `MarketDataManager` | quotes, history & streaming | `Snapshot`, `History`, `Unsubscribe`, `UnsubscribeAll`, `Subscribe` |
+| `TradingAccountManager` | trading-account ops | 9 ops (owners, active/dynamic accounts, fund/balance/margin/market summaries) |
+| `AlertManager`, `ForecastManager`, `ScannerManager` | alerts, event contracts, scanner | 6, 5, and 2 ops respectively |
+| `AllocationManager`, `ModelManager` | FA allocation, model portfolios | 8 and 10 ops |
+| `FYIManager`, `OAuthManager`, `WatchlistManager`, `PerformanceManager` | FYIs/notifications, OAuth1, watchlists, PortfolioAnalyst | 11, 3, 4, and 4 ops |
 
-Pending: `AccountManager.BalanceSummary`/`MarginSummary`; `MarketDataManager.Subscribe`
-(WebSocket, Phase 3).
+The IB REST (`oauth2Bearer`) surface is exposed separately via `Client.REST()`
+(`RESTSurface` and its `REST*` sub-managers); see
+[08-concurrency.md](./08-concurrency.md) and
+[../adr/0011](../adr/0011-oauth2-surface.md).
 
 ## Method conventions
 
