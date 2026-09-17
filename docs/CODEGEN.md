@@ -116,8 +116,12 @@ make codegen-verify
 ```
 
 This fetches the spec, patches, regenerates into a temp directory, and diffs
-against `client/`. A non-empty diff fails CI. Because the upstream spec can
-change without notice, this check runs on a schedule as well as on PRs.
+against `client/`. A non-empty diff fails CI.
+
+A separate [`.github/workflows/spec-drift.yml`](../.github/workflows/spec-drift.yml)
+workflow runs daily and opens a GitHub issue if the upstream spec version
+advances past the version pinned in `docs/SPEC.md`. This catches spec drift
+before it silently breaks the next `make codegen`.
 
 ## Regenerating `docs/SPEC.md`
 

@@ -21,6 +21,9 @@
 - [ ] Docs updated; counts match `docs/SPEC.md`
 - [ ] No hand edits to `client/*.gen.go`
 - [ ] New dependencies have an ADR (`docs/adr/`)
+- [ ] Architecture/design consistency considered
+- [ ] Backward compatibility impact reviewed
+- [ ] Test coverage added or updated
 
 ## Related
 

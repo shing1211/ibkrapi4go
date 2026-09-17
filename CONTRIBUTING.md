@@ -151,15 +151,54 @@ in [docs/CODEGEN.md](./docs/CODEGEN.md).
 
 ---
 
+## Architecture Tour
+
+The SDK has three layers:
+
+```
+pkg/ibkr/         Public SDK — edit here for API changes
+     ↓
+internal/         Internal implementation — breaking changes OK
+     ↓
+client/           Generated OpenAPI code — DO NOT EDIT MANUALLY
+```
+
+**Public surface** (`pkg/ibkr/`) is the only surface external packages may depend
+on. Managers (`AccountManager`, `TradeManager`, etc.) are accessed via
+`Client` accessors. All public functions accept `context.Context` as the first
+argument. Never import `internal/` from outside the module.
+
+See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the full design.
+
 ## Testing Guidelines
 
 | Test Type | Location | Runs In CI | Needs Account |
 |-----------|----------|------------|---------------|
 | Unit tests | `*_test.go` alongside source | ✅ | No |
-| Integration tests | `test/` (`-tags=integration`, planned) | On demand | Paper account |
+| Integration tests | `test/` (`//go:build integration`) | On demand | Paper account |
 | Codegen validation | `scripts/` | ✅ | No |
 
 See [docs/TESTING.md](./docs/TESTING.md).
+
+## Code Review Criteria
+
+Before merging, consider:
+
+- **No float64 for money or quantities.** Use `string` or `json.Number`
+  ([ADR 0008](./docs/adr/0008-numeric-precision.md)).
+- **No auto-retry on order mutations.** Write operations (`Submit`, `Modify`,
+  `Cancel`) must not be retried automatically
+  ([ADR 0009](./docs/adr/0009-no-auto-retry-orders.md)).
+- **Context on all public functions.** Every exported function must accept
+  `context.Context` as its first parameter.
+- **Minimal dependencies.** New runtime dependencies require an ADR
+  ([ADR 0004](./docs/adr/0004-minimal-dependencies.md)).
+- **Never hand-edit generated code.** Changes to `client/*.gen.go` go through
+  `scripts/patch_spec.py` + `make codegen`; see
+  [docs/CODEGEN.md](./docs/CODEGEN.md).
+- **Backwards compatibility.** Pre-1.0, breaking changes are permitted in minor
+  releases but must be called out in the changelog; after 1.0 they require a
+  major bump.
 
 ---
 

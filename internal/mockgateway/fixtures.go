@@ -182,6 +182,17 @@ func (f *Fixtures) Get(op string) (Fixture, bool) {
 	return fx, ok
 }
 
+// All returns a copy of all registered fixtures.
+func (f *Fixtures) All() map[string]Fixture {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	out := make(map[string]Fixture, len(f.m))
+	for k, v := range f.m {
+		out[k] = v
+	}
+	return out
+}
+
 // Set registers or replaces the fixture for op.
 func (f *Fixtures) Set(op string, fx Fixture) {
 	f.mu.Lock()

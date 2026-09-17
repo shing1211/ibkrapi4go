@@ -1,0 +1,3 @@
+# Test data directory for integration tests.
+# This directory is currently empty; integration tests use live
+# paper-account credentials from the environment.

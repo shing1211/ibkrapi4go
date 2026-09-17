@@ -9,7 +9,7 @@ OAPI_CODEGEN_VERSION ?= v2.8.0
 
 .DEFAULT_GOAL := help
 
-.PHONY: help tools fmt vet test test-race coverage check \
+.PHONY: help tools fmt vet test test-race test-integration coverage check \
         codegen codegen-verify docs-spec docs-check \
         license license-check mock-gateway clean
 
@@ -32,6 +32,9 @@ test: ## Run unit tests
 
 test-race: ## Run tests with the race detector
 	@if [ -f go.mod ]; then $(GO) test ./... -race -count=1; else echo "no go.mod yet; skipping"; fi
+
+test-integration: ## Run integration tests against a real gateway (requires IBKR_GATEWAY, IBKR_USERNAME, IBKR_PASSWORD)
+	$(GO) test --tags=integration ./test/...
 
 coverage: ## Write coverage.out and coverage.html
 	@if [ -f go.mod ]; then \

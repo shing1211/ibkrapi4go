@@ -31,6 +31,14 @@ go run ./examples/mock
 
 - [`mock/main.go`](./mock/main.go) — connect to the mock, initialize a session,
   and list accounts.
+- [`portfolio/main.go`](./portfolio/main.go) — query accounts, positions, ledger,
+  and portfolio summary.
+- [`marketdata-streaming/main.go`](./marketdata-streaming/main.go) — subscribe to
+  real-time market-data fields and print updates.
+- [`orders/main.go`](./orders/main.go) — WhatIf dry-run, submit an order, confirm
+  it, and list open orders.
+- [`models/main.go`](./models/main.go) — list model portfolios and their
+  positions.
 
 ## Pointing at a different gateway
 

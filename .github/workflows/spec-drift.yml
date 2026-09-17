@@ -1,0 +1,78 @@
+# Copyright 2026 shing1211
+# SPDX-License-Identifier: Apache-2.0
+
+name: spec-drift
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # daily at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spec-version-check:
+    name: upstream spec drift watch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check upstream spec version
+        id: check
+        run: |
+          UPSTREAM_VERSION=$(python3 scripts/check_spec_version.py 2>&1 | tee /dev/stderr | grep -oP '^upstream=\K[0-9.]+' | tail -1)
+          PINNED=$(python3 scripts/check_spec_version.py 2>&1 | grep -oP '^pinned=\K[0-9.]+' | tail -1)
+          echo "upstream=$UPSTREAM_VERSION" >> "$GITHUB_OUTPUT"
+          echo "pinned=$PINNED" >> "$GITHUB_OUTPUT"
+
+      - name: Read pinned version from docs/SPEC.md
+        run: |
+          python3 -c "
+          import re, sys
+          text = open('docs/SPEC.md').read()
+          m = re.search(r'Version:\s*(\d+\.\d+\.\d+)', text)
+          print('PINNED=' + (m.group(1) if m else 'unknown'))
+          " >> "$GITHUB_OUTPUT"
+
+      - name: Open GitHub issue if spec drifted
+        if: steps.check.outputs.upstream != steps.check.outputs.PINNED
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const upstream = process.env.UPSTREAM;
+            const pinned = process.env.PINNED;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['spec-drift'],
+              state: 'open'
+            });
+            const alreadyOpen = issues.some(i => i.title.includes(upstream));
+            if (!alreadyOpen) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `[spec-drift] Upstream IBKR spec advanced to v${upstream}`,
+                body: `Upstream spec moved from **v${pinned}** → **v${upstream}**.\n\n` +
+                      `This issue was auto-created by the \`spec-drift\` workflow.\n\n` +
+                      `> **Drift does NOT auto-regenerate.** See [CODEGEN.md]` +
+                      `(https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/docs/CODEGEN.md) ` +
+                      `and ADR 0003.\n\n` +
+                      `1. Confirm the new spec is compatible with the current SDK.\n` +
+                      `2. Run \`make codegen\` to regenerate \`client/client.gen.go\`.\n` +
+                      `3. Run \`make check && make codegen-verify\`.\n` +
+                      `4. Update \`docs/SPEC.md\` to the new version.\n` +
+                      `5. Close this issue.`,
+                labels: ['spec-drift', 'upstream-change']
+              });
+            } else {
+              console.log(`A spec-drift issue for v${upstream} is already open (#${issues[0].number})`);
+            }
+          env:
+            UPSTREAM: ${{ steps.check.outputs.upstream }}
+            PINNED: ${{ steps.check.outputs.PINNED }}
+
+      - name: Log result (no drift)
+        if: steps.check.outputs.upstream == steps.check.outputs.PINNED
+        run: echo "Spec up-to-date at v${{ steps.check.outputs.upstream }}"

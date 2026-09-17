@@ -164,6 +164,12 @@ operation has no registered route, or if any route has no fixture. It asserts
 the parsed counts match the canonical 115 CPAPI + 70 IB REST = 185 operations
 (AGENTS.md rule 6), so the mock cannot silently drift from the spec.
 
+`internal/mockgateway/shape_test.go` (`TestFixtureShapeConformance`) validates
+that every fixture contains well-formed JSON and uses a strict decoder
+(`json.Decoder` with `DisallowUnknownFields()`) to catch type mismatches. It
+would have caught the nil-`interface{}` (D1) and wrong-decode-shape (D2) bug
+classes. Dynamic, paginated, and mutation-ack fixtures are skip-listed by name.
+
 ## Example
 
 [`examples/mock`](../examples/mock/main.go) starts no server itself; it connects
