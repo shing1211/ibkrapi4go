@@ -40296,11 +40296,14 @@ func NewModifyFyiEmailsRequest(server string, params *ModifyFyiEmailsParams) (*h
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "enabled", params.Enabled, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Enabled != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "enabled", params.Enabled, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
@@ -40456,27 +40459,36 @@ func NewGetAllFyisRequest(server string, params *GetAllFyisParams) (*http.Reques
 			}
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "include", params.Include, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Include != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "include", params.Include, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "exclude", params.Exclude, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Exclude != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "exclude", params.Exclude, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "id", params.Id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Id != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "id", params.Id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
@@ -42850,43 +42862,58 @@ func NewGetContractInfoRequest(server string, params *GetContractInfoParams) (*h
 
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "sectype", params.Sectype, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Sectype != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "sectype", params.Sectype, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "month", params.Month, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Month != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "month", params.Month, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "exchange", params.Exchange, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Exchange != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "exchange", params.Exchange, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "strike", params.Strike, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Strike != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "strike", params.Strike, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "right", params.Right, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Right != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "right", params.Right, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
@@ -42902,11 +42929,14 @@ func NewGetContractInfoRequest(server string, params *GetContractInfoParams) (*h
 
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "filters", params.Filters, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Filters != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "filters", params.Filters, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
@@ -44406,11 +44436,14 @@ func NewGetConidsByExchangeRequest(server string, params *GetConidsByExchangePar
 			}
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "assetClass", params.AssetClass, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.AssetClass != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "assetClass", params.AssetClass, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 
@@ -44568,11 +44601,14 @@ func NewGetTradingSchedule2Request(server string, params *GetTradingSchedule2Par
 		// per the OpenAPI spec (e.g. "color=blue,black,brown").
 		var rawQueryFragments []string
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "assetClass", params.AssetClass, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.AssetClass != nil {
+			// FIX: guard nil interface{} to avoid panic
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "assetClass", params.AssetClass, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
 		}
 

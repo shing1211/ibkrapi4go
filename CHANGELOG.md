@@ -85,5 +85,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   packages are "not yet implemented"; both are complete.
 - Corrected the documented dependency set: `testify` is not used;
   `go.uber.org/goleak` is the test-only dependency.
+- Fixed nil-interface{} panics in the generated client (`client/client.gen.go`):
+  12 nil guards added to request builders for `GetContractInfo` (6 fields),
+  `GetConidsByExchange` (1 field), `GetAllFyis` (3 fields),
+  `GetTradingSchedule2` (1 field), and `ModifyFyiEmails` (1 field).
+  Root cause: spec-patch produces `interface{}` with `omitempty` for optional
+  non-pointer params; codegen template did not guard against nil.
+- Fixed 8 REST wrapper/decode mismatches in `pkg/ibkr/rest.go` and
+  `pkg/ibkr/rest_utilities.go`: `TaxDocuments.Generate`,
+  `TaxVouchers.CreateRequests`, `ActiveCountries`, `AvailableYears`,
+  `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
+  and `RequiredForms`.
 
 [Unreleased]: https://github.com/shing1211/ibkrapi4go/commits/main

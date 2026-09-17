@@ -33,13 +33,16 @@ func (m *RESTUtilities) Enumerations(ctx context.Context, enumType string) ([]st
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw []string
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
-		internal.LogError(m.surface.owner.cfg.logger, e)
-		return nil, e
+	if resp.JSON200 == nil || resp.JSON200.JsonData == nil {
+		return nil, nil
 	}
-	return raw, nil
+	out := make([]string, 0)
+	for _, v := range *resp.JSON200.JsonData {
+		if s, ok := v.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out, nil // FIX: use resp.JSON200 (*EnumerationResponse), extract string values from JsonData map
 }
 
 func (m *RESTUtilities) ComplexAssetTransferBrokers(ctx context.Context) ([]string, error) {
@@ -58,13 +61,10 @@ func (m *RESTUtilities) ComplexAssetTransferBrokers(ctx context.Context) ([]stri
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw []string
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
-		internal.LogError(m.surface.owner.cfg.logger, e)
-		return nil, e
+	if resp.JSON200 == nil {
+		return nil, nil
 	}
-	return raw, nil
+	return resp.JSON200.Brokers, nil // FIX: use resp.JSON200 (*GetBrokerListResponse).Brokers
 }
 
 func (m *RESTUtilities) Forms(ctx context.Context, formNos []int64) ([]Form, error) {
@@ -108,13 +108,14 @@ func (m *RESTUtilities) RequiredForms(ctx context.Context) ([]Form, error) {
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw formsRaw
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
-		internal.LogError(m.surface.owner.cfg.logger, e)
-		return nil, e
+	if resp.JSON200 == nil || resp.JSON200.Forms == nil {
+		return nil, nil
 	}
-	return raw.toPublic(), nil
+	out := make([]Form, len(*resp.JSON200.Forms))
+	for i, name := range *resp.JSON200.Forms {
+		out[i] = Form{Name: name} // FIX: use resp.JSON200 (*RequiredFormsResponse).Forms (*[]string)
+	}
+	return out, nil
 }
 
 func (m *RESTUtilities) ParticipatingBanks(ctx context.Context) ([]Bank, error) {

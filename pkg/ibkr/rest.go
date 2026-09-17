@@ -5,7 +5,6 @@ package ibkr
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -297,7 +296,7 @@ func (m *RESTTaxDocuments) Generate(ctx context.Context, req TaxDocumentRequest)
 			Gzip     *bool   `json:"gzip,omitempty"`
 		} `json:"data,omitempty"`
 	}
-	if err := decodeJSON(resp.HTTPResponse, op, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil { // FIX: use resp.Body bytes (already read by generated parser), not resp.HTTPResponse
 		return nil, err
 	}
 	if raw.Data.Value == nil {
@@ -636,13 +635,10 @@ func (m *RESTTaxVouchers) CreateRequests(ctx context.Context, csvContent string)
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	var raw requestIDRaw
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
-		internal.LogError(m.surface.owner.cfg.logger, e)
-		return "", e
+	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
+		return "", nil
 	}
-	return raw.toPublic(), nil
+	return strPtrVal((*resp.JSON200)[0].RequestId), nil // FIX: use resp.JSON200 (*[]TaxVoucherDTO), extract RequestId from first element
 }
 
 func (m *RESTTaxVouchers) ActiveCountries(ctx context.Context) ([]string, error) {
@@ -661,13 +657,14 @@ func (m *RESTTaxVouchers) ActiveCountries(ctx context.Context) ([]string, error)
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw countriesRaw
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
-		internal.LogError(m.surface.owner.cfg.logger, e)
-		return nil, e
+	if resp.JSON200 == nil {
+		return nil, nil
 	}
-	return raw.toPublic(), nil
+	countries := make([]string, len(*resp.JSON200))
+	for i, c := range *resp.JSON200 {
+		countries[i] = strPtrVal(c.Country) // FIX: use resp.JSON200 (*[]Country), extract Country field
+	}
+	return countries, nil
 }
 
 func (m *RESTTaxVouchers) Dividends(ctx context.Context, accountID AccountID, year, countryCode string) ([]TaxVoucherDividend, error) {
@@ -690,13 +687,33 @@ func (m *RESTTaxVouchers) Dividends(ctx context.Context, accountID AccountID, ye
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw dividendsRaw
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
-		internal.LogError(m.surface.owner.cfg.logger, e)
-		return nil, e
+	if resp.JSON200 == nil {
+		return nil, nil
 	}
-	return raw.toPublic(), nil
+	out := make([]TaxVoucherDividend, 0, len(*resp.JSON200))
+	for _, d := range *resp.JSON200 {
+		tvd := TaxVoucherDividend{
+			CorpActionID:   strPtrVal(d.CorpactionId),
+			CountryCode:    strPtrVal(d.Country),
+			AccountID:      accountID,
+			Amount:         "",
+			Fee:            "",
+			Quantity:       "",
+			RequestID:      "",
+			Year:           0,
+			WithheldAmount: "",
+		}
+		if d.Voucher != nil {
+			tvd.Amount = float32ToStr(d.Voucher.DivAmount)
+			tvd.Fee = float32ToStr(d.Voucher.Fee)
+			tvd.Quantity = float32ToStr(d.Voucher.Quantity)
+			tvd.RequestID = strPtrVal(d.Voucher.RequestId)
+			tvd.Year = int64PtrVal(d.Voucher.Year)
+			tvd.WithheldAmount = float32ToStr(d.Voucher.WithHeldAmount)
+		}
+		out = append(out, tvd)
+	}
+	return out, nil // FIX: use resp.JSON200 (*[]DividendDTO), not wrong-shape dividendsRaw
 }
 
 func (m *RESTTaxVouchers) AvailableYears(ctx context.Context) ([]string, error) {
@@ -715,13 +732,14 @@ func (m *RESTTaxVouchers) AvailableYears(ctx context.Context) ([]string, error) 
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw yearsRaw
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
-		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
-		internal.LogError(m.surface.owner.cfg.logger, e)
-		return nil, e
+	if resp.JSON200 == nil {
+		return nil, nil
 	}
-	return raw.toPublic(), nil
+	years := make([]string, len(*resp.JSON200))
+	for i, y := range *resp.JSON200 {
+		years[i] = strconv.FormatInt(y, 10) // FIX: use resp.JSON200 (*[]int64), convert to string
+	}
+	return years, nil
 }
 
 func (m *RESTTaxVouchers) Download(ctx context.Context, requestID string) ([]byte, error) {
