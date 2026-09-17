@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 
@@ -371,4 +372,763 @@ func strPtrVal(p *string) string {
 func mustMarshal(v interface{}) io.Reader {
 	data, _ := json.Marshal(v)
 	return bytes.NewReader(data)
+}
+
+// ============================================================================
+// Request types for transfer operations
+// ============================================================================
+
+// AssetTransferRequest represents a request to transfer assets externally (FOP, DWAC, etc.)
+type AssetTransferRequest struct {
+	AccountID             AccountID
+	ClientInstructionID   float32
+	ContraBrokerAccountID string
+	ContraBrokerDtcCode   string
+	Direction             string // "IN" or "OUT"
+	Quantity              float32
+	ConID                 int64
+	// For V2 only
+	Positions []PositionV2Request
+}
+
+// PositionV2Request represents a position for V2 transfers
+type PositionV2Request struct {
+	ConID    int64
+	Quantity float32
+}
+
+// InternalAssetTransferRequest represents a request to transfer assets between IBKR accounts
+type InternalAssetTransferRequest struct {
+	ClientInstructionID float32
+	SourceAccountID     AccountID
+	TargetAccountID     AccountID
+	ConID               int64
+	TransferQuantity    float32
+	TransferPrice       *float32
+	TradeDate           *string
+	SettleDate          *string
+}
+
+// CashTransferRequest represents a request to transfer cash externally (deposit/withdrawal)
+type CashTransferRequest struct {
+	AccountID             AccountID
+	ClientInstructionID   float32
+	Amount                float32
+	Currency              string
+	BankInstructionMethod string // "ACH", "WIRE", "eDDA", "OPEN_BANKING"
+	BankInstructionName   *string
+}
+
+// InternalCashTransferRequest represents a request to transfer cash between IBKR accounts
+type InternalCashTransferRequest struct {
+	ClientInstructionID float32
+	SourceAccountID     AccountID
+	TargetAccountID     AccountID
+	Amount              float32
+	Currency            string
+	ClientNote          *string
+}
+
+// BankInstructionCreateRequest represents a request to create a bank instruction
+type BankInstructionCreateRequest struct {
+	AccountID           AccountID
+	ClientInstructionID float32
+	BankInstructionCode string // "ACH_INSTRUCTION", "OPEN_BANKING_INSTRUCTION", etc.
+	BankInstructionName string
+	BankAccountNumber   string
+	BankRoutingNumber   string
+	BankAccountTypeCode int // 1 = Checking, 2 = Savings
+	BankName            string
+	Currency            string
+	AchType             string // "DEBIT", "CREDIT", "DEBIT_CREDIT"
+}
+
+// BankInstructionQueryRequest represents a request to query bank instructions
+type BankInstructionQueryRequest struct {
+	AccountID             AccountID
+	BankInstructionMethod string
+}
+
+// TransferResult represents the result of a transfer instruction
+type TransferResult struct {
+	ClientInstructionID float32
+	InstructionID       float32
+	InstructionStatus   string
+	IbReferenceID       *float32
+	Description         *string
+}
+
+// ============================================================================
+// RESTExternalAssetTransfers - External asset transfer operations
+// ============================================================================
+
+// Transfer initiates a single external asset transfer (FOP, DWAC, etc.)
+func (m *RESTExternalAssetTransfers) Transfer(ctx context.Context, req AssetTransferRequest) (string, error) {
+	const op = "ExternalAssetTransfers.Transfer"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return "", err
+	}
+
+	instr := client.CreateExternalAssetTransfersJSONBody_Instruction{}
+	_ = instr.FromFopInstruction(client.FopInstruction{
+		AccountId:             string(req.AccountID),
+		ClientInstructionId:   req.ClientInstructionID,
+		ContraBrokerAccountId: req.ContraBrokerAccountID,
+		ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
+		Direction:             client.FopInstructionDirection(req.Direction),
+		Quantity:              req.Quantity,
+		TradingInstrument:     makeTradingInstrumentRef(req.ConID),
+	})
+
+	payload := client.CreateExternalAssetTransfersJSONRequestBody{
+		Instruction:     instr,
+		InstructionType: client.CreateExternalAssetTransfersJSONBodyInstructionTypeFOP,
+	}
+
+	resp, err := m.surface.generated.CreateExternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return "", wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+}
+
+// TransferBulk initiates multiple external asset transfers in a single request
+func (m *RESTExternalAssetTransfers) TransferBulk(ctx context.Context, reqs []AssetTransferRequest) ([]TransferResult, error) {
+	const op = "ExternalAssetTransfers.TransferBulk"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+
+	payload := client.BulkExternalAssetTransfersJSONBody{
+		InstructionType: client.BulkExternalAssetTransfersJSONBodyInstructionTypeFOP,
+		Instructions:    make([]interface{}, len(reqs)),
+	}
+
+	for i, req := range reqs {
+		payload.Instructions[i] = client.FopInstruction{
+			AccountId:             string(req.AccountID),
+			ClientInstructionId:   req.ClientInstructionID,
+			ContraBrokerAccountId: req.ContraBrokerAccountID,
+			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
+			Direction:             client.FopInstructionDirection(req.Direction),
+			Quantity:              req.Quantity,
+			TradingInstrument:     makeTradingInstrumentRef(req.ConID),
+		}
+	}
+
+	resp, err := m.surface.generated.BulkExternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return extractBulkResults(resp.JSON202.InstructionResults), nil
+}
+
+// TransferV2 initiates a single external asset transfer using V2 API
+func (m *RESTExternalAssetTransfers) TransferV2(ctx context.Context, req AssetTransferRequest) (string, error) {
+	const op = "ExternalAssetTransfers.TransferV2"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return "", err
+	}
+
+	instr := client.CreateExternalAssetTransfers2JSONBody_Instruction{}
+	positions := make([]client.TradingInstrumentV2, len(req.Positions))
+	for i, pos := range req.Positions {
+		positions[i] = client.TradingInstrumentV2{Quantity: pos.Quantity}
+		_ = positions[i].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: float32(pos.ConID)})
+	}
+
+	_ = instr.FromFopInstructionV2(client.FopInstructionV2{
+		AccountId:             string(req.AccountID),
+		ClientInstructionId:   req.ClientInstructionID,
+		ContraBrokerAccountId: req.ContraBrokerAccountID,
+		ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
+		Direction:             client.FopInstructionV2Direction(req.Direction),
+		Positions:             positions,
+	})
+
+	payload := client.CreateExternalAssetTransfers2JSONRequestBody{
+		Instruction:     instr,
+		InstructionType: client.CreateExternalAssetTransfers2JSONBodyInstructionTypeFOP,
+	}
+
+	resp, err := m.surface.generated.CreateExternalAssetTransfers2WithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return "", wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+}
+
+// TransferBulkV2 initiates multiple external asset transfers using V2 API
+func (m *RESTExternalAssetTransfers) TransferBulkV2(ctx context.Context, reqs []AssetTransferRequest) ([]TransferResult, error) {
+	const op = "ExternalAssetTransfers.TransferBulkV2"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+
+	payload := client.BulkExternalAssetTransfers2JSONBody{
+		InstructionType: client.BulkExternalAssetTransfers2JSONBodyInstructionTypeFOP,
+		Instructions:    make([]interface{}, len(reqs)),
+	}
+
+	for i, req := range reqs {
+		positions := make([]client.TradingInstrumentV2, len(req.Positions))
+		for j, pos := range req.Positions {
+			positions[j] = client.TradingInstrumentV2{Quantity: pos.Quantity}
+			_ = positions[j].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: float32(pos.ConID)})
+		}
+		payload.Instructions[i] = client.FopInstructionV2{
+			AccountId:             string(req.AccountID),
+			ClientInstructionId:   req.ClientInstructionID,
+			ContraBrokerAccountId: req.ContraBrokerAccountID,
+			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
+			Direction:             client.FopInstructionV2Direction(req.Direction),
+			Positions:             positions,
+		}
+	}
+
+	resp, err := m.surface.generated.BulkExternalAssetTransfers2WithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return extractBulkResults(resp.JSON202.InstructionResults), nil
+}
+
+// ============================================================================
+// RESTInternalAssetTransfers - Internal asset transfer operations
+// ============================================================================
+
+// Transfer initiates a single internal asset transfer between IBKR accounts
+func (m *RESTInternalAssetTransfers) Transfer(ctx context.Context, req InternalAssetTransferRequest) (string, error) {
+	const op = "InternalAssetTransfers.Transfer"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return "", err
+	}
+
+	instr := client.InternalPositionTransferInstruction{
+		ClientInstructionId: req.ClientInstructionID,
+		SourceAccountId:     string(req.SourceAccountID),
+		TargetAccountId:     string(req.TargetAccountID),
+		TradingInstrument:   makeTradingInstrumentRef(req.ConID),
+		TransferQuantity:    req.TransferQuantity,
+	}
+	if req.TransferPrice != nil {
+		instr.TransferPrice = req.TransferPrice
+	}
+	if req.TradeDate != nil {
+		instr.TradeDate = req.TradeDate
+	}
+	if req.SettleDate != nil {
+		instr.SettleDate = req.SettleDate
+	}
+
+	payload := client.CreateInternalAssetTransfersJSONRequestBody{
+		Instruction:     instr,
+		InstructionType: client.CreateInternalAssetTransfersJSONBodyInstructionTypeINTERNALPOSITIONTRANSFER,
+	}
+
+	resp, err := m.surface.generated.CreateInternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return "", wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+}
+
+// TransferBulk initiates multiple internal asset transfers in a single request
+func (m *RESTInternalAssetTransfers) TransferBulk(ctx context.Context, reqs []InternalAssetTransferRequest) ([]TransferResult, error) {
+	const op = "InternalAssetTransfers.TransferBulk"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+
+	payload := client.BulkInternalAssetTransfersJSONBody{
+		InstructionType: client.BulkInternalAssetTransfersJSONBodyInstructionTypeINTERNALPOSITIONTRANSFER,
+		Instructions:    make([]interface{}, len(reqs)),
+	}
+
+	for i, req := range reqs {
+		instr := client.InternalPositionTransferInstruction{
+			ClientInstructionId: req.ClientInstructionID,
+			SourceAccountId:     string(req.SourceAccountID),
+			TargetAccountId:     string(req.TargetAccountID),
+			TradingInstrument:   makeTradingInstrumentRef(req.ConID),
+			TransferQuantity:    req.TransferQuantity,
+		}
+		if req.TransferPrice != nil {
+			instr.TransferPrice = req.TransferPrice
+		}
+		if req.TradeDate != nil {
+			instr.TradeDate = req.TradeDate
+		}
+		if req.SettleDate != nil {
+			instr.SettleDate = req.SettleDate
+		}
+		payload.Instructions[i] = instr
+	}
+
+	resp, err := m.surface.generated.BulkInternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return extractBulkResults(resp.JSON202.InstructionResults), nil
+}
+
+// ============================================================================
+// RESTExternalCashTransfers - External cash transfer operations
+// ============================================================================
+
+// Transfer initiates a single external cash transfer (deposit or withdrawal)
+func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransferRequest, isDeposit bool) (string, error) {
+	const op = "ExternalCashTransfers.Transfer"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return "", err
+	}
+
+	instr := client.CreateExternalCashTransfersJSONBody_Instruction{}
+
+	if isDeposit {
+		depositInstr := client.DepositFundsInstruction{
+			AccountId:             string(req.AccountID),
+			Amount:                req.Amount,
+			BankInstructionMethod: client.DepositFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
+			ClientInstructionId:   req.ClientInstructionID,
+			Currency:              req.Currency,
+		}
+		if req.BankInstructionName != nil {
+			depositInstr.BankInstructionName = req.BankInstructionName
+		}
+		_ = instr.FromDepositFundsInstruction(depositInstr)
+	} else {
+		withdrawInstr := client.WithdrawFundsInstruction{
+			AccountId:             string(req.AccountID),
+			Amount:                req.Amount,
+			BankInstructionMethod: client.WithdrawFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
+			BankInstructionName:   derefStr(req.BankInstructionName),
+			ClientInstructionId:   req.ClientInstructionID,
+			Currency:              req.Currency,
+		}
+		_ = instr.FromWithdrawFundsInstruction(withdrawInstr)
+	}
+
+	var instrType client.CreateExternalCashTransfersJSONBodyInstructionType
+	if isDeposit {
+		instrType = client.CreateExternalCashTransfersJSONBodyInstructionTypeDEPOSIT
+	} else {
+		instrType = client.CreateExternalCashTransfersJSONBodyInstructionTypeWITHDRAWAL
+	}
+
+	payload := client.CreateExternalCashTransfersJSONRequestBody{
+		Instruction:     instr,
+		InstructionType: instrType,
+	}
+
+	resp, err := m.surface.generated.CreateExternalCashTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return "", wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+}
+
+// TransferBulk initiates multiple external cash transfers in a single request
+func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []CashTransferRequest, isDeposit bool) ([]TransferResult, error) {
+	const op = "ExternalCashTransfers.TransferBulk"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+
+	var instrType client.BulkExternalCashTransfersJSONBodyInstructionType
+	if isDeposit {
+		instrType = client.BulkExternalCashTransfersJSONBodyInstructionTypeDEPOSIT
+	} else {
+		instrType = client.BulkExternalCashTransfersJSONBodyInstructionTypeWITHDRAWAL
+	}
+
+	payload := client.BulkExternalCashTransfersJSONBody{
+		InstructionType: instrType,
+		Instructions:    make([]interface{}, len(reqs)),
+	}
+
+	for i, req := range reqs {
+		if isDeposit {
+			depositInstr := client.DepositFundsInstruction{
+				AccountId:             string(req.AccountID),
+				Amount:                req.Amount,
+				BankInstructionMethod: client.DepositFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
+				ClientInstructionId:   req.ClientInstructionID,
+				Currency:              req.Currency,
+			}
+			if req.BankInstructionName != nil {
+				depositInstr.BankInstructionName = req.BankInstructionName
+			}
+			payload.Instructions[i] = depositInstr
+		} else {
+			withdrawInstr := client.WithdrawFundsInstruction{
+				AccountId:             string(req.AccountID),
+				Amount:                req.Amount,
+				BankInstructionMethod: client.WithdrawFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
+				BankInstructionName:   derefStr(req.BankInstructionName),
+				ClientInstructionId:   req.ClientInstructionID,
+				Currency:              req.Currency,
+			}
+			payload.Instructions[i] = withdrawInstr
+		}
+	}
+
+	resp, err := m.surface.generated.BulkExternalCashTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return extractBulkResults(resp.JSON202.InstructionResults), nil
+}
+
+// QueryBalances queries cash balances (withdrawable funds)
+func (m *RESTExternalCashTransfers) QueryBalances(ctx context.Context, req CashTransferRequest) (*WithdrawableFundsResult, error) {
+	const op = "ExternalCashTransfers.QueryBalances"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+
+	instr := client.CreateExternalCashTransfersQueryJSONBody_Instruction{}
+	_ = instr.FromQueryWithdrawableFunds(client.QueryWithdrawableFunds{
+		AccountId: string(req.AccountID),
+		Currency:  req.Currency,
+	})
+
+	payload := client.CreateExternalCashTransfersQueryJSONRequestBody{
+		Instruction:     instr,
+		InstructionType: client.CreateExternalCashTransfersQueryJSONBodyInstructionTypeQUERYWITHDRAWABLEFUNDS,
+	}
+
+	resp, err := m.surface.generated.CreateExternalCashTransfersQueryWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+
+	// Parse the response
+	var result struct {
+		CashBalance float32 `json:"cashBalance"`
+		Currency    string  `json:"currency"`
+	}
+	if err := json.Unmarshal(resp.Body, &result); err != nil {
+		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+	}
+
+	return &WithdrawableFundsResult{
+		CashBalance: fmt.Sprintf("%.2f", result.CashBalance),
+		Currency:    result.Currency,
+	}, nil
+}
+
+// WithdrawableFundsResult represents withdrawable funds query result
+type WithdrawableFundsResult struct {
+	CashBalance string
+	Currency    string
+}
+
+// ============================================================================
+// RESTInternalCashTransfers - Internal cash transfer operations
+// ============================================================================
+
+// Transfer initiates a single internal cash transfer between IBKR accounts
+func (m *RESTInternalCashTransfers) Transfer(ctx context.Context, req InternalCashTransferRequest) (string, error) {
+	const op = "InternalCashTransfers.Transfer"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return "", err
+	}
+
+	instr := client.InternalCashTransferInstruction{
+		Amount:              req.Amount,
+		ClientInstructionId: req.ClientInstructionID,
+		Currency:            req.Currency,
+		SourceAccountId:     string(req.SourceAccountID),
+		TargetAccountId:     string(req.TargetAccountID),
+	}
+	if req.ClientNote != nil {
+		instr.ClientNote = req.ClientNote
+	}
+
+	payload := client.CreateInternalCashTransfersJSONRequestBody{
+		Instruction:     instr,
+		InstructionType: client.CreateInternalCashTransfersJSONBodyInstructionTypeINTERNALCASHTRANSFER,
+	}
+
+	resp, err := m.surface.generated.CreateInternalCashTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return "", wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+}
+
+// TransferBulk initiates multiple internal cash transfers in a single request
+func (m *RESTInternalCashTransfers) TransferBulk(ctx context.Context, reqs []InternalCashTransferRequest) ([]TransferResult, error) {
+	const op = "InternalCashTransfers.TransferBulk"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+
+	payload := client.BulkInternalCashTransfersJSONBody{
+		InstructionType: client.BulkInternalCashTransfersJSONBodyInstructionTypeINTERNALCASHTRANSFER,
+		Instructions:    make([]interface{}, len(reqs)),
+	}
+
+	for i, req := range reqs {
+		instr := client.InternalCashTransferInstruction{
+			Amount:              req.Amount,
+			ClientInstructionId: req.ClientInstructionID,
+			Currency:            req.Currency,
+			SourceAccountId:     string(req.SourceAccountID),
+			TargetAccountId:     string(req.TargetAccountID),
+		}
+		if req.ClientNote != nil {
+			instr.ClientNote = req.ClientNote
+		}
+		payload.Instructions[i] = instr
+	}
+
+	resp, err := m.surface.generated.BulkInternalCashTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return extractBulkResults(resp.JSON202.InstructionResults), nil
+}
+
+// ============================================================================
+// RESTBankInstructions - Bank instruction operations
+// ============================================================================
+
+// Create creates a single bank instruction (ACH, Open Banking, etc.)
+func (m *RESTBankInstructions) Create(ctx context.Context, req BankInstructionCreateRequest) (string, error) {
+	const op = "BankInstructions.Create"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return "", err
+	}
+
+	instr := client.CreateBankInstructionsJSONBody_Instruction{}
+	_ = instr.FromAchInstruction(client.AchInstruction{
+		AccountId:           string(req.AccountID),
+		AchType:             client.AchInstructionAchType(req.AchType),
+		BankInstructionCode: client.AchInstructionBankInstructionCode(req.BankInstructionCode),
+		BankInstructionName: req.BankInstructionName,
+		ClientInstructionId: req.ClientInstructionID,
+		Currency:            req.Currency,
+		ClientAccountInfo: struct {
+			BankAccountNumber   string                                                    `json:"bankAccountNumber"`
+			BankAccountTypeCode client.AchInstructionClientAccountInfoBankAccountTypeCode `json:"bankAccountTypeCode"`
+			BankName            string                                                    `json:"bankName"`
+			BankRoutingNumber   string                                                    `json:"bankRoutingNumber"`
+		}{
+			BankAccountNumber:   req.BankAccountNumber,
+			BankAccountTypeCode: client.AchInstructionClientAccountInfoBankAccountTypeCode(req.BankAccountTypeCode),
+			BankName:            req.BankName,
+			BankRoutingNumber:   req.BankRoutingNumber,
+		},
+	})
+
+	payload := client.CreateBankInstructionsJSONRequestBody{
+		Instruction:     instr,
+		InstructionType: client.CreateBankInstructionsJSONBodyInstructionTypeACHINSTRUCTION,
+	}
+
+	resp, err := m.surface.generated.CreateBankInstructionsWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return "", wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return "", m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return "", &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+}
+
+// Query queries bank instructions
+func (m *RESTBankInstructions) Query(ctx context.Context, req BankInstructionQueryRequest) (*BankInstructionResult, error) {
+	const op = "BankInstructions.Query"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+
+	instr := client.CreateBankInstructionsQueryJSONBody_Instruction{}
+	_ = instr.FromQueryBankInstruction(client.QueryBankInstruction{
+		AccountId:             string(req.AccountID),
+		BankInstructionMethod: client.QueryBankInstructionBankInstructionMethod(req.BankInstructionMethod),
+	})
+
+	payload := client.CreateBankInstructionsQueryJSONRequestBody{
+		Instruction:     instr,
+		InstructionType: client.CreateBankInstructionsQueryJSONBodyInstructionTypeQUERYBANKINSTRUCTION,
+	}
+
+	resp, err := m.surface.generated.CreateBankInstructionsQueryWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+
+	var result BankInstructionResult
+	if err := json.Unmarshal(resp.Body, &result); err != nil {
+		return nil, &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
+	}
+	return &result, nil
+}
+
+// CreateBulk creates multiple bank instructions in a single request
+func (m *RESTBankInstructions) CreateBulk(ctx context.Context, reqs []BankInstructionCreateRequest) ([]TransferResult, error) {
+	const op = "BankInstructions.CreateBulk"
+	if err := m.surface.owner.checkOpen(); err != nil {
+		return nil, err
+	}
+
+	payload := client.BulkBankInstructionsJSONBody{
+		InstructionType: client.BulkBankInstructionsJSONBodyInstructionTypeACHINSTRUCTION,
+		Instructions:    make([]interface{}, len(reqs)),
+	}
+
+	for i, req := range reqs {
+		payload.Instructions[i] = client.AchInstruction{
+			AccountId:           string(req.AccountID),
+			AchType:             client.AchInstructionAchType(req.AchType),
+			BankInstructionCode: client.AchInstructionBankInstructionCode(req.BankInstructionCode),
+			BankInstructionName: req.BankInstructionName,
+			ClientInstructionId: req.ClientInstructionID,
+			Currency:            req.Currency,
+			ClientAccountInfo: struct {
+				BankAccountNumber   string                                                    `json:"bankAccountNumber"`
+				BankAccountTypeCode client.AchInstructionClientAccountInfoBankAccountTypeCode `json:"bankAccountTypeCode"`
+				BankName            string                                                    `json:"bankName"`
+				BankRoutingNumber   string                                                    `json:"bankRoutingNumber"`
+			}{
+				BankAccountNumber:   req.BankAccountNumber,
+				BankAccountTypeCode: client.AchInstructionClientAccountInfoBankAccountTypeCode(req.BankAccountTypeCode),
+				BankName:            req.BankName,
+				BankRoutingNumber:   req.BankRoutingNumber,
+			},
+		}
+	}
+
+	resp, err := m.surface.generated.BulkBankInstructionsWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	if err != nil {
+		return nil, wrapOp(op, err)
+	}
+	if resp.HTTPResponse.StatusCode >= 400 {
+		return nil, m.surface.owner.errorFrom(resp.HTTPResponse, op)
+	}
+	if resp.JSON202 == nil {
+		return nil, &Error{Op: op, Message: "unexpected nil 202 response"}
+	}
+	return extractBulkResults(resp.JSON202.InstructionResults), nil
+}
+
+// BankInstructionResult represents the result of querying bank instructions
+type BankInstructionResult struct {
+	AccountID             string
+	BankInstructionName   string
+	BankInstructionMethod string
+	Status                string
+}
+
+// ============================================================================
+// Helper functions
+// ============================================================================
+
+// makeTradingInstrumentRef creates a TradingInstrumentRef from conid
+func makeTradingInstrumentRef(conid int64) client.TradingInstrumentRef {
+	ref := client.TradingInstrumentRef{}
+	_ = ref.FromTradingInstrumentRef0(client.TradingInstrumentRef0{Conid: float32(conid)})
+	return ref
+}
+
+// extractBulkResults extracts TransferResult slice from bulk response
+func extractBulkResults(results *[]struct {
+	InstructionResult client.InstructionResult `json:"instructionResult"`
+	InstructionSetId  float32                  `json:"instructionSetId"`
+	Status            int64                    `json:"status"`
+}) []TransferResult {
+	if results == nil {
+		return nil
+	}
+	out := make([]TransferResult, 0, len(*results))
+	for _, r := range *results {
+		out = append(out, TransferResult{
+			ClientInstructionID: r.InstructionResult.ClientInstructionId,
+			InstructionID:       r.InstructionResult.InstructionId,
+			InstructionStatus:   string(r.InstructionResult.InstructionStatus),
+			IbReferenceID:       r.InstructionResult.IbReferenceId,
+			Description:         r.InstructionResult.Description,
+		})
+	}
+	return out
+}
+
+// derefStr returns empty string if ptr is nil, otherwise returns *ptr
+func derefStr(ptr *string) string {
+	if ptr == nil {
+		return ""
+	}
+	return *ptr
 }

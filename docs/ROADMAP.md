@@ -143,19 +143,19 @@ Deliverables (~48 of 70 oauth2Bearer ops):
 
 ## Phase 6 — OAuth2 surface: write ops, SSO, Echo, Restrictions *(complete)*
 
-Deliverables (~57 of 70 oauth2Bearer ops; 13 deferred):
+Deliverables (~70 of 70 oauth2Bearer ops; all complete):
 
 **PR 1 — SSO Sessions + Echo (complete):**
 - [x] `pkg/ibkr/rest_sso.go` — SSO session management: `CreateBrowserSession`, `CreateSession` (2 ops).
 - [x] `pkg/ibkr/rest_echo.go` — Echo utilities: `ListEchoHttps`, `CreateEchoSignedJwt` (2 ops).
 
-**PR 2 — Transfer write ops (deferred):**
-- [ ] External asset transfers: `Transfer`, `TransferBulk`, `TransferV2`, `TransferBulkV2` (4 ops)
-- [ ] Internal asset transfers: `Transfer`, `TransferBulk` (2 ops)
-- [ ] External cash transfers: `Transfer`, `TransferBulk`, `QueryBalances` (3 ops)
-- [ ] Internal cash transfers: `Transfer`, `TransferBulk` (2 ops)
-- [ ] Bank instructions: `Create`, `Query`, `CreateBulk` (3 ops)
-- [ ] `BulkInstructionsCancel` (1 op)
+**PR 2 — Transfer write ops (complete):**
+- [x] External asset transfers: `Transfer`, `TransferBulk`, `TransferV2`, `TransferBulkV2` (4 ops)
+- [x] Internal asset transfers: `Transfer`, `TransferBulk` (2 ops)
+- [x] External cash transfers: `Transfer`, `TransferBulk`, `QueryBalances` (3 ops)
+- [x] Internal cash transfers: `Transfer`, `TransferBulk` (2 ops)
+- [x] Bank instructions: `Create`, `Query`, `CreateBulk` (3 ops)
+- [x] `BulkInstructionsCancel` (1 op)
 
 **PR 3 — Restrictions with Signed JWT (complete):**
 - [x] `MasterRestrictionIDs`, `MasterListIDs`, `ListDetails`, `RestrictionDetails`, `RestrictionScope` (5 ops)
@@ -167,8 +167,8 @@ Deliverables (~57 of 70 oauth2Bearer ops; 13 deferred):
 
 Notes:
 
-- Transfer operations are deferred due to complex polymorphic union types requiring additional review.
-- Restrictions with Signed JWT use Authorization query param or header as appropriate.
+- Transfer operations implemented using polymorphic union types for instruction bodies.
+- All 70 OAuth2 bearer ops now implemented (70/70).
 
 ## Non-goals
 
