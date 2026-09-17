@@ -341,6 +341,43 @@ func (m *TradeManager) Trades(ctx context.Context, days int) ([]Trade, error) {
 	return out, nil
 }
 
+// SuppressOrderReplies suppresses specific order reply messages so they are
+// no longer returned as pending confirmations. Pass the message IDs from a
+// Reply.MessageIDs slice to suppress them.
+func (m *TradeManager) SuppressOrderReplies(ctx context.Context, messageIDs []string) error {
+	const op = "Trade.SuppressOrderReplies"
+	ids := make([]client.SuppressOrderRepliesJSONBodyMessageIds, len(messageIDs))
+	for i, id := range messageIDs {
+		ids[i] = client.SuppressOrderRepliesJSONBodyMessageIds(id)
+	}
+	body := client.SuppressOrderRepliesJSONRequestBody{
+		MessageIds: &ids,
+	}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.SuppressOrderReplies(ctx, body)
+	})
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
+}
+
+// ResetOrderSuppression clears all suppressed order reply messages, restoring
+// them to the default behaviour where they are returned as pending
+// confirmations.
+func (m *TradeManager) ResetOrderSuppression(ctx context.Context) error {
+	const op = "Trade.ResetOrderSuppression"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.ResetOrderSuppression(ctx)
+	})
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
+}
+
 // --- internals --------------------------------------------------------------
 
 // mutate runs an order-mutating call exactly once. Transport timeouts are

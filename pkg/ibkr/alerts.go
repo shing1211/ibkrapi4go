@@ -200,6 +200,23 @@ func (m *AlertManager) GetAllAlerts(ctx context.Context, accountID AccountID) ([
 	return out, nil
 }
 
+// AckServerPrompt dismisses a server prompt received via the websocket ntf
+// channel. The orderId is the IB-assigned order identifier from the ntf message.
+func (m *AlertManager) AckServerPrompt(ctx context.Context, orderID int64) error {
+	const op = "Alert.AckServerPrompt"
+	body := client.AckServerPromptJSONRequestBody{
+		OrderId: &orderID,
+	}
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.AckServerPrompt(ctx, body)
+	})
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
+}
+
 // alertIDToString converts an alert ID to string.
 func alertIDToString(id int64) string {
 	return strconv.FormatInt(id, 10)
