@@ -11,7 +11,7 @@ Plan: `plan.md` · Status legend: `todo` · `doing` · `blocked` · `review` · 
 | T4 | Docs sync | docs | done | T3 | No stale refs; `make docs-check` pass |
 | T5 | Release: commit + push both remotes | release | done | T4 | Both remotes at `adb3c1f`; no force-push |
 | T6 | Next-phase planning | planner | done | T5 | `next-phase.md` |
-| T7 | Close-out report + index | orchestrator | doing | T6 | `report.md` + index line |
+| T7 | Close-out report + index | orchestrator | done | T6 | `report.md` + index line |
 | T7 | Close-out report + index | orchestrator | todo | T6 | `report.md` + index line |
 
 ## Notes
