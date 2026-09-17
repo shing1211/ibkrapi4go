@@ -296,7 +296,7 @@ func (m *RESTTaxDocuments) Generate(ctx context.Context, req TaxDocumentRequest)
 			Gzip     *bool   `json:"gzip,omitempty"`
 		} `json:"data,omitempty"`
 	}
-	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil { // FIX: use resp.Body bytes (already read by generated parser), not resp.HTTPResponse
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		return nil, err
 	}
 	if raw.Data.Value == nil {
@@ -638,7 +638,7 @@ func (m *RESTTaxVouchers) CreateRequests(ctx context.Context, csvContent string)
 	if resp.JSON200 == nil || len(*resp.JSON200) == 0 {
 		return "", nil
 	}
-	return strPtrVal((*resp.JSON200)[0].RequestId), nil // FIX: use resp.JSON200 (*[]TaxVoucherDTO), extract RequestId from first element
+	return strPtrVal((*resp.JSON200)[0].RequestId), nil
 }
 
 func (m *RESTTaxVouchers) ActiveCountries(ctx context.Context) ([]string, error) {
@@ -662,7 +662,7 @@ func (m *RESTTaxVouchers) ActiveCountries(ctx context.Context) ([]string, error)
 	}
 	countries := make([]string, len(*resp.JSON200))
 	for i, c := range *resp.JSON200 {
-		countries[i] = strPtrVal(c.Country) // FIX: use resp.JSON200 (*[]Country), extract Country field
+		countries[i] = strPtrVal(c.Country)
 	}
 	return countries, nil
 }
@@ -713,7 +713,7 @@ func (m *RESTTaxVouchers) Dividends(ctx context.Context, accountID AccountID, ye
 		}
 		out = append(out, tvd)
 	}
-	return out, nil // FIX: use resp.JSON200 (*[]DividendDTO), not wrong-shape dividendsRaw
+	return out, nil
 }
 
 func (m *RESTTaxVouchers) AvailableYears(ctx context.Context) ([]string, error) {
@@ -737,7 +737,7 @@ func (m *RESTTaxVouchers) AvailableYears(ctx context.Context) ([]string, error) 
 	}
 	years := make([]string, len(*resp.JSON200))
 	for i, y := range *resp.JSON200 {
-		years[i] = strconv.FormatInt(y, 10) // FIX: use resp.JSON200 (*[]int64), convert to string
+		years[i] = strconv.FormatInt(y, 10)
 	}
 	return years, nil
 }

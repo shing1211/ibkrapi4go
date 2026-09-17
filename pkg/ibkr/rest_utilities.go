@@ -42,7 +42,7 @@ func (m *RESTUtilities) Enumerations(ctx context.Context, enumType string) ([]st
 			out = append(out, s)
 		}
 	}
-	return out, nil // FIX: use resp.JSON200 (*EnumerationResponse), extract string values from JsonData map
+	return out, nil
 }
 
 func (m *RESTUtilities) ComplexAssetTransferBrokers(ctx context.Context) ([]string, error) {
@@ -64,7 +64,7 @@ func (m *RESTUtilities) ComplexAssetTransferBrokers(ctx context.Context) ([]stri
 	if resp.JSON200 == nil {
 		return nil, nil
 	}
-	return resp.JSON200.Brokers, nil // FIX: use resp.JSON200 (*GetBrokerListResponse).Brokers
+	return resp.JSON200.Brokers, nil
 }
 
 func (m *RESTUtilities) Forms(ctx context.Context, formNos []int64) ([]Form, error) {
@@ -113,7 +113,7 @@ func (m *RESTUtilities) RequiredForms(ctx context.Context) ([]Form, error) {
 	}
 	out := make([]Form, len(*resp.JSON200.Forms))
 	for i, name := range *resp.JSON200.Forms {
-		out[i] = Form{Name: name} // FIX: use resp.JSON200 (*RequiredFormsResponse).Forms (*[]string)
+		out[i] = Form{Name: name}
 	}
 	return out, nil
 }
