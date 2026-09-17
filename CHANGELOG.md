@@ -64,6 +64,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Benchmark CI gate (`.github/workflows/ci.yml`):** `benchmarks` job compares
   current results against `benchmark.baseline`; fails on >10% regression in
   ns/op. `scripts/bench_compare.go` is pure stdlib.
+- **Coverage badge (`.github/workflows/ci.yml`):** `go test -coverprofile=coverage.out`
+  uploaded to codecov.io via `codecov/codecov-action@v4`; badge rendered in all
+  6 README translations.
+- **Pre-commit CI gate (`.github/workflows/pre-commit.yml`):** `gofmt -s -l .`,
+  `go vet ./...`, and `make check` run on every push and PR; parallel to the main
+  CI workflow (~30s).
+- **FUNDING.yml (`.github/FUNDING.yml`):** GitHub Sponsors link for `shing1211`.
 - Initialized the Go module (`go.mod`) and committed the generated OpenAPI
   client (`client/client.gen.go`, package `client`), with a deterministic SPDX
   header and a reproducible `make codegen-verify` check.
