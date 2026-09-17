@@ -74,3 +74,10 @@ avoid working-tree conflicts between sub-agents.
 `make check` · `make test-race` · `make docs-check` · `make license-check`,
 plus the 185-op coverage guard. SPDX header on every new file;
 `client/*.gen.go` untouched; no new dependencies.
+
+## Actuals (close-out)
+- **Outcome:** all tasks T1–T10 complete. Release commit `f9cf1fc` on `origin/main` + `gitee/main`.
+- **Added mid-run:** T7b (stale comment corrections) and T7c (fix mock `MaxSubscriptions` to count distinct conids), both surfaced during T6/T7 verification.
+- **Coverage:** guard reports CPAPI 115/115, IB REST 70/70, total 185/185.
+- **Discovered, deferred:** D1 (generated-client nil-`interface{}` panic) and D2 (8 REST wrapper/model mismatches) → `next-phase.md` Phase 9.
+- **Notes:** one-port server reuses existing `coder/websocket` (no new deps); mock fixtures synthetic/shape-level; latency faults are max not additive; recorder captures pre-routing (no params).

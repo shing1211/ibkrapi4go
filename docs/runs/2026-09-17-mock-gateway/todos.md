@@ -14,9 +14,9 @@ Plan: `plan.md` · Status legend: `todo` · `doing` · `blocked` · `review` · 
 | T7 | Full docs sync (all Markdown) | docs | done | T6 | Files-reviewed table; no stale refs |
 | T7b | Fix stale mockgateway code comments (latency semantics) | reviewer | done | T7 | Comments match behavior; checks pass |
 | T7c | Fix streaming `MaxSubscriptions` to count distinct conids (F1) | backend | done | T7b | Distinct-accounting matches client; tests pass |
-| T8 | Release: commit + push GitHub & Gitee main | release | doing | T7c | Both remotes at new commit; no force-push |
-| T9 | Next-phase planning | planner | todo | T8 | `next-phase.md` with 3–7 candidates |
-| T10 | Close-out report + runs index | orchestrator | todo | T9 | `report.md` + index line |
+| T8 | Release: commit + push GitHub & Gitee main | release | done | T7c | Both remotes at `f9cf1fc`; no force-push |
+| T9 | Next-phase planning | planner | done | T8 | `next-phase.md` with 3–7 candidates |
+| T10 | Close-out report + runs index | orchestrator | done | T9 | `report.md` + index line |
 
 ## Discovered issues (deferred)
 - **D1 — generated-client nil-`interface{}` panic.** Wrappers `TradeManager.GetConidsByExchange`, `TradeManager.GetContractInfo`, and `FYIManager.GetAllFYIs` panic before any HTTP call because the generated request builders pass a nil `interface{}` param (e.g. `params.AssetClass`) to `runtime.StyleParamWithOptions` without a nil guard (`client/client.gen.go:44409`). Root cause is spec-patch/codegen; fix belongs in `scripts/patch_spec.py` + regenerate (AGENTS.md rule 1). Blocked locally by missing `oapi-codegen` (`make tools`). → next-phase candidate.
