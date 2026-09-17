@@ -5,6 +5,7 @@
 - **Base commit:** `5857f03`
 - **Release commit:** `b94e677` — `fix(codegen): retype null query params to string at spec level`
 - **Remotes:** `origin/main` + `gitee/main` both at `b94e677`
+- **Published in:** `v0.1.1` (release commit `b7f2b81`; GitHub Release + Gitee tag)
 - **Status:** complete
 
 ## Shipped

@@ -1,4 +1,4 @@
-# Next Phase: Post-v0.1.0 Directions
+# Next Phase: Post-v0.1.1 Directions
 
 - **Run:** `2026-09-17-d1-root-cause`
 - **Planner:** D6
@@ -15,7 +15,8 @@ change:
 - All 185/185 operations are implemented and stable.
 - No known correctness defects remain open.
 - `make check`, `make codegen-verify`, `make docs-check`, `make license-check` pass.
-- v0.1.0 is released on GitHub and mirrored to Gitee.
+- Tagged releases `v0.1.0` and `v0.1.1` are published on GitHub and mirrored to
+  Gitee; this run's fix shipped in `v0.1.1`.
 
 The correctness and developer-experience backlog is empty. Remaining work is
 forward-looking rather than remedial.
