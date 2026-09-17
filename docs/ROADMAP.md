@@ -57,15 +57,6 @@ Exit criteria:
   (`pkg/ibkr/endtoend_test.go`).
 - [x] No exported symbol lacks a doc comment.
 
-Notes:
-
-- Account **details** (`/gw/api/v1/accounts/{id}/details`) belongs to the IB REST
-  surface and is deferred to Phase 5; CPAPI account data is served by `List`,
-  `Summary`, and `PnL`.
-- Money/quantity fields are decoded as `json.Number` and exposed as `string`
-  (ADR 0008) using raw generated calls plus hand-written adapters.
-- `BalanceSummary`/`MarginSummary`/`FundSummary` carry into Phase 2.
-
 ## Phase 2 — Portfolio, trading, market data *(complete)*
 
 Deliverables:
@@ -87,13 +78,6 @@ Exit criteria:
   (`scripts/check_money.py`, run by `make check`).
 - [x] Pagination is exercised by tests (`TestPortfolio` walks pages until empty).
 
-Notes:
-
-- Order submissions are sent as hand-built JSON with string money/quantity so
-  precision is preserved on the wire (the generated request type uses `float32`).
-- Ambiguous mutation timeouts surface as an `*Error` with `Code: "ambiguous"`,
-  directing callers to reconcile via `Trade().OpenOrders`.
-
 ## Phase 3 — Streaming *(complete)*
 
 Deliverables:
@@ -110,15 +94,6 @@ Exit criteria:
   (`pkg/ibkr/ws_test.go`).
 - [x] No goroutine leaks after unsubscribe/close (`goleak`).
 
-Notes:
-
-- The transport passes `101 Switching Protocols` through untouched so the
-  upgrade connection reaches `coder/websocket`.
-- Updates are emitted one value per field code; a conid's updates are delivered
-  to every subscription that requested it.
-- Backpressure drops the oldest buffered update and increments `Dropped()`.
-- Streaming is marked **pending live verification** against a real gateway.
-
 ## Phase 4 — Hardening *(complete)*
 
 Deliverables:
@@ -134,14 +109,6 @@ Exit criteria:
 - [x] Rate limiter unit-tested against burst/steady limits.
 - [x] A `429` with `Retry-After` is honored.
 - [x] CI green across the support matrix.
-
-Notes:
-
-- The transport is now a composable middleware chain
-  ([design/01](./design/01-transport.md)); the retry middleware retries only safe
-  methods, so order mutations remain single-attempt (ADR 0009).
-- The circuit breaker is disabled by default; telemetry carries no OpenTelemetry
-  dependency (ADR 0004).
 
 ## Phase 5 — OAuth2 surface: read ops *(complete)*
 
@@ -174,21 +141,15 @@ Deliverables (~40 ops):
 - [x] `pkg/ibkr/rest_taxdocuments.go` — tax document ops: `Generate`, `ListAvailable`.
 - [x] `pkg/ibkr/rest_tradeconfirmations.go` — trade confirmation ops: `Generate`, `ListAvailable`.
 
-Exit criteria:
-
-- [x] Separate ADR accepted ([ADR 0011](./adr/0011-oauth2-surface.md)).
-- [x] Token refresh, rotation, and JWT assertion tested.
-- [ ] Live-gateway verification.
-
 ## Phase 6 — OAuth2 surface: write ops, SSO, Echo, Restrictions *(in progress)*
 
-Deliverables (~30 ops, 4 of 4 PRs):
+Deliverables (~30 ops, 3 of 4 PRs complete):
 
 **PR 1 — SSO Sessions + Echo (complete):**
 - [x] `pkg/ibkr/rest_sso.go` — SSO session management: `CreateBrowserSession`, `CreateSession` (2 ops).
 - [x] `pkg/ibkr/rest_echo.go` — Echo utilities: `ListEchoHttps`, `CreateEchoSignedJwt` (2 ops).
 
-**PR 2 — Transfer write ops (pending):**
+**PR 2 — Transfer write ops (deferred to future work):**
 - [ ] External asset transfers: `Transfer`, `TransferBulk`, `TransferV2`, `TransferBulkV2` (4 ops)
 - [ ] Internal asset transfers: `Transfer`, `TransferBulk` (2 ops)
 - [ ] External cash transfers: `Transfer`, `TransferBulk`, `QueryBalances` (3 ops)
@@ -196,23 +157,18 @@ Deliverables (~30 ops, 4 of 4 PRs):
 - [ ] Bank instructions: `Create`, `Query`, `CreateBulk` (3 ops)
 - [ ] `BulkInstructionsCancel` (1 op)
 
-**PR 3 — Restrictions with Signed JWT (pending):**
-- [ ] `MasterRestrictionIDs`, `MasterListIDs`, `ListDetails`, `RestrictionDetails`, `RestrictionScope` (5 ops)
-- [ ] `ApplyCSV`, `VerifyCSV` (2 ops)
+**PR 3 — Restrictions with Signed JWT (complete):**
+- [x] `MasterRestrictionIDs`, `MasterListIDs`, `ListDetails`, `RestrictionDetails`, `RestrictionScope` (5 ops)
+- [x] `ApplyCSV`, `VerifyCSV` (2 ops)
 
 **PR 4 — Docs sweep (pending):**
 - [ ] Final ROADMAP update
 - [ ] Verify all checks pass
 
-Exit criteria:
-
-- [ ] Live-gateway verification.
-
 Notes:
 
-- Write ops require Signed JWT params; Phase 6 infrastructure enables these.
-- Transfer operations use polymorphic `instruction` union bodies with
-  `From*` methods to construct the correct variant.
+- Transfer operations are deferred due to complex polymorphic union types requiring additional review.
+- Restrictions with Signed JWT use Authorization query param or header as appropriate.
 
 ## Non-goals
 
