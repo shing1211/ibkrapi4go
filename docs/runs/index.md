@@ -12,3 +12,4 @@
 | 2026-09-18 | [track-c-sentinel-rename](./2026-09-18-track-c-sentinel-rename/) | BUILD | complete | `7cbc084` | `7cbc084` | `plan.md`, `todos.md`, `report.md` |
 | 2026-09-18 | [track-d-godoc-sprint](./2026-09-18-track-d-godoc-sprint/) | BUILD | complete | `ab5f6be` | `ab5f6be` | `plan.md`, `todos.md`, `report.md` |
 | 2026-09-18 | [track-fg-release-prep](./2026-09-18-track-fg-release-prep/) | BUILD | complete | `5cb0141` | `5cb0141` | `plan.md`, `todos.md`, `report.md` |
+| 2026-09-18 | [v030-ergonomics](./2026-09-18-v030-ergonomics/) | BUILD | complete | `e8deb89` | `e8deb89` | `plan.md`, `todos.md`, `report.md` |
