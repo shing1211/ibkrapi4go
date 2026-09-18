@@ -17,6 +17,8 @@
       --accent: #58a6ff;
       --accent-green: #3fb950;
       --accent-orange: #d29922;
+      --accent-purple: #bc8cff;
+      --accent-red: #f85149;
       --code-bg: #1c2128;
     }
 
@@ -30,36 +32,34 @@
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    .container { max-width: 900px; margin: 0 auto; padding: 0 1.5rem; }
+    .container { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; }
 
     /* ── Header ── */
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 2rem 0;
+      padding: 2.5rem 0;
       text-align: center;
     }
 
     .logo {
-      font-size: 2.2rem;
+      font-size: 2.4rem;
       font-weight: 700;
       color: var(--text);
       letter-spacing: -0.02em;
     }
-
     .logo span { color: var(--accent); }
 
     header .tagline {
       margin-top: 0.5rem;
       color: var(--text-muted);
-      font-size: 1.05rem;
+      font-size: 1.1rem;
     }
 
-    /* ── Badges ── */
     .badges {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.6rem;
+      gap: 0.5rem;
       justify-content: center;
       margin-top: 1.2rem;
     }
@@ -72,35 +72,41 @@
       font-weight: 600;
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     }
-
-    .badge-go    { background: #00add8; color: #fff; }
-    .badge-apache{ background: #4a7fc1; color: #fff; }
-    .badge-ops   { background: var(--accent-orange); color: #000; }
+    .badge-go      { background: #00add8; color: #fff; }
+    .badge-apache  { background: #4a7fc1; color: #fff; }
+    .badge-ops     { background: var(--accent-orange); color: #000; }
     .badge-schemas { background: var(--accent); color: #fff; }
-    .badge-status { background: #f85149; color: #fff; }
+    .badge-version  { background: var(--accent-green); color: #fff; }
 
-    /* ── Hero install ── */
     .hero-install {
       margin-top: 1.5rem;
       background: var(--code-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 1rem 1.25rem;
+      padding: 0.9rem 1.25rem;
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
       font-size: 0.9rem;
       display: inline-block;
     }
-
     .hero-install .dollar { color: var(--accent-green); margin-right: 0.5rem; }
 
     /* ── Section titles ── */
     h2 {
-      font-size: 1.4rem;
+      font-size: 1.35rem;
       font-weight: 600;
       margin-bottom: 1rem;
       padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--border);
       margin-top: 2.5rem;
+    }
+    h2 .section-tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 0.3rem;
     }
 
     /* ── Cards grid ── */
@@ -117,37 +123,111 @@
       border-radius: 8px;
       padding: 1rem 1.2rem;
     }
-
     .card h3 {
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 600;
       color: var(--text);
       margin-bottom: 0.3rem;
     }
-
     .card p {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 0.6rem;
-    }
-
-    .card a {
       font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .card a {
+      font-size: 0.8rem;
       color: var(--accent);
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     }
+    .card.superseded { opacity: 0.55; }
+    .card.superseded h3::after {
+      content: " (superseded)";
+      font-weight: 400;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
 
-    /* ── Links section ── */
+    /* ── Quick Start ── */
+    .quick-start {
+      margin-top: 1rem;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .quick-start-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 1rem;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-red    { background: #f85149; }
+    .dot-yellow { background: #d29922; }
+    .dot-green  { background: #3fb950; }
+    .quick-start-header span {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      margin-left: auto;
+    }
+    .quick-start pre {
+      padding: 1.2rem 1.25rem;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      color: var(--text);
+    }
+    .quick-start .comment { color: var(--text-muted); }
+    .quick-start .keyword { color: var(--accent-purple); }
+    .quick-start .func  { color: #d2a8ff; }
+    .quick-start .type   { color: #79c0ff; }
+    .quick-start .string { color: var(--accent-green); }
+    .quick-start .decl   { color: var(--accent); }
+
+    /* ── Features ── */
+    .features {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem 1.5rem;
+      margin-top: 1rem;
+    }
+    .features p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      max-width: 720px;
+    }
+    .features ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      list-style: none;
+    }
+    .features li {
+      font-size: 0.82rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0.2rem 0.65rem;
+      color: var(--text-muted);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    /* ── Quick Links ── */
     .quick-links {
       display: flex;
       flex-wrap: wrap;
       gap: 1rem;
       margin-top: 1rem;
     }
-
     .quick-links a {
       color: var(--accent);
-      font-size: 0.9rem;
+      font-size: 0.88rem;
     }
 
     /* ── Footer ── */
@@ -159,10 +239,8 @@
       color: var(--text-muted);
       font-size: 0.85rem;
     }
-
     footer a { color: var(--text-muted); }
 
-    /* ── Responsive ── */
     @media (max-width: 600px) {
       .cards { grid-template-columns: 1fr; }
       .badges { gap: 0.4rem; }
@@ -180,7 +258,7 @@
       <span class="badge badge-apache">Apache-2.0</span>
       <span class="badge badge-ops">185/185 operations</span>
       <span class="badge badge-schemas">443 schemas</span>
-      <span class="badge badge-status">alpha</span>
+      <span class="badge badge-version">v0.3.0</span>
     </div>
     <div class="hero-install">
       <span class="dollar">$</span>go get github.com/shing1211/ibkrapi4go/pkg/ibkr
@@ -190,7 +268,79 @@
 
 <main class="container">
 
-  <h2>Documentation</h2>
+  <!-- Quick Start -->
+  <h2><span class="section-tag">Quick start</span>Connect, query, stream</h2>
+  <div class="quick-start">
+    <div class="quick-start-header">
+      <span class="dot dot-red"></span>
+      <span class="dot dot-yellow"></span>
+      <span class="dot dot-green"></span>
+      <span>main.go</span>
+    </div>
+    <pre><span class="keyword">package</span> main
+
+<span class="keyword">import</span> (
+    <span class="string">"context"</span>
+    <span class="string">"fmt"</span>
+    <span class="string">"time"</span>
+
+    ibkr <span class="string">"github.com/shing1211/ibkrapi4go/pkg/ibkr"</span>
+)
+
+<span class="keyword">func</span> <span class="func">main</span>() {
+    cli, err := ibkr.<span class="func">NewClient</span>(
+        ibkr.<span class="func">WithGatewayURL</span>(<span class="string">"localhost:5001"</span>),
+        ibkr.<span class="func">WithTickleInterval</span>(time.Hour),
+    )
+    <span class="keyword">if</span> err != nil { <span class="comment">/* handle */</span> }
+    <span class="keyword">defer</span> cli.<span class="func">Close</span>()
+
+    ctx := context.<span class="func">Background</span>()
+    cli.<span class="func">Session</span>().<span class="func">Initialize</span>(ctx)
+
+    <span class="comment">// List accounts</span>
+    accounts, _ := cli.<span class="func">Account</span>().<span class="func">List</span>(ctx)
+    <span class="keyword">for</span> _, a := <span class="keyword">range</span> accounts {
+        fmt.<span class="func">Println</span>(a.ID, a.BaseCurrency)
+    }
+
+    <span class="comment">// Stream live quotes via WebSocket</span>
+    sub, _ := cli.<span class="func">MarketData</span>().<span class="func">SubscribeQuotes</span>(ctx,
+        ibkr.<span class="type">QuoteRequest</span>{
+            Contract:  ibkr.<span class="func">Stock</span>(<span class="string">"AAPL"</span>),
+            Fields:    []ibkr.<span class="type">Field</span>{ibkr.FIELD_BID, ibkr.FIELD_ASK},
+        },
+    )
+    <span class="keyword">defer</span> sub.<span class="func">Close</span>()
+
+    <span class="keyword">for</span> q := <span class="keyword">range</span> sub.<span class="func">Events</span>() {
+        fmt.<span class="func">Printf</span>(<span class="string">"BID=%s  ASK=%s\n"</span>, q.Bid, q.Ask)
+    }
+}</pre>
+  </div>
+
+  <!-- Features -->
+  <h2><span class="section-tag">Overview</span>What you get</h2>
+  <div class="features">
+    <p>A typed, ergonomic Go SDK for the Interactive Brokers Client Portal API and the IB REST API. Covers all 185 operations across both surfaces — account management, market data, orders, portfolio analytics, and more — with a channel-based streaming API, per-endpoint rate limiting, circuit breakers, and a built-in mock gateway for tests.</p>
+    <ul>
+      <li>185/185 CPAPI + REST operations</li>
+      <li>Channel-based WebSocket streaming</li>
+      <li>Context-aware with timeout propagation</li>
+      <li>Per-endpoint + global rate limiting</li>
+      <li>Circuit breaker per operation</li>
+      <li>Money as string (ADR-0008)</li>
+      <li>Dependency-free core</li>
+      <li>47 fuzz targets + 180 shape tests</li>
+      <li>In-repo mock gateway</li>
+      <li>47 benchmarks with CI regression gate</li>
+      <li>Structured slog logging</li>
+      <li>OTel-shaped metrics hooks</li>
+    </ul>
+  </div>
+
+  <!-- Documentation -->
+  <h2><span class="section-tag">Documentation</span>Reference and guides</h2>
   <div class="cards">
 
     <div class="card">
@@ -215,6 +365,12 @@
       <h3>SESSIONS.md</h3>
       <p>Session lifecycle — initialize, tickle, logout</p>
       <a href="./SESSIONS.md">SESSIONS.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>STABILITY.md</h3>
+      <p>Public API surface, stability levels, and breaking change policy</p>
+      <a href="./STABILITY.md">STABILITY.md →</a>
     </div>
 
     <div class="card">
@@ -248,15 +404,27 @@
     </div>
 
     <div class="card">
+      <h3>ERRORS.md</h3>
+      <p>Error types, IBKR error envelope parsing, and sentinel errors</p>
+      <a href="./ERRORS.md">ERRORS.md →</a>
+    </div>
+
+    <div class="card">
       <h3>TESTING.md</h3>
       <p>Unit, manager, WebSocket, and integration testing strategy</p>
       <a href="./TESTING.md">TESTING.md →</a>
     </div>
 
     <div class="card">
-      <h3>ERRORS.md</h3>
-      <p>Error types, IBKR error envelope parsing, and sentinel errors</p>
-      <a href="./ERRORS.md">ERRORS.md →</a>
+      <h3>CONFIG.md</h3>
+      <p>All client options, environment variables, and configuration</p>
+      <a href="./CONFIG.md">CONFIG.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>CODEGEN.md</h3>
+      <p>OpenAPI spec patching and generated client regeneration</p>
+      <a href="./CODEGEN.md">CODEGEN.md →</a>
     </div>
 
     <div class="card">
@@ -265,21 +433,94 @@
       <a href="./ROADMAP.md">ROADMAP.md →</a>
     </div>
 
+    <div class="card">
+      <h3>CONTRIBUTING.md</h3>
+      <p>Architecture tour, code review criteria, and getting started</p>
+      <a href="./CONTRIBUTING.md">CONTRIBUTING.md →</a>
+    </div>
+
   </div>
 
-  <h2>Architecture Decision Records</h2>
+  <!-- Examples -->
+  <h2><span class="section-tag">Examples</span>Runnable code</h2>
   <div class="cards">
 
     <div class="card">
-      <h3>ADR index</h3>
-      <p>All design decisions — rationale, tradeoffs, and context</p>
-      <a href="./adr/">adr/ →</a>
+      <h3>portfolio</h3>
+      <p>List accounts, fetch positions and P&amp;L, stream live updates</p>
+      <a href="./examples/portfolio/">examples/portfolio/ →</a>
     </div>
+
+    <div class="card">
+      <h3>marketdata-streaming</h3>
+      <p>Subscribe to live quotes, bars, and tick-by-tick data via WebSocket</p>
+      <a href="./examples/marketdata-streaming/">examples/marketdata-streaming/ →</a>
+    </div>
+
+    <div class="card">
+      <h3>orders</h3>
+      <p>Place, modify, and cancel orders; observe fills in real time</p>
+      <a href="./examples/orders/">examples/orders/ →</a>
+    </div>
+
+    <div class="card">
+      <h3>models</h3>
+      <p>List model portfolios and their positions</p>
+      <a href="./examples/models/">examples/models/ →</a>
+    </div>
+
+    <div class="card">
+      <h3>examples/README.md</h3>
+      <p>Overview of all examples and how to run them against the mock gateway</p>
+      <a href="./examples/README.md">examples/README.md →</a>
+    </div>
+
+  </div>
+
+  <!-- Architecture Decision Records -->
+  <h2><span class="section-tag">Architecture Decision Records</span>Design rationale</h2>
+  <div class="cards">
 
     <div class="card">
       <h3>ADR-0001 — Two API surfaces</h3>
       <p>CPAPI (ssoBearer) vs IB REST (oauth2Bearer) are distinct</p>
       <a href="./adr/0001-two-api-surfaces.md">adr/0001-two-api-surfaces.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0002 — Two auth models</h3>
+      <p>CPAPI SSO bearer and IB REST OAuth2 bearer</p>
+      <a href="./adr/0002-auth-models.md">adr/0002-auth-models.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0003 — OpenAPI codegen</h3>
+      <p>Generate types/client with oapi-codegen + spec patching</p>
+      <a href="./adr/0003-openapi-codegen.md">adr/0003-openapi-codegen.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0004 — Minimal dependencies</h3>
+      <p>Minimal dependency set — no surprises, no transitive version conflicts</p>
+      <a href="./adr/0004-minimal-dependencies.md">adr/0004-minimal-dependencies.md →</a>
+    </div>
+
+    <div class="card superseded">
+      <h3>ADR-0005 — v1 scope</h3>
+      <p>v1 targets the CPAPI surface only (superseded by ADR-0011)</p>
+      <a href="./adr/0005-v1-scope.md">adr/0005-v1-scope.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0006 — Context-channel API</h3>
+      <p>Context-aware, channel-based streaming API</p>
+      <a href="./adr/0006-context-channel-api.md">adr/0006-context-channel-api.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0007 — Apache-2.0 license</h3>
+      <p>License under Apache-2.0 with DCO sign-off requirement</p>
+      <a href="./adr/0007-license-apache-2.0.md">adr/0007-license-apache-2.0.md →</a>
     </div>
 
     <div class="card">
@@ -295,25 +536,64 @@
     </div>
 
     <div class="card">
+      <h3>ADR-0010 — Project naming</h3>
+      <p>Project naming and module path conventions</p>
+      <a href="./adr/0010-naming.md">adr/0010-naming.md →</a>
+    </div>
+
+    <div class="card">
       <h3>ADR-0011 — OAuth2 surface</h3>
       <p>IB REST oauth2Bearer surface added in Phases 5–6</p>
       <a href="./adr/0011-oauth2-surface.md">adr/0011-oauth2-surface.md →</a>
     </div>
 
     <div class="card">
+      <h3>ADR-0012 — Test dependencies</h3>
+      <p>Test-only dependencies (go.uber.org/goleak)</p>
+      <a href="./adr/0012-test-dependencies.md">adr/0012-test-dependencies.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0013 — Metrics</h3>
+      <p>Dependency-free metrics interface (OTel-shaped)</p>
+      <a href="./adr/0013-metrics.md">adr/0013-metrics.md →</a>
+    </div>
+
+    <div class="card">
       <h3>ADR-0014 — Mock gateway</h3>
-      <p>Server-side test/development aid for both API surfaces</p>
+      <p>In-repo mock IBKR gateway for tests and examples</p>
       <a href="./adr/0014-mock-gateway.md">adr/0014-mock-gateway.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0015 — Stability contract</h3>
+      <p>Public API surface definition and semver policy for v0.x / v1.x</p>
+      <a href="./adr/0015-stability.md">adr/0015-stability.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0016 — Error taxonomy</h3>
+      <p>Error types, sentinel errors, and error handling philosophy</p>
+      <a href="./adr/0016-error-taxonomy.md">adr/0016-error-taxonomy.md →</a>
+    </div>
+
+    <div class="card">
+      <h3>ADR-0017 — Logging interface</h3>
+      <p>Structured logging with redaction and component prefixes</p>
+      <a href="./adr/0017-logging.md">adr/0017-logging.md →</a>
     </div>
 
   </div>
 
-  <h2>Quick Links</h2>
+  <!-- Quick Links -->
+  <h2><span class="section-tag">Links</span></h2>
   <div class="quick-links">
     <a href="https://github.com/shing1211/ibkrapi4go">GitHub Repository →</a>
+    <a href="https://github.com/shing1211/ibkrapi4go/releases">Releases →</a>
     <a href="https://github.com/shing1211/ibkrapi4go/issues">Issue Tracker →</a>
-    <a href="https://github.com/shing1211/ibkrapi4go/blob/main/LICENSE">License (Apache-2.0) →</a>
     <a href="https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr">pkg.go.dev →</a>
+    <a href="https://github.com/shing1211/ibkrapi4go/blob/main/LICENSE">License (Apache-2.0) →</a>
+    <a href="https://github.com/shing1211/ibkrapi4go/blob/main/DISCLAIMER.md">Disclaimer →</a>
   </div>
 
 </main>
