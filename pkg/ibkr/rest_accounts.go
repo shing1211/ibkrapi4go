@@ -59,7 +59,7 @@ func (m *RESTAccounts) LoginMessages(ctx context.Context) ([]LoginMessage, error
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw LoginMessagesWrapper
+	var raw loginMessagesWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
@@ -91,7 +91,7 @@ func (m *RESTAccounts) BulkStatus(ctx context.Context) ([]RESTAccountStatus, err
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw AccountStatusBulkWrapper
+	var raw accountStatusBulkWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
@@ -123,7 +123,7 @@ func (m *RESTAccounts) KycURL(ctx context.Context, accountID AccountID) (string,
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	var raw Au10TixWrapper
+	var raw au10tixWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
@@ -149,7 +149,7 @@ func (m *RESTAccounts) LoginMessagesForAccount(ctx context.Context, accountID Ac
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw LoginMessagesWrapper
+	var raw loginMessagesWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
@@ -212,7 +212,7 @@ func (m *RESTAccounts) Tasks(ctx context.Context, accountID AccountID, taskType 
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
-	var raw RegistrationTasksWrapper
+	var raw registrationTasksWrapper
 	if err := json.Unmarshal(resp.Body, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
@@ -540,7 +540,7 @@ type TaskAssignment struct {
 
 // Response wrapper types
 
-type LoginMessagesWrapper struct {
+type loginMessagesWrapper struct {
 	AccountID                 *string         `json:"accountId,omitempty"`
 	ClearingStatus            *string         `json:"clearingStatus,omitempty"`
 	ClearingStatusDescription *string         `json:"clearingStatusDescription,omitempty"`
@@ -548,14 +548,14 @@ type LoginMessagesWrapper struct {
 	LoginMessages             []*LoginMessage `json:"loginMessages,omitempty"`
 }
 
-type AccountStatusBulkWrapper struct {
+type accountStatusBulkWrapper struct {
 	Accounts []*RESTAccountStatus `json:"accounts,omitempty"`
 	Total    *int64               `json:"total,omitempty"`
 	Offset   *int64               `json:"offset,omitempty"`
 	Limit    *int64               `json:"limit,omitempty"`
 }
 
-type Au10TixWrapper struct {
+type au10tixWrapper struct {
 	EntityID         *int64  `json:"entityId,omitempty"`
 	ExternalID       *string `json:"externalId,omitempty"`
 	HasError         *bool   `json:"hasError,omitempty"`
@@ -564,14 +564,14 @@ type Au10TixWrapper struct {
 	StartDate        *string `json:"startDate,omitempty"`
 }
 
-func (r Au10TixWrapper) KycURL() string {
+func (r au10tixWrapper) KycURL() string {
 	if r.ExternalID != nil {
 		return *r.ExternalID
 	}
 	return ""
 }
 
-type RegistrationTasksWrapper struct {
+type registrationTasksWrapper struct {
 	AccountID         *string                 `json:"accountId,omitempty"`
 	Description       *string                 `json:"description,omitempty"`
 	Empty             *bool                   `json:"empty,omitempty"`
@@ -582,7 +582,7 @@ type RegistrationTasksWrapper struct {
 	Status            *string                 `json:"status,omitempty"`
 }
 
-func (r RegistrationTasksWrapper) Tasks() []RegistrationTaskItem {
+func (r registrationTasksWrapper) Tasks() []RegistrationTaskItem {
 	if r.RegistrationTasks == nil {
 		return nil
 	}
