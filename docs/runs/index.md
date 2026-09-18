@@ -11,3 +11,4 @@
 | 2026-09-17 | [d1-root-cause](./2026-09-17-d1-root-cause/) | BUILD | complete | `b94e677` | `3aea82e` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-18 | [track-c-sentinel-rename](./2026-09-18-track-c-sentinel-rename/) | BUILD | complete | `7cbc084` | `7cbc084` | `plan.md`, `todos.md`, `report.md` |
 | 2026-09-18 | [track-d-godoc-sprint](./2026-09-18-track-d-godoc-sprint/) | BUILD | complete | `ab5f6be` | `ab5f6be` | `plan.md`, `todos.md`, `report.md` |
+| 2026-09-18 | [track-fg-release-prep](./2026-09-18-track-fg-release-prep/) | BUILD | complete | `5cb0141` | `5cb0141` | `plan.md`, `todos.md`, `report.md` |
