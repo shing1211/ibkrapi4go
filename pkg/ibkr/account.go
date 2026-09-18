@@ -171,6 +171,15 @@ func derefString(s *string, def string) string {
 	return *s
 }
 
+// toStringIDSlice converts a string slice to an AccountID slice.
+func toStringIDSlice(ss []string) []AccountID {
+	out := make([]AccountID, len(ss))
+	for i, s := range ss {
+		out[i] = AccountID(s)
+	}
+	return out
+}
+
 // userAccountsRaw mirrors the dynamic parts of the gateway accounts response.
 type userAccountsRaw struct {
 	Accounts []string          `json:"accounts"`

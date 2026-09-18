@@ -18,7 +18,7 @@ type AllocationManager struct {
 // Subaccount holds a sub-account in an allocation group.
 type Subaccount struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// Amount is the allocation amount.
 	Amount string `json:"amount"`
 }
@@ -38,13 +38,13 @@ type AllocationGroup struct {
 // AllocationPreset holds a default allocation preset.
 type AllocationPreset struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// Percentage is the default allocation percentage.
 	Percentage string `json:"percentage"`
 }
 
-// GetAllocatableSubaccounts returns accounts that can be allocated.
-func (m *AllocationManager) GetAllocatableSubaccounts(ctx context.Context) ([]string, error) {
+// AllocatableSubaccounts returns accounts that can be allocated.
+func (m *AllocationManager) AllocatableSubaccounts(ctx context.Context) ([]string, error) {
 	const op = "Allocation.GetAllocatableSubaccounts"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAllocatableSubaccounts(ctx)
@@ -59,8 +59,8 @@ func (m *AllocationManager) GetAllocatableSubaccounts(ctx context.Context) ([]st
 	return raw, nil
 }
 
-// GetAllocationGroups returns all allocation groups.
-func (m *AllocationManager) GetAllocationGroups(ctx context.Context) ([]AllocationGroup, error) {
+// AllocationGroups returns all allocation groups.
+func (m *AllocationManager) AllocationGroups(ctx context.Context) ([]AllocationGroup, error) {
 	const op = "Allocation.GetAllocationGroups"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAllocationGroups(ctx)
@@ -91,7 +91,7 @@ func (m *AllocationManager) CreateAllocationGroup(ctx context.Context, name stri
 		Amount string `json:"amount,omitempty"`
 	}, len(accounts))
 	for i, a := range accounts {
-		accts[i].AcctID = a.AccountID
+		accts[i].AcctID = string(a.AccountID)
 		accts[i].Amount = a.Amount
 	}
 	bodyJSON := map[string]interface{}{
@@ -121,7 +121,7 @@ func (m *AllocationManager) ModifyAllocationGroup(ctx context.Context, name stri
 		Amount string `json:"amount,omitempty"`
 	}, len(accounts))
 	for i, a := range accounts {
-		accts[i].AcctID = a.AccountID
+		accts[i].AcctID = string(a.AccountID)
 		accts[i].Amount = a.Amount
 	}
 	bodyJSON := map[string]interface{}{
@@ -162,8 +162,8 @@ func (m *AllocationManager) DeleteAllocationGroup(ctx context.Context, name stri
 	return nil
 }
 
-// GetSingleAllocationGroup returns a single allocation group.
-func (m *AllocationManager) GetSingleAllocationGroup(ctx context.Context, name string) (*AllocationGroup, error) {
+// SingleAllocationGroup returns a single allocation group.
+func (m *AllocationManager) SingleAllocationGroup(ctx context.Context, name string) (*AllocationGroup, error) {
 	const op = "Allocation.GetSingleAllocationGroup"
 	bodyJSON := map[string]interface{}{"name": name}
 	body, err := json.Marshal(bodyJSON)
@@ -188,8 +188,8 @@ func (m *AllocationManager) GetSingleAllocationGroup(ctx context.Context, name s
 	}, nil
 }
 
-// GetAllocationPresets returns the default allocation presets.
-func (m *AllocationManager) GetAllocationPresets(ctx context.Context) ([]AllocationPreset, error) {
+// AllocationPresets returns the default allocation presets.
+func (m *AllocationManager) AllocationPresets(ctx context.Context) ([]AllocationPreset, error) {
 	const op = "Allocation.GetAllocationPresets"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAllocationPresets(ctx)
@@ -204,7 +204,7 @@ func (m *AllocationManager) GetAllocationPresets(ctx context.Context) ([]Allocat
 	out := make([]AllocationPreset, 0, len(raw))
 	for _, item := range raw {
 		out = append(out, AllocationPreset{
-			AccountID:  rawToString(item, "accountId"),
+			AccountID:  AccountID(rawToString(item, "accountId")),
 			Percentage: rawToString(item, "percentage"),
 		})
 	}
@@ -217,7 +217,7 @@ func (m *AllocationManager) SetAllocationPreset(ctx context.Context, presets []A
 	accts := make([]map[string]string, len(presets))
 	for i, p := range presets {
 		accts[i] = map[string]string{
-			"accountId":  p.AccountID,
+			"accountId":  string(p.AccountID),
 			"percentage": p.Percentage,
 		}
 	}

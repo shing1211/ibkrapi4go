@@ -22,7 +22,7 @@ type PerformanceManager struct {
 // PerformanceData holds performance analysis data.
 type PerformanceData struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// Data holds the performance data as raw JSON.
 	Data json.RawMessage `json:"data"`
 }
@@ -30,7 +30,7 @@ type PerformanceData struct {
 // Transaction holds a transaction record.
 type Transaction struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// ConID is the contract identifier.
 	ConID ConID `json:"conId"`
 	// Symbol is the ticker symbol.
@@ -67,8 +67,8 @@ func (m *PerformanceManager) CreateAllocationPA(ctx context.Context, accountIDs 
 	return nil
 }
 
-// GetPerformanceAllPeriods returns performance data for all periods.
-func (m *PerformanceManager) GetPerformanceAllPeriods(ctx context.Context, accountIDs []string, param string) (json.RawMessage, error) {
+// PerformanceAllPeriods returns performance data for all periods.
+func (m *PerformanceManager) PerformanceAllPeriods(ctx context.Context, accountIDs []string, param string) (json.RawMessage, error) {
 	const op = "Performance.GetPerformanceAllPeriods"
 	params := &client.GetPerformanceAllPeriodsParams{}
 	if param != "" {
@@ -91,8 +91,8 @@ func (m *PerformanceManager) GetPerformanceAllPeriods(ctx context.Context, accou
 	return result, nil
 }
 
-// GetSinglePerformancePeriod returns performance data for a single period.
-func (m *PerformanceManager) GetSinglePerformancePeriod(ctx context.Context, accountIDs []string, period string) (*PerformanceData, error) {
+// SinglePerformancePeriod returns performance data for a single period.
+func (m *PerformanceManager) SinglePerformancePeriod(ctx context.Context, accountIDs []string, period string) (*PerformanceData, error) {
 	const op = "Performance.GetSinglePerformancePeriod"
 	bodyJSON := map[string]interface{}{
 		"acctIds": accountIDs,
@@ -118,8 +118,8 @@ func (m *PerformanceManager) GetSinglePerformancePeriod(ctx context.Context, acc
 	}, nil
 }
 
-// GetTransactions returns transactions for the given accounts.
-func (m *PerformanceManager) GetTransactions(ctx context.Context, accountIDs []string, startDate, endDate string) ([]Transaction, error) {
+// Transactions returns transactions for the given accounts.
+func (m *PerformanceManager) Transactions(ctx context.Context, accountIDs []string, startDate, endDate string) ([]Transaction, error) {
 	const op = "Performance.GetTransactions"
 	bodyJSON := map[string]interface{}{
 		"acctIds":   accountIDs,
@@ -144,7 +144,7 @@ func (m *PerformanceManager) GetTransactions(ctx context.Context, accountIDs []s
 	out := make([]Transaction, 0, len(raw))
 	for _, item := range raw {
 		out = append(out, Transaction{
-			AccountID: rawToString(item, "accountId"),
+			AccountID: AccountID(rawToString(item, "accountId")),
 			ConID:     ConID(jsonNumberToInt(jsonNumber(item["conId"]))),
 			Symbol:    rawToString(item, "symbol"),
 			Side:      rawToString(item, "side"),

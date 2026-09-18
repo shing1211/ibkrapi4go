@@ -75,7 +75,7 @@ func TestPortfolio(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Positions: %v", err)
 	}
-	if len(positions) != 1 || positions[0].Quantity != "10.5" || positions[0].UnrealizedPnl != "49.875" {
+	if len(positions) != 1 || positions[0].Quantity != "10.5" || positions[0].UnrealizedPnL != "49.875" {
 		t.Errorf("positions = %+v; want qty 10.5 upl 49.875", positions)
 	}
 	if positions[0].ConID != 265598 {

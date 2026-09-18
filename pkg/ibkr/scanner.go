@@ -39,8 +39,8 @@ type ScannerResult struct {
 	Distance string `json:"distance"`
 }
 
-// GetScannerParameters returns the available scanner parameters.
-func (m *ScannerManager) GetScannerParameters(ctx context.Context) (json.RawMessage, error) {
+// ScannerParameters returns the available scanner parameters.
+func (m *ScannerManager) ScannerParameters(ctx context.Context) (json.RawMessage, error) {
 	const op = "Scanner.GetScannerParameters"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetScannerParameters(ctx)
@@ -55,8 +55,8 @@ func (m *ScannerManager) GetScannerParameters(ctx context.Context) (json.RawMess
 	return result, nil
 }
 
-// GetScannerResults runs a scanner with the given request body.
-func (m *ScannerManager) GetScannerResults(ctx context.Context, scannerJSON map[string]interface{}) ([]ScannerResult, error) {
+// ScannerResults runs a scanner with the given request body.
+func (m *ScannerManager) ScannerResults(ctx context.Context, scannerJSON map[string]interface{}) ([]ScannerResult, error) {
 	const op = "Scanner.GetScannerResults"
 	body, err := json.Marshal(scannerJSON)
 	if err != nil {

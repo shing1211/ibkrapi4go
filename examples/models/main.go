@@ -50,7 +50,7 @@ func main() {
 
 	reqID := time.Now().UnixMilli()
 
-	models, err := cli.Model().GetAllModels(ctx, reqID)
+	models, err := cli.Model().AllModels(ctx, reqID)
 	if err != nil {
 		log.Fatalf("Model.GetAllModels: %v", err)
 	}
@@ -66,7 +66,7 @@ func main() {
 
 	first := models[0]
 	fmt.Println("\n=== Positions for:", first, "===")
-	positions, err := cli.Model().GetAllModelPositions(ctx, first)
+	positions, err := cli.Model().AllModelPositions(ctx, first)
 	if err != nil {
 		log.Fatalf("Model.GetAllModelPositions: %v", err)
 	}
@@ -80,7 +80,7 @@ func main() {
 	}
 
 	fmt.Println("\n=== Model presets ===")
-	presets, err := cli.Model().GetModelPresets(ctx, reqID)
+	presets, err := cli.Model().ModelPresets(ctx, reqID)
 	if err != nil {
 		log.Fatalf("Model.GetModelPresets: %v", err)
 	}

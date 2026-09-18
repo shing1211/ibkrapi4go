@@ -97,8 +97,8 @@ func (m *SessionManager) Status(ctx context.Context) (*AuthStatus, error) {
 	return st, nil
 }
 
-// GetSessionValidation validates the current session.
-func (m *SessionManager) GetSessionValidation(ctx context.Context) (*SessionValidation, error) {
+// SessionValidation validates the current session.
+func (m *SessionManager) SessionValidation(ctx context.Context) (*SessionValidation, error) {
 	const op = "Session.GetSessionValidation"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetSessionValidation(ctx)
@@ -116,8 +116,8 @@ func (m *SessionManager) GetSessionValidation(ctx context.Context) (*SessionVali
 	}, nil
 }
 
-// GetSessionToken returns the current session token.
-func (m *SessionManager) GetSessionToken(ctx context.Context) (*SessionToken, error) {
+// SessionToken returns the current session token.
+func (m *SessionManager) SessionToken(ctx context.Context) (*SessionToken, error) {
 	const op = "Session.GetSessionToken"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetSessionToken(ctx)

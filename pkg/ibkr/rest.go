@@ -170,8 +170,8 @@ type RESTRequestInfo struct {
 	ExecutedAt *string
 }
 
-// GetStatus retrieves the current status of a submitted request.
-func (m *RESTRequests) GetStatus(ctx context.Context, requestID int64) (*RESTRequestInfo, error) {
+// Status retrieves the current status of a submitted request.
+func (m *RESTRequests) Status(ctx context.Context, requestID int64) (*RESTRequestInfo, error) {
 	const op = "Requests.GetStatus"
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return nil, err

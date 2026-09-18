@@ -270,7 +270,7 @@ func (r *RESTRestrictions) RestrictionDetails(ctx context.Context, username stri
 type RestrictionScope struct {
 	RestrictionID int64
 	Scope         string
-	AccountIDs    []string
+	AccountIDs    []AccountID
 	Truncated     bool
 }
 
@@ -310,8 +310,8 @@ func (r *RESTRestrictions) RestrictionScope(ctx context.Context, username string
 	return parseRestrictionScope(resp.JSON200), nil
 }
 
-// CsvApplyResponse represents the response from an ApplyCSV operation.
-type CsvApplyResponse struct {
+// CSVApplyResponse represents the response from an ApplyCSV operation.
+type CSVApplyResponse struct {
 	Success   bool
 	RequestID int64
 	Message   string
@@ -319,7 +319,7 @@ type CsvApplyResponse struct {
 
 // ApplyCSV applies previously verified CSV changes.
 // Requires Signed JWT in Authorization header and a signed JWT body.
-func (r *RESTRestrictions) ApplyCSV(ctx context.Context, auth string, csvJWTContent string) (*CsvApplyResponse, error) {
+func (r *RESTRestrictions) ApplyCSV(ctx context.Context, auth string, csvJWTContent string) (*CSVApplyResponse, error) {
 	const op = "Restrictions.ApplyCSV"
 	if err := r.surface.owner.checkOpen(); err != nil {
 		return nil, err
@@ -348,16 +348,16 @@ func (r *RESTRestrictions) ApplyCSV(ctx context.Context, auth string, csvJWTCont
 	return raw.toPublic(), nil
 }
 
-// CsvVerifyRequest is the request body for VerifyCSV.
-type CsvVerifyRequest struct {
+// CSVVerifyRequest is the request body for VerifyCSV.
+type CSVVerifyRequest struct {
 	UserName   string
 	RequestID  int64
 	Payload    []byte
 	IsEmpTrack bool
 }
 
-// CsvVerifyResponse represents the response from a VerifyCSV operation.
-type CsvVerifyResponse struct {
+// CSVVerifyResponse represents the response from a VerifyCSV operation.
+type CSVVerifyResponse struct {
 	Success   bool
 	RequestID int64
 	Message   string
@@ -365,7 +365,7 @@ type CsvVerifyResponse struct {
 
 // VerifyCSV verifies CSV changes before applying.
 // Requires Signed JWT in Authorization header and a JSON body.
-func (r *RESTRestrictions) VerifyCSV(ctx context.Context, auth string, req CsvVerifyRequest) (*CsvVerifyResponse, error) {
+func (r *RESTRestrictions) VerifyCSV(ctx context.Context, auth string, req CSVVerifyRequest) (*CSVVerifyResponse, error) {
 	const op = "Restrictions.VerifyCSV"
 	if err := r.surface.owner.checkOpen(); err != nil {
 		return nil, err
@@ -518,7 +518,7 @@ func parseRestrictionScope(r *client.RestrictionScopeResponse) *RestrictionScope
 	if r.AccountIds != nil {
 		for _, id := range *r.AccountIds {
 			if id != nil {
-				s.AccountIDs = append(s.AccountIDs, *id)
+				s.AccountIDs = append(s.AccountIDs, AccountID(*id))
 			}
 		}
 	}
@@ -531,11 +531,11 @@ type csvApplyResponseRaw struct {
 	Message   *string `json:"message,omitempty"`
 }
 
-func (r *csvApplyResponseRaw) toPublic() *CsvApplyResponse {
+func (r *csvApplyResponseRaw) toPublic() *CSVApplyResponse {
 	if r == nil {
 		return nil
 	}
-	return &CsvApplyResponse{
+	return &CSVApplyResponse{
 		Success:   r.Success != nil && *r.Success,
 		RequestID: int64PtrVal(r.RequestId),
 		Message:   strPtrVal(r.Message),
@@ -548,11 +548,11 @@ type csvVerifyResponseRaw struct {
 	Message   *string `json:"message,omitempty"`
 }
 
-func (r *csvVerifyResponseRaw) toPublic() *CsvVerifyResponse {
+func (r *csvVerifyResponseRaw) toPublic() *CSVVerifyResponse {
 	if r == nil {
 		return nil
 	}
-	return &CsvVerifyResponse{
+	return &CSVVerifyResponse{
 		Success:   r.Success != nil && *r.Success,
 		RequestID: int64PtrVal(r.RequestId),
 		Message:   strPtrVal(r.Message),

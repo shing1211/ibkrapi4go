@@ -469,12 +469,12 @@ type LoginMessage struct {
 //	}
 type RESTAccountStatus struct {
 	AccountID       AccountID `json:"accountId"`
-	AdminAccountID  string    `json:"adminAccountId"`
+	AdminAccountID  AccountID `json:"adminAccountId"`
 	DateClosed      time.Time `json:"dateClosed"`
 	DateOpened      time.Time `json:"dateOpened"`
 	DateStarted     time.Time `json:"dateStarted"`
 	Description     string    `json:"description"`
-	MasterAccountID string    `json:"masterAccountId"`
+	MasterAccountID AccountID `json:"masterAccountId"`
 	Message         string    `json:"message"`
 	State           string    `json:"state"`
 	Status          string    `json:"status"`

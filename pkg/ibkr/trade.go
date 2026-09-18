@@ -42,7 +42,7 @@ type OrderRequest struct {
 
 func (r OrderRequest) toJSON() orderTicketJSON {
 	t := orderTicketJSON{
-		ConID:         int64(r.ConID),
+		ConID:         r.ConID,
 		Side:          string(r.Side),
 		Quantity:      r.Quantity,
 		OrderType:     string(r.OrderType),
@@ -484,17 +484,17 @@ func isAmbiguous(err error) bool {
 // orderTicketJSON is the wire shape for a single order. Money/quantity are
 // strings to preserve precision (ADR 0008).
 type orderTicketJSON struct {
-	ConID         int64  `json:"conid"`
-	Side          string `json:"side"`
-	Quantity      string `json:"quantity"`
-	OrderType     string `json:"orderType"`
-	Price         string `json:"price,omitempty"`
-	AuxPrice      string `json:"auxPrice,omitempty"`
-	TimeInForce   string `json:"tif,omitempty"`
-	OutsideRTH    bool   `json:"outsideRTH,omitempty"`
-	AllOrNone     bool   `json:"allOrNone,omitempty"`
-	ClientOrderID string `json:"cOID,omitempty"`
-	AccountID     string `json:"acctId,omitempty"`
+	ConID         ConID     `json:"conid"`
+	Side          string    `json:"side"`
+	Quantity      string    `json:"quantity"`
+	OrderType     string    `json:"orderType"`
+	Price         string    `json:"price,omitempty"`
+	AuxPrice      string    `json:"auxPrice,omitempty"`
+	TimeInForce   string    `json:"tif,omitempty"`
+	OutsideRTH    bool      `json:"outsideRTH,omitempty"`
+	AllOrNone     bool      `json:"allOrNone,omitempty"`
+	ClientOrderID string    `json:"cOID,omitempty"`
+	AccountID     AccountID `json:"acctId,omitempty"`
 }
 
 type ordersSubmissionJSON struct {

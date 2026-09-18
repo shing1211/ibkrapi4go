@@ -20,16 +20,16 @@ type RESTEcho struct {
 // Echo returns the Echo utilities manager.
 func (s *RESTSurface) Echo() *RESTEcho { return &RESTEcho{surface: s} }
 
-// EchoHttpsResponse is the response from the HTTPS echo endpoint.
-type EchoHttpsResponse struct {
+// EchoHTTPSResponse is the response from the HTTPS echo endpoint.
+type EchoHTTPSResponse struct {
 	RequestMethod  string
 	SecurityPolicy string
 }
 
-// ListEchoHttps performs an echo request with HTTPS security policy validation.
+// ListEchoHTTPS performs an echo request with HTTPS security policy validation.
 // This is a simple GET request that echoes back the security policy information.
-func (m *RESTEcho) ListEchoHttps(ctx context.Context) (*EchoHttpsResponse, error) {
-	const op = "Echo.ListEchoHttps"
+func (m *RESTEcho) ListEchoHTTPS(ctx context.Context) (*EchoHTTPSResponse, error) {
+	const op = "Echo.ListEchoHTTPS"
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return nil, err
 	}
@@ -53,22 +53,22 @@ func (m *RESTEcho) ListEchoHttps(ctx context.Context) (*EchoHttpsResponse, error
 	return raw.toPublic(), nil
 }
 
-// SignedJwtEchoRequest is a request to test the signed JWT security policy.
-type SignedJwtEchoRequest struct {
+// SignedJWTEchoRequest is a request to test the signed JWT security policy.
+type SignedJWTEchoRequest struct {
 	// Iss is the issuer to include in the JWT.
 	Iss string
 }
 
-// SignedJwtEchoResponse is the response from the signed JWT echo endpoint.
-type SignedJwtEchoResponse struct {
+// SignedJWTEchoResponse is the response from the signed JWT echo endpoint.
+type SignedJWTEchoResponse struct {
 	RequestMethod  string
 	SecurityPolicy string
 }
 
-// CreateEchoSignedJwt performs an echo request with signed JWT security policy validation.
+// CreateEchoSignedJWT performs an echo request with signed JWT security policy validation.
 // This is used to test that the JWT security policy is working correctly.
-func (m *RESTEcho) CreateEchoSignedJwt(ctx context.Context, req SignedJwtEchoRequest) (*SignedJwtEchoResponse, error) {
-	const op = "Echo.CreateEchoSignedJwt"
+func (m *RESTEcho) CreateEchoSignedJWT(ctx context.Context, req SignedJWTEchoRequest) (*SignedJWTEchoResponse, error) {
+	const op = "Echo.CreateEchoSignedJWT"
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return nil, err
 	}
@@ -105,21 +105,21 @@ type echoResponseRaw struct {
 	SecurityPolicy *string `json:"securityPolicy,omitempty"`
 }
 
-func (r *echoResponseRaw) toPublic() *EchoHttpsResponse {
+func (r *echoResponseRaw) toPublic() *EchoHTTPSResponse {
 	if r == nil {
 		return nil
 	}
-	return &EchoHttpsResponse{
+	return &EchoHTTPSResponse{
 		RequestMethod:  strPtrVal(r.RequestMethod),
 		SecurityPolicy: strPtrVal(r.SecurityPolicy),
 	}
 }
 
-func (r *echoResponseRaw) toPublicSignedJwt() *SignedJwtEchoResponse {
+func (r *echoResponseRaw) toPublicSignedJwt() *SignedJWTEchoResponse {
 	if r == nil {
 		return nil
 	}
-	return &SignedJwtEchoResponse{
+	return &SignedJWTEchoResponse{
 		RequestMethod:  strPtrVal(r.RequestMethod),
 		SecurityPolicy: strPtrVal(r.SecurityPolicy),
 	}

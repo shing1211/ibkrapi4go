@@ -20,16 +20,16 @@ type RESTSSOSessions struct {
 // SSO returns the SSO sessions manager.
 func (s *RESTSurface) SSO() *RESTSSOSessions { return &RESTSSOSessions{surface: s} }
 
-// SsoBrowserSessionRequest is a request to create an SSO browser session.
-type SsoBrowserSessionRequest struct {
+// SSOBrowserSessionRequest is a request to create an SSO browser session.
+type SSOBrowserSessionRequest struct {
 	// Credential is the IBKR username.
 	Credential string
 	// IP address for the session.
 	IP string
 }
 
-// SsoSessionRequest is a request to create an SSO session on behalf of an end-user.
-type SsoSessionRequest struct {
+// SSOSessionRequest is a request to create an SSO session on behalf of an end-user.
+type SSOSessionRequest struct {
 	// Credential is the IBKR username.
 	Credential string
 	// IP address for the session.
@@ -54,7 +54,7 @@ type SessionResponse struct {
 }
 
 // CreateBrowserSession creates an SSO browser session.
-func (m *RESTSSOSessions) CreateBrowserSession(ctx context.Context, req SsoBrowserSessionRequest) (*BrowserSessionResponse, error) {
+func (m *RESTSSOSessions) CreateBrowserSession(ctx context.Context, req SSOBrowserSessionRequest) (*BrowserSessionResponse, error) {
 	const op = "SSO.CreateBrowserSession"
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ func (m *RESTSSOSessions) CreateBrowserSession(ctx context.Context, req SsoBrows
 }
 
 // CreateSession creates an SSO session on behalf of an end-user.
-func (m *RESTSSOSessions) CreateSession(ctx context.Context, req SsoSessionRequest) (*SessionResponse, error) {
+func (m *RESTSSOSessions) CreateSession(ctx context.Context, req SSOSessionRequest) (*SessionResponse, error) {
 	const op = "SSO.CreateSession"
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (m *RESTSSOSessions) CreateSession(ctx context.Context, req SsoSessionReque
 
 // CreateSessionRaw creates an SSO session and returns the raw HTTP response.
 // This is useful when you need to handle non-standard responses.
-func (m *RESTSSOSessions) CreateSessionRaw(ctx context.Context, req SsoSessionRequest) (*client.CreateSsoSessionsResponse, error) {
+func (m *RESTSSOSessions) CreateSessionRaw(ctx context.Context, req SSOSessionRequest) (*client.CreateSsoSessionsResponse, error) {
 	const op = "SSO.CreateSession"
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return nil, err

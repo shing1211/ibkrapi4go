@@ -22,13 +22,13 @@ type ModelPreset struct {
 	// Name is the model name.
 	Name string `json:"name"`
 	// Accounts is the list of accounts in the model.
-	Accounts []string `json:"accounts"`
+	Accounts []AccountID `json:"accounts"`
 }
 
 // ModelAccount holds account details for a model.
 type ModelAccount struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// AccountAlias is the account alias.
 	AccountAlias string `json:"accountAlias"`
 }
@@ -36,7 +36,7 @@ type ModelAccount struct {
 // ModelPosition holds a position in a model portfolio.
 type ModelPosition struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// ConID is the contract identifier.
 	ConID ConID `json:"conId"`
 	// Symbol is the ticker symbol.
@@ -52,11 +52,11 @@ type ModelSummary struct {
 	// Name is the model name.
 	Name string `json:"name"`
 	// AccountIDs is the list of account IDs in the model.
-	AccountIDs []string `json:"accountIds"`
+	AccountIDs []AccountID `json:"accountIds"`
 }
 
-// GetModelPresets returns model portfolio presets.
-func (m *ModelManager) GetModelPresets(ctx context.Context, reqID int64) ([]ModelPreset, error) {
+// ModelPresets returns model portfolio presets.
+func (m *ModelManager) ModelPresets(ctx context.Context, reqID int64) ([]ModelPreset, error) {
 	const op = "Model.GetModelPresets"
 	body := client.GetModelPresetsJSONRequestBody(client.GetModelPresetsJSONBody{
 		ReqID: reqID,
@@ -75,7 +75,7 @@ func (m *ModelManager) GetModelPresets(ctx context.Context, reqID int64) ([]Mode
 	for _, item := range raw {
 		out = append(out, ModelPreset{
 			Name:     rawToString(item, "name"),
-			Accounts: rawToStringSlice(item, "accounts"),
+			Accounts: toStringIDSlice(rawToStringSlice(item, "accounts")),
 		})
 	}
 	return out, nil
@@ -86,9 +86,13 @@ func (m *ModelManager) SetModelPresets(ctx context.Context, presets []ModelPrese
 	const op = "Model.SetModelPresets"
 	bodyJSON := make([]map[string]interface{}, len(presets))
 	for i, p := range presets {
+		accts := make([]string, len(p.Accounts))
+		for j, a := range p.Accounts {
+			accts[j] = string(a)
+		}
 		bodyJSON[i] = map[string]interface{}{
 			"name":     p.Name,
-			"accounts": p.Accounts,
+			"accounts": accts,
 		}
 	}
 	body, err := json.Marshal(bodyJSON)
@@ -106,8 +110,8 @@ func (m *ModelManager) SetModelPresets(ctx context.Context, presets []ModelPrese
 	return nil
 }
 
-// GetAccountsInModel returns accounts in a model.
-func (m *ModelManager) GetAccountsInModel(ctx context.Context, modelName string) ([]ModelAccount, error) {
+// AccountsInModel returns accounts in a model.
+func (m *ModelManager) AccountsInModel(ctx context.Context, modelName string) ([]ModelAccount, error) {
 	const op = "Model.GetAccountsInModel"
 	bodyJSON := map[string]interface{}{"model": modelName}
 	body, err := json.Marshal(bodyJSON)
@@ -128,7 +132,7 @@ func (m *ModelManager) GetAccountsInModel(ctx context.Context, modelName string)
 	out := make([]ModelAccount, 0, len(raw))
 	for _, item := range raw {
 		out = append(out, ModelAccount{
-			AccountID:    rawToString(item, "accountId"),
+			AccountID:    AccountID(rawToString(item, "accountId")),
 			AccountAlias: rawToString(item, "accountAlias"),
 		})
 	}
@@ -157,8 +161,8 @@ func (m *ModelManager) SetAccountInvestmentInModel(ctx context.Context, modelNam
 	return nil
 }
 
-// GetInvestedAccountsInModel returns invested accounts and positions in a model.
-func (m *ModelManager) GetInvestedAccountsInModel(ctx context.Context, modelName string) (json.RawMessage, error) {
+// InvestedAccountsInModel returns invested accounts and positions in a model.
+func (m *ModelManager) InvestedAccountsInModel(ctx context.Context, modelName string) (json.RawMessage, error) {
 	const op = "Model.GetInvestedAccountsInModel"
 	bodyJSON := map[string]interface{}{"model": modelName}
 	body, err := json.Marshal(bodyJSON)
@@ -179,8 +183,8 @@ func (m *ModelManager) GetInvestedAccountsInModel(ctx context.Context, modelName
 	return result, nil
 }
 
-// GetAllModels returns all model portfolios.
-func (m *ModelManager) GetAllModels(ctx context.Context, reqID int64) ([]string, error) {
+// AllModels returns all model portfolios.
+func (m *ModelManager) AllModels(ctx context.Context, reqID int64) ([]string, error) {
 	const op = "Model.GetAllModels"
 	bodyJSON := map[string]interface{}{"reqID": reqID}
 	body, err := json.Marshal(bodyJSON)
@@ -201,8 +205,8 @@ func (m *ModelManager) GetAllModels(ctx context.Context, reqID int64) ([]string,
 	return raw, nil
 }
 
-// GetAllModelPositions returns all positions across models.
-func (m *ModelManager) GetAllModelPositions(ctx context.Context, modelName string) ([]ModelPosition, error) {
+// AllModelPositions returns all positions across models.
+func (m *ModelManager) AllModelPositions(ctx context.Context, modelName string) ([]ModelPosition, error) {
 	const op = "Model.GetAllModelPositions"
 	bodyJSON := map[string]interface{}{"model": modelName}
 	body, err := json.Marshal(bodyJSON)
@@ -223,7 +227,7 @@ func (m *ModelManager) GetAllModelPositions(ctx context.Context, modelName strin
 	out := make([]ModelPosition, 0, len(raw))
 	for _, item := range raw {
 		out = append(out, ModelPosition{
-			AccountID: rawToString(item, "accountId"),
+			AccountID: AccountID(rawToString(item, "accountId")),
 			ConID:     ConID(jsonNumberToInt(jsonNumber(item["conId"]))),
 			Symbol:    rawToString(item, "symbol"),
 			Position:  rawToString(item, "position"),
@@ -274,8 +278,8 @@ func (m *ModelManager) SubmitModelOrders(ctx context.Context, modelName string) 
 	return nil
 }
 
-// GetModelSummarySingle returns a model summary.
-func (m *ModelManager) GetModelSummarySingle(ctx context.Context, modelName string) (*ModelSummary, error) {
+// ModelSummarySingle returns a model summary.
+func (m *ModelManager) ModelSummarySingle(ctx context.Context, modelName string) (*ModelSummary, error) {
 	const op = "Model.GetModelSummarySingle"
 	bodyJSON := map[string]interface{}{"model": modelName}
 	body, err := json.Marshal(bodyJSON)
@@ -295,6 +299,6 @@ func (m *ModelManager) GetModelSummarySingle(ctx context.Context, modelName stri
 	}
 	return &ModelSummary{
 		Name:       rawToString(raw, "name"),
-		AccountIDs: rawToStringSlice(raw, "accountIds"),
+		AccountIDs: toStringIDSlice(rawToStringSlice(raw, "accountIds")),
 	}, nil
 }

@@ -23,7 +23,7 @@ type AlertDetails struct {
 	// AlertID is the alert identifier.
 	AlertID string `json:"alertId"`
 	// AccountID is the account the alert belongs to.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// Name is the human-readable alert name.
 	Name string `json:"name"`
 	// AlertType is the alert type.
@@ -37,7 +37,7 @@ type AlertDetails struct {
 // MTADetails holds multi-trade account details.
 type MTADetails struct {
 	// Accounts is the list of accounts in the MTA group.
-	Accounts []string `json:"accounts"`
+	Accounts []AccountID `json:"accounts"`
 }
 
 // AlertActivationResult is the result of activating or deactivating an alert.
@@ -60,8 +60,8 @@ type AlertDeletionResult struct {
 	AlertID string `json:"alertId"`
 }
 
-// GetAlertDetails returns the details of a specific alert.
-func (m *AlertManager) GetAlertDetails(ctx context.Context, alertID int64, alertType string) (*AlertDetails, error) {
+// AlertDetail returns the details of a specific alert.
+func (m *AlertManager) AlertDetail(ctx context.Context, alertID int64, alertType string) (*AlertDetails, error) {
 	const op = "Alert.GetAlertDetails"
 	params := &client.GetAlertDetailsParams{
 		Type: client.GetAlertDetailsParamsType(alertType),
@@ -78,7 +78,7 @@ func (m *AlertManager) GetAlertDetails(ctx context.Context, alertID int64, alert
 	}
 	return &AlertDetails{
 		AlertID:   rawToString(raw, "alertId"),
-		AccountID: rawToString(raw, "accountId"),
+		AccountID: AccountID(rawToString(raw, "accountId")),
 		Name:      rawToString(raw, "name"),
 		AlertType: rawToString(raw, "alertType"),
 		Enabled:   rawToBool(raw, "enabled"),
@@ -86,8 +86,8 @@ func (m *AlertManager) GetAlertDetails(ctx context.Context, alertID int64, alert
 	}, nil
 }
 
-// GetMtaDetails returns multi-trade account details.
-func (m *AlertManager) GetMtaDetails(ctx context.Context) (*MTADetails, error) {
+// MtaDetail returns multi-trade account details.
+func (m *AlertManager) MtaDetail(ctx context.Context) (*MTADetails, error) {
 	const op = "Alert.GetMtaDetails"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetMtaDetails(ctx)
@@ -100,7 +100,7 @@ func (m *AlertManager) GetMtaDetails(ctx context.Context) (*MTADetails, error) {
 		return nil, err
 	}
 	return &MTADetails{
-		Accounts: rawToStringSlice(raw, "accounts"),
+		Accounts: toStringIDSlice(rawToStringSlice(raw, "accounts")),
 	}, nil
 }
 
@@ -173,8 +173,8 @@ func (m *AlertManager) DeleteAlert(ctx context.Context, accountID AccountID, ale
 	return nil
 }
 
-// GetAllAlerts returns all alerts for the given account.
-func (m *AlertManager) GetAllAlerts(ctx context.Context, accountID AccountID) ([]AlertDetails, error) {
+// AllAlerts returns all alerts for the given account.
+func (m *AlertManager) AllAlerts(ctx context.Context, accountID AccountID) ([]AlertDetails, error) {
 	const op = "Alert.GetAllAlerts"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAllAlerts(ctx, string(accountID))
@@ -190,7 +190,7 @@ func (m *AlertManager) GetAllAlerts(ctx context.Context, accountID AccountID) ([
 	for _, item := range raw {
 		out = append(out, AlertDetails{
 			AlertID:   rawToString(item, "alertId"),
-			AccountID: rawToString(item, "accountId"),
+			AccountID: AccountID(rawToString(item, "accountId")),
 			Name:      rawToString(item, "name"),
 			AlertType: rawToString(item, "alertType"),
 			Enabled:   rawToBool(item, "enabled"),

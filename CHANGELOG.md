@@ -7,6 +7,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-18
+
+### Breaking
+
+This release contains breaking API changes. All symbols are frozen for the v0.x
+series; breaking changes will not occur after v1.0.0.
+
+#### `Get` prefix removed from 57 methods
+
+Go convention is to omit the `Get` prefix when the receiver already provides
+context. All affected methods are on manager types.
+
+| Manager | Old name | New name |
+|---------|----------|----------|
+| `ScannerManager` | `GetScannerParameters` | `ScannerParameters` |
+| `ScannerManager` | `GetScannerResults` | `ScannerResults` |
+| `TradingAccountManager` | `GetAccountOwners` | `AccountOwners` |
+| `TradingAccountManager` | `GetDynamicAccounts` | `DynamicAccounts` |
+| `TradingAccountManager` | `GetFundSummary` | `FundSummary` |
+| `TradingAccountManager` | `GetBalanceSummary` | `BalanceSummary` |
+| `TradingAccountManager` | `GetMarginSummary` | `MarginSummary` |
+| `TradingAccountManager` | `GetAccountMarketSummary` | `AccountMarketSummary` |
+| `TradingAccountManager` | `GetBrokerageAccounts` | `BrokerageAccounts` |
+| `ModelManager` | `GetModelPresets` | `ModelPresets` |
+| `ModelManager` | `GetAccountsInModel` | `AccountsInModel` |
+| `ModelManager` | `GetInvestedAccountsInModel` | `InvestedAccountsInModel` |
+| `ModelManager` | `GetAllModels` | `AllModels` |
+| `ModelManager` | `GetAllModelPositions` | `AllModelPositions` |
+| `ModelManager` | `GetModelSummarySingle` | `ModelSummarySingle` |
+| `SessionManager` | `GetSessionValidation` | `SessionValidation` |
+| `SessionManager` | `GetSessionToken` | `SessionToken` |
+| `WatchlistManager` | `GetSpecificWatchlist` | `SpecificWatchlist` |
+| `WatchlistManager` | `GetAllWatchlists` | `AllWatchlists` |
+| `AllocationManager` | `GetAllocatableSubaccounts` | `AllocatableSubaccounts` |
+| `AllocationManager` | `GetAllocationGroups` | `AllocationGroups` |
+| `AllocationManager` | `GetSingleAllocationGroup` | `SingleAllocationGroup` |
+| `AllocationManager` | `GetAllocationPresets` | `AllocationPresets` |
+| `FYIManager` | `GetFYIDelivery` | `FYIDelivery` |
+| `FYIManager` | `GetFYIDisclaimers` | `FYIDisclaimers` |
+| `FYIManager` | `GetAllFYIs` | `AllFYIs` |
+| `FYIManager` | `GetFYISettings` | `FYISettings` |
+| `FYIManager` | `GetUnreadFYIs` | `UnreadFYIs` |
+| `TradeManager` | `GetTradingSchedule` | `TradingSchedule` |
+| `TradeManager` | `GetAlgosByInstrument` | `AlgosByInstrument` |
+| `TradeManager` | `GetInfoAndRules` | `InfoAndRules` |
+| `TradeManager` | `GetCurrencyPairs` | `CurrencyPairs` |
+| `TradeManager` | `GetExchangeRates` | `ExchangeRates` |
+| `TradeManager` | `GetBondFilters` | `BondFilters` |
+| `TradeManager` | `GetContractInfo` | `SecDefInfos` |
+| `TradeManager` | `GetContractSymbolsFromBody` | `ContractSymbolsFromBody` |
+| `TradeManager` | `GetConidsByExchange` | `ConidsByExchange` |
+| `TradeManager` | `GetFutureBySymbol` | `FutureBySymbol` |
+| `TradeManager` | `GetInstrumentDefinition` | `InstrumentDefinition` |
+| `TradeManager` | `GetTradingScheduleBySymbol` | `TradingScheduleBySymbol` |
+| `TradeManager` | `GetStockBySymbol` | `StockBySymbol` |
+| `PerformanceManager` | `GetPerformanceAllPeriods` | `PerformanceAllPeriods` |
+| `PerformanceManager` | `GetSinglePerformancePeriod` | `SinglePerformancePeriod` |
+| `PerformanceManager` | `GetTransactions` | `Transactions` |
+| `AlertManager` | `GetAlertDetails` | `AlertDetail` |
+| `AlertManager` | `GetMtaDetails` | `MtaDetail` |
+| `AlertManager` | `GetAllAlerts` | `AllAlerts` |
+| `ForecastManager` | `GetForecastCategories` | `ForecastCategories` |
+| `ForecastManager` | `GetForecastContract` | `ForecastContract` |
+| `ForecastManager` | `GetForecastMarkets` | `ForecastMarkets` |
+| `ForecastManager` | `GetForecastRules` | `ForecastRules` |
+| `ForecastManager` | `GetForecastSchedule` | `ForecastSchedule` |
+| `PortfolioManager` | `GetAllAccountsForConid` | `AllAccountsForConid` |
+| `PortfolioManager` | `GetManySubaccounts` | `ManySubaccounts` |
+| `PortfolioManager` | `GetComboPositions` | `ComboPositions` |
+| `PortfolioManager` | `GetUncachedPositions` | `UncachedPositions` |
+| `RESTRequests` | `GetStatus` | `Status` |
+
+#### Type consistency: `AccountID` and `ConID`
+
+- `AccountID` (type `string`) is now used consistently for all account-ID fields
+  across 21 struct fields in response types. Callers passing raw `string`
+  account IDs may need to wrap with `AccountID(...)`.
+- `ConID` (type `int`) is now used consistently for `ConID` fields in banking
+  transfer request types (`AssetTransferRequest`, `PositionV2Request`,
+  `InternalAssetTransferRequest`).
+
+#### `float32` → `int64` for banking IDs
+
+`BankInstructionCreateRequest.ClientInstructionID` and `TransferResult`
+fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
+`int64` instead of `float32`. These are integer IDs, not floating-point values.
+
+#### Go initialism casing fixed
+
+14 symbols renamed to follow Go convention for initialisms:
+`EchoHTTPSResponse`, `ListEchoHTTPS`, `SignedJWTEchoRequest`,
+`SignedJWTEchoResponse`, `CreateEchoSignedJWT`, `SSOBrowserSessionRequest`,
+`SSOSessionRequest`, `CSVApplyResponse`, `CSVVerifyRequest`,
+`CSVVerifyResponse`, `RealizedPnL`, `UnrealizedPnL`,
+`RequestAccessToken`, `RequestLiveSessionToken`, `RequestTempToken`.
+
+### Deprecated
+
+- `ErrStreamDisconnected` and `ErrStreamReconnected` are removed. Use
+  `ErrWSDisconnected` and `ErrWSReconnected` instead.
+
+### Internal
+
+- `RESTInstructions` type removed (zero methods, dead code).
+
 ## [0.2.0] - 2026-09-18
 
 ### Added
@@ -198,7 +303,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/shing1211/ibkrapi4go/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/shing1211/ibkrapi4go/releases/tag/v0.1.0

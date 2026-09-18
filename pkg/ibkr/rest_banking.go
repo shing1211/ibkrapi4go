@@ -68,11 +68,6 @@ func (b *RESTBanking) BankInstructions() *RESTBankInstructions {
 	return &RESTBankInstructions{surface: b.surface}
 }
 
-// Instructions returns the instructions sub-manager for querying and canceling instructions.
-func (b *RESTBanking) Instructions() *RESTInstructions {
-	return &RESTInstructions{surface: b.surface}
-}
-
 // RESTExternalAssetTransfers provides external asset transfer operations (FOP, DWAC, etc.).
 type RESTExternalAssetTransfers struct{ surface *RESTSurface }
 
@@ -87,9 +82,6 @@ type RESTInternalCashTransfers struct{ surface *RESTSurface }
 
 // RESTBankInstructions provides bank instruction management (ACH, Open Banking).
 type RESTBankInstructions struct{ surface *RESTSurface }
-
-// RESTInstructions provides instruction query and status tracking.
-type RESTInstructions struct{ surface *RESTSurface }
 
 // RESTClientInstruction represents a client instruction with its associated sub-instructions.
 //
@@ -497,18 +489,18 @@ func mustMarshal(v interface{}) io.Reader {
 type AssetTransferRequest struct {
 	AccountID             AccountID
 	ClientInstructionID   string
-	ContraBrokerAccountID string
+	ContraBrokerAccountID AccountID
 	ContraBrokerDtcCode   string
 	Direction             string // "IN" or "OUT"
 	Quantity              string
-	ConID                 int64
+	ConID                 ConID
 	// For V2 only
 	Positions []PositionV2Request
 }
 
 // PositionV2Request represents a position for V2 transfers
 type PositionV2Request struct {
-	ConID    int64
+	ConID    ConID
 	Quantity string
 }
 
@@ -517,7 +509,7 @@ type InternalAssetTransferRequest struct {
 	ClientInstructionID string
 	SourceAccountID     AccountID
 	TargetAccountID     AccountID
-	ConID               int64
+	ConID               ConID
 	TransferQuantity    string
 	TransferPrice       *string
 	TradeDate           *string
@@ -566,10 +558,10 @@ type BankInstructionQueryRequest struct {
 
 // TransferResult represents the result of a transfer instruction
 type TransferResult struct {
-	ClientInstructionID float32
-	InstructionID       float32
+	ClientInstructionID int64
+	InstructionID       int64
 	InstructionStatus   string
-	IbReferenceID       *float32
+	IbReferenceID       *int64
 	Description         *string
 }
 
@@ -588,7 +580,7 @@ func (m *RESTExternalAssetTransfers) Transfer(ctx context.Context, req AssetTran
 	_ = instr.FromFopInstruction(client.FopInstruction{
 		AccountId:             string(req.AccountID),
 		ClientInstructionId:   strToF32(req.ClientInstructionID),
-		ContraBrokerAccountId: req.ContraBrokerAccountID,
+		ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 		ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 		Direction:             client.FopInstructionDirection(req.Direction),
 		Quantity:              strToF32(req.Quantity),
@@ -635,7 +627,7 @@ func (m *RESTExternalAssetTransfers) TransferBulk(ctx context.Context, reqs []As
 		payload.Instructions[i] = client.FopInstruction{
 			AccountId:             string(req.AccountID),
 			ClientInstructionId:   strToF32(req.ClientInstructionID),
-			ContraBrokerAccountId: req.ContraBrokerAccountID,
+			ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 			Direction:             client.FopInstructionDirection(req.Direction),
 			Quantity:              strToF32(req.Quantity),
@@ -679,7 +671,7 @@ func (m *RESTExternalAssetTransfers) TransferV2(ctx context.Context, req AssetTr
 	_ = instr.FromFopInstructionV2(client.FopInstructionV2{
 		AccountId:             string(req.AccountID),
 		ClientInstructionId:   strToF32(req.ClientInstructionID),
-		ContraBrokerAccountId: req.ContraBrokerAccountID,
+		ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 		ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 		Direction:             client.FopInstructionV2Direction(req.Direction),
 		Positions:             positions,
@@ -730,7 +722,7 @@ func (m *RESTExternalAssetTransfers) TransferBulkV2(ctx context.Context, reqs []
 		payload.Instructions[i] = client.FopInstructionV2{
 			AccountId:             string(req.AccountID),
 			ClientInstructionId:   strToF32(req.ClientInstructionID),
-			ContraBrokerAccountId: req.ContraBrokerAccountID,
+			ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 			Direction:             client.FopInstructionV2Direction(req.Direction),
 			Positions:             positions,
@@ -1152,7 +1144,7 @@ func (m *RESTBankInstructions) Create(ctx context.Context, req BankInstructionCr
 		AchType:             client.AchInstructionAchType(req.AchType),
 		BankInstructionCode: client.AchInstructionBankInstructionCode(req.BankInstructionCode),
 		BankInstructionName: req.BankInstructionName,
-		ClientInstructionId: req.ClientInstructionID,
+		ClientInstructionId: float32(req.ClientInstructionID),
 		Currency:            req.Currency,
 		ClientAccountInfo: struct {
 			BankAccountNumber   string                                                    `json:"bankAccountNumber"`
@@ -1248,7 +1240,7 @@ func (m *RESTBankInstructions) CreateBulk(ctx context.Context, reqs []BankInstru
 			AchType:             client.AchInstructionAchType(req.AchType),
 			BankInstructionCode: client.AchInstructionBankInstructionCode(req.BankInstructionCode),
 			BankInstructionName: req.BankInstructionName,
-			ClientInstructionId: req.ClientInstructionID,
+			ClientInstructionId: float32(req.ClientInstructionID),
 			Currency:            req.Currency,
 			ClientAccountInfo: struct {
 				BankAccountNumber   string                                                    `json:"bankAccountNumber"`
@@ -1285,7 +1277,7 @@ func (m *RESTBankInstructions) CreateBulk(ctx context.Context, reqs []BankInstru
 
 // BankInstructionResult represents the result of querying bank instructions
 type BankInstructionResult struct {
-	AccountID             string
+	AccountID             AccountID
 	BankInstructionName   string
 	BankInstructionMethod string
 	Status                string
@@ -1296,7 +1288,7 @@ type BankInstructionResult struct {
 // ============================================================================
 
 // makeTradingInstrumentRef creates a TradingInstrumentRef from conid
-func makeTradingInstrumentRef(conid int64) client.TradingInstrumentRef {
+func makeTradingInstrumentRef(conid ConID) client.TradingInstrumentRef {
 	ref := client.TradingInstrumentRef{}
 	_ = ref.FromTradingInstrumentRef0(client.TradingInstrumentRef0{Conid: float32(conid)})
 	return ref
@@ -1314,10 +1306,10 @@ func extractBulkResults(results *[]struct {
 	out := make([]TransferResult, 0, len(*results))
 	for _, r := range *results {
 		out = append(out, TransferResult{
-			ClientInstructionID: r.InstructionResult.ClientInstructionId,
-			InstructionID:       r.InstructionResult.InstructionId,
+			ClientInstructionID: int64(r.InstructionResult.ClientInstructionId),
+			InstructionID:       int64(r.InstructionResult.InstructionId),
 			InstructionStatus:   string(r.InstructionResult.InstructionStatus),
-			IbReferenceID:       r.InstructionResult.IbReferenceId,
+			IbReferenceID:       f32PtrToInt64Ptr(r.InstructionResult.IbReferenceId),
 			Description:         r.InstructionResult.Description,
 		})
 	}
@@ -1330,4 +1322,13 @@ func derefStr(ptr *string) string {
 		return ""
 	}
 	return *ptr
+}
+
+// f32PtrToInt64Ptr converts a *float32 to *int64, returning nil if the input is nil.
+func f32PtrToInt64Ptr(p *float32) *int64 {
+	if p == nil {
+		return nil
+	}
+	v := int64(*p)
+	return &v
 }

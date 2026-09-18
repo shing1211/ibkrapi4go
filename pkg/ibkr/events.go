@@ -61,8 +61,8 @@ type ForecastSchedule struct {
 	ScheduleTime string `json:"scheduleTime"`
 }
 
-// GetForecastCategories returns the category tree for forecasts.
-func (m *ForecastManager) GetForecastCategories(ctx context.Context) ([]ForecastCategory, error) {
+// ForecastCategories returns the category tree for forecasts.
+func (m *ForecastManager) ForecastCategories(ctx context.Context) ([]ForecastCategory, error) {
 	const op = "Forecast.GetForecastCategories"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetForecastCategories(ctx)
@@ -84,8 +84,8 @@ func (m *ForecastManager) GetForecastCategories(ctx context.Context) ([]Forecast
 	return out, nil
 }
 
-// GetForecastContract returns details for a forecast contract.
-func (m *ForecastManager) GetForecastContract(ctx context.Context, conid ConID) (*ForecastContractDetails, error) {
+// ForecastContract returns details for a forecast contract.
+func (m *ForecastManager) ForecastContract(ctx context.Context, conid ConID) (*ForecastContractDetails, error) {
 	const op = "Forecast.GetForecastContract"
 	params := &client.GetForecastContractParams{
 		Conid: strconv.Itoa(int(conid)),
@@ -107,8 +107,8 @@ func (m *ForecastManager) GetForecastContract(ctx context.Context, conid ConID) 
 	}, nil
 }
 
-// GetForecastMarkets returns available markets for a forecast contract.
-func (m *ForecastManager) GetForecastMarkets(ctx context.Context, underlyingConid ConID, exchange *string) ([]ForecastMarket, error) {
+// ForecastMarkets returns available markets for a forecast contract.
+func (m *ForecastManager) ForecastMarkets(ctx context.Context, underlyingConid ConID, exchange *string) ([]ForecastMarket, error) {
 	const op = "Forecast.GetForecastMarkets"
 	params := &client.GetForecastMarketsParams{
 		UnderlyingConid: strconv.Itoa(int(underlyingConid)),
@@ -135,8 +135,8 @@ func (m *ForecastManager) GetForecastMarkets(ctx context.Context, underlyingConi
 	return out, nil
 }
 
-// GetForecastRules returns the rules for a forecast contract.
-func (m *ForecastManager) GetForecastRules(ctx context.Context, conid ConID) ([]ForecastRule, error) {
+// ForecastRules returns the rules for a forecast contract.
+func (m *ForecastManager) ForecastRules(ctx context.Context, conid ConID) ([]ForecastRule, error) {
 	const op = "Forecast.GetForecastRules"
 	params := &client.GetForecastRulesParams{
 		Conid: strconv.Itoa(int(conid)),
@@ -161,8 +161,8 @@ func (m *ForecastManager) GetForecastRules(ctx context.Context, conid ConID) ([]
 	return out, nil
 }
 
-// GetForecastSchedule returns the forecast schedule for a contract.
-func (m *ForecastManager) GetForecastSchedule(ctx context.Context, conid ConID) ([]ForecastSchedule, error) {
+// ForecastSchedule returns the forecast schedule for a contract.
+func (m *ForecastManager) ForecastSchedule(ctx context.Context, conid ConID) ([]ForecastSchedule, error) {
 	const op = "Forecast.GetForecastSchedule"
 	params := &client.GetForecastScheduleParams{
 		Conid: strconv.Itoa(int(conid)),

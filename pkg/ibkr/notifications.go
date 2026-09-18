@@ -63,8 +63,8 @@ type UnreadFYIs struct {
 	Count int `json:"count"`
 }
 
-// GetFYIDelivery returns the delivery options for FYIs.
-func (m *FYIManager) GetFYIDelivery(ctx context.Context) ([]FYIDelivery, error) {
+// FYIDelivery returns the delivery options for FYIs.
+func (m *FYIManager) FYIDelivery(ctx context.Context) ([]FYIDelivery, error) {
 	const op = "FYI.GetFYIDelivery"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetFyiDelivery(ctx)
@@ -138,8 +138,8 @@ func (m *FYIManager) DeleteFYIDevice(ctx context.Context, deviceID string) error
 	return nil
 }
 
-// GetFYIDisclaimers returns the disclaimer for a given FYI type code.
-func (m *FYIManager) GetFYIDisclaimers(ctx context.Context, typeCode string) (*FYIDisclaimer, error) {
+// FYIDisclaimers returns the disclaimer for a given FYI type code.
+func (m *FYIManager) FYIDisclaimers(ctx context.Context, typeCode string) (*FYIDisclaimer, error) {
 	const op = "FYI.GetFYIDisclaimers"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetFyiDisclaimerss(ctx, typeCode)
@@ -170,8 +170,8 @@ func (m *FYIManager) ReadFYIDisclaimer(ctx context.Context, typeCode string) err
 	return nil
 }
 
-// GetAllFYIs returns all FYI notifications.
-func (m *FYIManager) GetAllFYIs(ctx context.Context, max int64) ([]FYINotification, error) {
+// AllFYIs returns all FYI notifications.
+func (m *FYIManager) AllFYIs(ctx context.Context, max int64) ([]FYINotification, error) {
 	const op = "FYI.GetAllFYIs"
 	params := &client.GetAllFyisParams{Max: max}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
@@ -209,8 +209,8 @@ func (m *FYIManager) ReadFYINotification(ctx context.Context, notificationID str
 	return nil
 }
 
-// GetFYISettings returns FYI notification settings.
-func (m *FYIManager) GetFYISettings(ctx context.Context) ([]FYISettings, error) {
+// FYISettings returns FYI notification settings.
+func (m *FYIManager) FYISettings(ctx context.Context) ([]FYISettings, error) {
 	const op = "FYI.GetFYISettings"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetFyiSettings(ctx)
@@ -248,8 +248,8 @@ func (m *FYIManager) ModifyFYINotification(ctx context.Context, typeCode string,
 	return nil
 }
 
-// GetUnreadFYIs returns the count of unread FYIs.
-func (m *FYIManager) GetUnreadFYIs(ctx context.Context) (*UnreadFYIs, error) {
+// UnreadFYIs returns the count of unread FYIs.
+func (m *FYIManager) UnreadFYIs(ctx context.Context) (*UnreadFYIs, error) {
 	const op = "FYI.GetUnreadFYIs"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetUnreadFyis(ctx)

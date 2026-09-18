@@ -126,8 +126,8 @@ func FuzzPositionJSON(f *testing.F) {
 			AvgPrice      string `json:"avgPrice"`
 			MktPrice      string `json:"mktPrice"`
 			MktValue      string `json:"mktValue"`
-			RealizedPnl   string `json:"realizedPnl"`
-			UnrealizedPnl string `json:"unrealizedPnl"`
+			RealizedPnL   string `json:"realizedPnl"`
+			UnrealizedPnL string `json:"unrealizedPnl"`
 			Model         string `json:"model"`
 		}
 		dec := json.NewDecoder(bytes.NewReader([]byte(data)))
@@ -146,8 +146,8 @@ func FuzzPositionJSON(f *testing.F) {
 		_ = v.AvgPrice
 		_ = v.MktPrice
 		_ = v.MktValue
-		_ = v.RealizedPnl
-		_ = v.UnrealizedPnl
+		_ = v.RealizedPnL
+		_ = v.UnrealizedPnL
 		_ = v.Model
 	})
 }
@@ -166,8 +166,8 @@ func FuzzLedgerCurrencyJSON(f *testing.F) {
 			NetLiquidationValue    string `json:"netliquidationvalue"`
 			StockMarketValue       string `json:"stockmarketvalue"`
 			StockOptionMarketValue string `json:"stockoptionmarketvalue"`
-			UnrealizedPnl          string `json:"unrealizedpnl"`
-			RealizedPnl            string `json:"realizedpnl"`
+			UnrealizedPnL          string `json:"unrealizedpnl"`
+			RealizedPnL            string `json:"realizedpnl"`
 		}
 		dec := json.NewDecoder(bytes.NewReader([]byte(data)))
 		dec.UseNumber()
@@ -182,8 +182,8 @@ func FuzzLedgerCurrencyJSON(f *testing.F) {
 		_ = v.NetLiquidationValue
 		_ = v.StockMarketValue
 		_ = v.StockOptionMarketValue
-		_ = v.UnrealizedPnl
-		_ = v.RealizedPnl
+		_ = v.UnrealizedPnL
+		_ = v.RealizedPnL
 	})
 }
 

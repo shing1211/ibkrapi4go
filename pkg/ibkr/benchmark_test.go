@@ -162,8 +162,8 @@ type FixturePosition struct {
 	AvgPrice      string `json:"avgPrice"`
 	MktPrice      string `json:"mktPrice"`
 	MktValue      string `json:"mktValue"`
-	RealizedPnl   string `json:"realizedPnl"`
-	UnrealizedPnl string `json:"unrealizedPnl"`
+	RealizedPnL   string `json:"realizedPnl"`
+	UnrealizedPnL string `json:"unrealizedPnl"`
 	Model         string `json:"model"`
 }
 
@@ -175,8 +175,8 @@ type FixtureLedgerCurrency struct {
 	NetLiquidationValue    string `json:"netliquidationvalue"`
 	StockMarketValue       string `json:"stockmarketvalue"`
 	StockOptionMarketValue string `json:"stockoptionmarketvalue"`
-	UnrealizedPnl          string `json:"unrealizedpnl"`
-	RealizedPnl            string `json:"realizedpnl"`
+	UnrealizedPnL          string `json:"unrealizedpnl"`
+	RealizedPnL            string `json:"realizedpnl"`
 }
 
 type FixtureContract struct {

@@ -28,7 +28,7 @@ type AccountOwner struct {
 // DynamicAccount is a dynamically-resolved account.
 type DynamicAccount struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// AccountTitle is the account's legal title.
 	AccountTitle string `json:"accountTitle"`
 }
@@ -36,7 +36,7 @@ type DynamicAccount struct {
 // FundSummary holds available fund information.
 type FundSummary struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// BuyingPower is the buying power available.
 	BuyingPower string `json:"buyingPower"`
 	// AvailableFunds is the available funds.
@@ -48,7 +48,7 @@ type FundSummary struct {
 // BalanceSummary holds balance information for an account.
 type BalanceSummary struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// Balance is the total account balance.
 	Balance string `json:"balance"`
 	// SettledCash is the settled cash.
@@ -60,7 +60,7 @@ type BalanceSummary struct {
 // MarginSummary holds margin information for an account.
 type MarginSummary struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// InitialMargin is the initial margin requirement.
 	InitialMargin string `json:"initialMargin"`
 	// MaintenanceMargin is the maintenance margin requirement.
@@ -72,7 +72,7 @@ type MarginSummary struct {
 // AccountMarketSummary holds market value information for an account.
 type AccountMarketSummary struct {
 	// AccountID is the account identifier.
-	AccountID string `json:"accountId"`
+	AccountID AccountID `json:"accountId"`
 	// Stock is the total stock market value.
 	Stock string `json:"stock"`
 	// Futures is the total futures market value.
@@ -81,8 +81,8 @@ type AccountMarketSummary struct {
 	StocksAndFutures string `json:"stocksAndFutures"`
 }
 
-// GetAccountOwners returns the signatures and owners for an account.
-func (m *TradingAccountManager) GetAccountOwners(ctx context.Context, accountID AccountID) (json.RawMessage, error) {
+// AccountOwners returns the signatures and owners for an account.
+func (m *TradingAccountManager) AccountOwners(ctx context.Context, accountID AccountID) (json.RawMessage, error) {
 	const op = "TradingAccount.GetAccountOwners"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAccountOwners(ctx, string(accountID))
@@ -113,8 +113,8 @@ func (m *TradingAccountManager) SetActiveAccount(ctx context.Context, accountID 
 	return nil
 }
 
-// GetDynamicAccounts searches for accounts by pattern.
-func (m *TradingAccountManager) GetDynamicAccounts(ctx context.Context, searchPattern string) ([]DynamicAccount, error) {
+// DynamicAccounts searches for accounts by pattern.
+func (m *TradingAccountManager) DynamicAccounts(ctx context.Context, searchPattern string) ([]DynamicAccount, error) {
 	const op = "TradingAccount.GetDynamicAccounts"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetDynamicAccounts(ctx, searchPattern)
@@ -129,15 +129,15 @@ func (m *TradingAccountManager) GetDynamicAccounts(ctx context.Context, searchPa
 	out := make([]DynamicAccount, 0, len(raw))
 	for _, item := range raw {
 		out = append(out, DynamicAccount{
-			AccountID:    rawToString(item, "accountId"),
+			AccountID:    AccountID(rawToString(item, "accountId")),
 			AccountTitle: rawToString(item, "accountTitle"),
 		})
 	}
 	return out, nil
 }
 
-// GetFundSummary returns available fund information for an account.
-func (m *TradingAccountManager) GetFundSummary(ctx context.Context, accountID AccountID) (*FundSummary, error) {
+// FundSummary returns available fund information for an account.
+func (m *TradingAccountManager) FundSummary(ctx context.Context, accountID AccountID) (*FundSummary, error) {
 	const op = "TradingAccount.GetFundSummary"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetFundSummary(ctx, string(accountID))
@@ -150,15 +150,15 @@ func (m *TradingAccountManager) GetFundSummary(ctx context.Context, accountID Ac
 		return nil, err
 	}
 	return &FundSummary{
-		AccountID:           string(accountID),
+		AccountID:           accountID,
 		BuyingPower:         rawToString(raw, "buyingPower"),
 		AvailableFunds:      rawToString(raw, "availableFunds"),
 		NetLiquidationValue: rawToString(raw, "netLiquidationValue"),
 	}, nil
 }
 
-// GetBalanceSummary returns balance information for an account.
-func (m *TradingAccountManager) GetBalanceSummary(ctx context.Context, accountID AccountID) (*BalanceSummary, error) {
+// BalanceSummary returns balance information for an account.
+func (m *TradingAccountManager) BalanceSummary(ctx context.Context, accountID AccountID) (*BalanceSummary, error) {
 	const op = "TradingAccount.GetBalanceSummary"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetBalanceSummary(ctx, string(accountID))
@@ -171,15 +171,15 @@ func (m *TradingAccountManager) GetBalanceSummary(ctx context.Context, accountID
 		return nil, err
 	}
 	return &BalanceSummary{
-		AccountID:       string(accountID),
+		AccountID:       accountID,
 		Balance:         rawToString(raw, "balance"),
 		SettledCash:     rawToString(raw, "settledCash"),
 		AccruedInterest: rawToString(raw, "accruedInterest"),
 	}, nil
 }
 
-// GetMarginSummary returns margin information for an account.
-func (m *TradingAccountManager) GetMarginSummary(ctx context.Context, accountID AccountID) (*MarginSummary, error) {
+// MarginSummary returns margin information for an account.
+func (m *TradingAccountManager) MarginSummary(ctx context.Context, accountID AccountID) (*MarginSummary, error) {
 	const op = "TradingAccount.GetMarginSummary"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetMarginSummary(ctx, string(accountID))
@@ -192,15 +192,15 @@ func (m *TradingAccountManager) GetMarginSummary(ctx context.Context, accountID 
 		return nil, err
 	}
 	return &MarginSummary{
-		AccountID:         string(accountID),
+		AccountID:         accountID,
 		InitialMargin:     rawToString(raw, "initialMargin"),
 		MaintenanceMargin: rawToString(raw, "maintenanceMargin"),
 		ExcessLiquidity:   rawToString(raw, "excessLiquidity"),
 	}, nil
 }
 
-// GetAccountMarketSummary returns market value information for an account.
-func (m *TradingAccountManager) GetAccountMarketSummary(ctx context.Context, accountID AccountID) (*AccountMarketSummary, error) {
+// AccountMarketSummary returns market value information for an account.
+func (m *TradingAccountManager) AccountMarketSummary(ctx context.Context, accountID AccountID) (*AccountMarketSummary, error) {
 	const op = "TradingAccount.GetAccountMarketSummary"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAccountMarketSummary(ctx, string(accountID))
@@ -213,15 +213,15 @@ func (m *TradingAccountManager) GetAccountMarketSummary(ctx context.Context, acc
 		return nil, err
 	}
 	return &AccountMarketSummary{
-		AccountID:        string(accountID),
+		AccountID:        accountID,
 		Stock:            rawToString(raw, "stock"),
 		Futures:          rawToString(raw, "futures"),
 		StocksAndFutures: rawToString(raw, "stocksAndFutures"),
 	}, nil
 }
 
-// GetBrokerageAccounts returns the list of brokerage accounts for the session.
-func (m *TradingAccountManager) GetBrokerageAccounts(ctx context.Context) (json.RawMessage, error) {
+// BrokerageAccounts returns the list of brokerage accounts for the session.
+func (m *TradingAccountManager) BrokerageAccounts(ctx context.Context) (json.RawMessage, error) {
 	const op = "TradingAccount.GetBrokerageAccounts"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetBrokerageAccounts(ctx)

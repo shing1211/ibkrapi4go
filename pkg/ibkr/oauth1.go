@@ -33,9 +33,9 @@ type TempTokenResult struct {
 	Token string `json:"token"`
 }
 
-// ReqAccessToken requests an OAuth access token.
-func (m *OAuthManager) ReqAccessToken(ctx context.Context, authorization *string) (*AccessTokenResult, error) {
-	const op = "OAuth.ReqAccessToken"
+// RequestAccessToken requests an OAuth access token.
+func (m *OAuthManager) RequestAccessToken(ctx context.Context, authorization *string) (*AccessTokenResult, error) {
+	const op = "OAuth.RequestAccessToken"
 	params := &client.ReqAccessTokenParams{
 		Authorization: authorization,
 	}
@@ -49,9 +49,9 @@ func (m *OAuthManager) ReqAccessToken(ctx context.Context, authorization *string
 	return &AccessTokenResult{}, nil
 }
 
-// ReqLiveSessionToken requests an OAuth live session token.
-func (m *OAuthManager) ReqLiveSessionToken(ctx context.Context, authorization *string) (*LiveSessionTokenResult, error) {
-	const op = "OAuth.ReqLiveSessionToken"
+// RequestLiveSessionToken requests an OAuth live session token.
+func (m *OAuthManager) RequestLiveSessionToken(ctx context.Context, authorization *string) (*LiveSessionTokenResult, error) {
+	const op = "OAuth.RequestLiveSessionToken"
 	params := &client.ReqLiveSessionTokenParams{
 		Authorization: authorization,
 	}
@@ -65,9 +65,9 @@ func (m *OAuthManager) ReqLiveSessionToken(ctx context.Context, authorization *s
 	return &LiveSessionTokenResult{}, nil
 }
 
-// ReqTempToken requests an OAuth temporary token.
-func (m *OAuthManager) ReqTempToken(ctx context.Context, authorization *string) (*TempTokenResult, error) {
-	const op = "OAuth.ReqTempToken"
+// RequestTempToken requests an OAuth temporary token.
+func (m *OAuthManager) RequestTempToken(ctx context.Context, authorization *string) (*TempTokenResult, error) {
+	const op = "OAuth.RequestTempToken"
 	params := &client.ReqTempTokenParams{
 		Authorization: authorization,
 	}

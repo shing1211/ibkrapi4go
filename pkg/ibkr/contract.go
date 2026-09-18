@@ -386,8 +386,8 @@ type StockBySymbol struct {
 	SecurityType string `json:"securityType"`
 }
 
-// GetTradingSchedule returns the trading schedule for a given contract.
-func (m *TradeManager) GetTradingSchedule(ctx context.Context, conid ConID, exchange *string) (*TradingSchedule, error) {
+// TradingSchedule returns the trading schedule for a given contract.
+func (m *TradeManager) TradingSchedule(ctx context.Context, conid ConID, exchange *string) (*TradingSchedule, error) {
 	const op = "Trade.GetTradingSchedule"
 	params := &client.GetTradingScheduleParams{
 		Conid:    strconv.Itoa(int(conid)),
@@ -409,8 +409,8 @@ func (m *TradeManager) GetTradingSchedule(ctx context.Context, conid ConID, exch
 	}, nil
 }
 
-// GetAlgosByInstrument returns available algo types for a contract.
-func (m *TradeManager) GetAlgosByInstrument(ctx context.Context, conid ConID) (json.RawMessage, error) {
+// AlgosByInstrument returns available algo types for a contract.
+func (m *TradeManager) AlgosByInstrument(ctx context.Context, conid ConID) (json.RawMessage, error) {
 	const op = "Trade.GetAlgosByInstrument"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAlgosByInstrument(ctx, strconv.Itoa(int(conid)), nil)
@@ -425,8 +425,8 @@ func (m *TradeManager) GetAlgosByInstrument(ctx context.Context, conid ConID) (j
 	return result, nil
 }
 
-// GetInfoAndRules returns combined information and rules for a contract.
-func (m *TradeManager) GetInfoAndRules(ctx context.Context, conid ConID) (*InfoAndRules, error) {
+// InfoAndRules returns combined information and rules for a contract.
+func (m *TradeManager) InfoAndRules(ctx context.Context, conid ConID) (*InfoAndRules, error) {
 	const op = "Trade.GetInfoAndRules"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetInfoAndRules(ctx, strconv.Itoa(int(conid)))
@@ -444,8 +444,8 @@ func (m *TradeManager) GetInfoAndRules(ctx context.Context, conid ConID) (*InfoA
 	}, nil
 }
 
-// GetCurrencyPairs returns currency pair exchange rates for a given currency.
-func (m *TradeManager) GetCurrencyPairs(ctx context.Context, currency string) ([]CurrencyPair, error) {
+// CurrencyPairs returns currency pair exchange rates for a given currency.
+func (m *TradeManager) CurrencyPairs(ctx context.Context, currency string) ([]CurrencyPair, error) {
 	const op = "Trade.GetCurrencyPairs"
 	params := &client.GetCurrencyPairsParams{Currency: currency}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
@@ -470,8 +470,8 @@ func (m *TradeManager) GetCurrencyPairs(ctx context.Context, currency string) ([
 	return out, nil
 }
 
-// GetExchangeRates returns exchange rates for a currency pair.
-func (m *TradeManager) GetExchangeRates(ctx context.Context, source, target string) ([]ExchangeRate, error) {
+// ExchangeRates returns exchange rates for a currency pair.
+func (m *TradeManager) ExchangeRates(ctx context.Context, source, target string) ([]ExchangeRate, error) {
 	const op = "Trade.GetExchangeRates"
 	params := &client.GetExchangeRatesParams{Source: source, Target: target}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
@@ -495,8 +495,8 @@ func (m *TradeManager) GetExchangeRates(ctx context.Context, source, target stri
 	return out, nil
 }
 
-// GetBondFilters returns bond filter results for a given symbol and issuer.
-func (m *TradeManager) GetBondFilters(ctx context.Context, symbol, issuerID string) ([]BondFilter, error) {
+// BondFilters returns bond filter results for a given symbol and issuer.
+func (m *TradeManager) BondFilters(ctx context.Context, symbol, issuerID string) ([]BondFilter, error) {
 	const op = "Trade.GetBondFilters"
 	params := &client.GetBondFiltersParams{Symbol: symbol, IssuerId: issuerID}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
@@ -520,8 +520,8 @@ func (m *TradeManager) GetBondFilters(ctx context.Context, symbol, issuerID stri
 	return out, nil
 }
 
-// GetContractInfo searches for contracts by criteria.
-func (m *TradeManager) GetContractInfo(ctx context.Context, conid ConID) ([]SecDefInfo, error) {
+// SecDefInfos searches for contracts by criteria.
+func (m *TradeManager) SecDefInfos(ctx context.Context, conid ConID) ([]SecDefInfo, error) {
 	const op = "Trade.GetContractInfo"
 	cid := strconv.Itoa(int(conid))
 	params := &client.GetContractInfoParams{Conid: &cid}
@@ -548,8 +548,8 @@ func (m *TradeManager) GetContractInfo(ctx context.Context, conid ConID) ([]SecD
 	return out, nil
 }
 
-// GetContractSymbolsFromBody searches for contracts using POST body parameters.
-func (m *TradeManager) GetContractSymbolsFromBody(ctx context.Context, symbol string) ([]SymbolSearchResult, error) {
+// ContractSymbolsFromBody searches for contracts using POST body parameters.
+func (m *TradeManager) ContractSymbolsFromBody(ctx context.Context, symbol string) ([]SymbolSearchResult, error) {
 	const op = "Trade.GetContractSymbolsFromBody"
 	bodyJSON := map[string]interface{}{"symbol": symbol}
 	body, err := json.Marshal(bodyJSON)
@@ -580,8 +580,8 @@ func (m *TradeManager) GetContractSymbolsFromBody(ctx context.Context, symbol st
 	return out, nil
 }
 
-// GetConidsByExchange returns contract IDs for instruments on a given exchange.
-func (m *TradeManager) GetConidsByExchange(ctx context.Context, exchange string) ([]ConidByExchange, error) {
+// ConidsByExchange returns contract IDs for instruments on a given exchange.
+func (m *TradeManager) ConidsByExchange(ctx context.Context, exchange string) ([]ConidByExchange, error) {
 	const op = "Trade.GetConidsByExchange"
 	params := &client.GetConidsByExchangeParams{Exchange: exchange}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
@@ -606,8 +606,8 @@ func (m *TradeManager) GetConidsByExchange(ctx context.Context, exchange string)
 	return out, nil
 }
 
-// GetFutureBySymbol returns future contracts for a given symbol.
-func (m *TradeManager) GetFutureBySymbol(ctx context.Context, symbols string, exchange *string) ([]FutureBySymbol, error) {
+// FutureBySymbol returns future contracts for a given symbol.
+func (m *TradeManager) FutureBySymbol(ctx context.Context, symbols string, exchange *string) ([]FutureBySymbol, error) {
 	const op = "Trade.GetFutureBySymbol"
 	params := &client.GetFutureBySymbolParams{Symbols: symbols, Exchange: exchange}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
@@ -638,8 +638,8 @@ func (m *TradeManager) GetFutureBySymbol(ctx context.Context, symbols string, ex
 	return out, nil
 }
 
-// GetInstrumentDefinition returns instrument definitions for given contract IDs.
-func (m *TradeManager) GetInstrumentDefinition(ctx context.Context, conids string) ([]InstrumentDefinition, error) {
+// InstrumentDefinition returns instrument definitions for given contract IDs.
+func (m *TradeManager) InstrumentDefinition(ctx context.Context, conids string) ([]InstrumentDefinition, error) {
 	const op = "Trade.GetInstrumentDefinition"
 	params := &client.GetInstrumentDefinitionParams{Conids: conids}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
@@ -666,8 +666,8 @@ func (m *TradeManager) GetInstrumentDefinition(ctx context.Context, conids strin
 	return out, nil
 }
 
-// GetTradingScheduleBySymbol returns the trading schedule for a given symbol.
-func (m *TradeManager) GetTradingScheduleBySymbol(ctx context.Context, assetClass, symbol string) (*TradingSchedule, error) {
+// TradingScheduleBySymbol returns the trading schedule for a given symbol.
+func (m *TradeManager) TradingScheduleBySymbol(ctx context.Context, assetClass, symbol string) (*TradingSchedule, error) {
 	const op = "Trade.GetTradingScheduleBySymbol"
 	params := &client.GetTradingSchedule2Params{
 		AssetClass: client.GetTradingSchedule2ParamsAssetClass(assetClass),
@@ -689,8 +689,8 @@ func (m *TradeManager) GetTradingScheduleBySymbol(ctx context.Context, assetClas
 	}, nil
 }
 
-// GetStockBySymbol returns stock contracts for a given symbol.
-func (m *TradeManager) GetStockBySymbol(ctx context.Context, symbols string) ([]StockBySymbol, error) {
+// StockBySymbol returns stock contracts for a given symbol.
+func (m *TradeManager) StockBySymbol(ctx context.Context, symbols string) ([]StockBySymbol, error) {
 	const op = "Trade.GetStockBySymbol"
 	params := &client.GetStockBySymbolParams{Symbols: symbols}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {

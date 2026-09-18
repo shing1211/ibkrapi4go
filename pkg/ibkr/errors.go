@@ -37,11 +37,7 @@ var (
 	ErrWSDisconnected   = internal.ErrWSDisconnected
 	ErrWSReconnected    = internal.ErrWSReconnected
 
-	// Deprecated: Use ErrWSDisconnected.
-	ErrStreamDisconnected = ErrWSDisconnected
-	// Deprecated: Use ErrWSReconnected.
-	ErrStreamReconnected = ErrWSReconnected
-	ErrCircuitOpen       = internal.ErrCircuitOpen
+	ErrCircuitOpen = internal.ErrCircuitOpen
 )
 
 // SessionState is the lifecycle state of the gateway session.

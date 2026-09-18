@@ -48,10 +48,10 @@ type Position struct {
 	MktPrice string
 	// MktValue is the current market value.
 	MktValue string
-	// RealizedPnl is the instrument realized P&L.
-	RealizedPnl string
-	// UnrealizedPnl is the instrument unrealized P&L.
-	UnrealizedPnl string
+	// RealizedPnL is the instrument realized P&L.
+	RealizedPnL string
+	// UnrealizedPnL is the instrument unrealized P&L.
+	UnrealizedPnL string
 	// Model is the model portfolio name, if any.
 	Model string
 }
@@ -72,10 +72,10 @@ type LedgerCurrency struct {
 	StockMarketValue string
 	// StockOptionMarketValue is the stock-option market value.
 	StockOptionMarketValue string
-	// UnrealizedPnl is the unrealized P&L.
-	UnrealizedPnl string
-	// RealizedPnl is the realized P&L.
-	RealizedPnl string
+	// UnrealizedPnL is the unrealized P&L.
+	UnrealizedPnL string
+	// RealizedPnL is the realized P&L.
+	RealizedPnL string
 }
 
 // SummaryValue is one key of a portfolio summary.
@@ -222,8 +222,8 @@ func (m *PortfolioManager) Ledger(ctx context.Context, account AccountID) (map[s
 			NetLiquidationValue:    r.NetLiquidationValue.String(),
 			StockMarketValue:       r.StockMarketValue.String(),
 			StockOptionMarketValue: r.StockOptionMarketValue.String(),
-			UnrealizedPnl:          r.UnrealizedPnl.String(),
-			RealizedPnl:            r.RealizedPnl.String(),
+			UnrealizedPnL:          r.UnrealizedPnL.String(),
+			RealizedPnL:            r.RealizedPnL.String(),
 		}
 	}
 	return out, nil
@@ -348,8 +348,8 @@ type positionRaw struct {
 	AvgPrice      json.Number `json:"avgPrice"`
 	MktPrice      json.Number `json:"mktPrice"`
 	MktValue      json.Number `json:"mktValue"`
-	RealizedPnl   json.Number `json:"realizedPnl"`
-	UnrealizedPnl json.Number `json:"unrealizedPnl"`
+	RealizedPnL   json.Number `json:"realizedPnl"`
+	UnrealizedPnL json.Number `json:"unrealizedPnl"`
 	Model         string      `json:"model"`
 }
 
@@ -371,8 +371,8 @@ func positionsFromRaw(account AccountID, raw []positionRaw) []Position {
 			AvgPrice:      r.AvgPrice.String(),
 			MktPrice:      r.MktPrice.String(),
 			MktValue:      r.MktValue.String(),
-			RealizedPnl:   r.RealizedPnl.String(),
-			UnrealizedPnl: r.UnrealizedPnl.String(),
+			RealizedPnL:   r.RealizedPnL.String(),
+			UnrealizedPnL: r.UnrealizedPnL.String(),
 			Model:         r.Model,
 		})
 	}
@@ -387,8 +387,8 @@ type ledgerRaw struct {
 	NetLiquidationValue    json.Number `json:"netliquidationvalue"`
 	StockMarketValue       json.Number `json:"stockmarketvalue"`
 	StockOptionMarketValue json.Number `json:"stockoptionmarketvalue"`
-	UnrealizedPnl          json.Number `json:"unrealizedpnl"`
-	RealizedPnl            json.Number `json:"realizedpnl"`
+	UnrealizedPnL          json.Number `json:"unrealizedpnl"`
+	RealizedPnL            json.Number `json:"realizedpnl"`
 }
 
 type allocationBreakdownRaw struct {
@@ -415,8 +415,8 @@ type ComboPosition struct {
 	Position string
 }
 
-// GetAllAccountsForConid returns all accounts holding a given contract.
-func (m *PortfolioManager) GetAllAccountsForConid(ctx context.Context, conid ConID) ([]PortfolioAccount, error) {
+// AllAccountsForConid returns all accounts holding a given contract.
+func (m *PortfolioManager) AllAccountsForConid(ctx context.Context, conid ConID) ([]PortfolioAccount, error) {
 	const op = "Portfolio.GetAllAccountsForConid"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAllAccountsForConid(ctx, int64(conid))
@@ -431,8 +431,8 @@ func (m *PortfolioManager) GetAllAccountsForConid(ctx context.Context, conid Con
 	return accountsFromRaw(raw), nil
 }
 
-// GetManySubaccounts returns subaccounts across all accounts.
-func (m *PortfolioManager) GetManySubaccounts(ctx context.Context) ([]PortfolioAccount, error) {
+// ManySubaccounts returns subaccounts across all accounts.
+func (m *PortfolioManager) ManySubaccounts(ctx context.Context) ([]PortfolioAccount, error) {
 	const op = "Portfolio.GetManySubaccounts"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetManySubaccounts(ctx, nil)
@@ -447,8 +447,8 @@ func (m *PortfolioManager) GetManySubaccounts(ctx context.Context) ([]PortfolioA
 	return accountsFromRaw(raw), nil
 }
 
-// GetComboPositions returns combo (basket) positions for an account.
-func (m *PortfolioManager) GetComboPositions(ctx context.Context, account AccountID) ([]ComboPosition, error) {
+// ComboPositions returns combo (basket) positions for an account.
+func (m *PortfolioManager) ComboPositions(ctx context.Context, account AccountID) ([]ComboPosition, error) {
 	const op = "Portfolio.GetComboPositions"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetComboPositions(ctx, string(account), nil)
@@ -472,8 +472,8 @@ func (m *PortfolioManager) GetComboPositions(ctx context.Context, account Accoun
 	return out, nil
 }
 
-// GetUncachedPositions returns uncached positions for an account.
-func (m *PortfolioManager) GetUncachedPositions(ctx context.Context, account AccountID) ([]Position, error) {
+// UncachedPositions returns uncached positions for an account.
+func (m *PortfolioManager) UncachedPositions(ctx context.Context, account AccountID) ([]Position, error) {
 	const op = "Portfolio.GetUncachedPositions"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetUncachedPositions(ctx, string(account), nil)

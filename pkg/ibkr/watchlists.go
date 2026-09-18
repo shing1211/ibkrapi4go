@@ -49,8 +49,8 @@ func (m *WatchlistManager) DeleteWatchlist(ctx context.Context, watchlistID stri
 	return nil
 }
 
-// GetSpecificWatchlist returns a specific watchlist by ID.
-func (m *WatchlistManager) GetSpecificWatchlist(ctx context.Context, watchlistID string) (*Watchlist, error) {
+// SpecificWatchlist returns a specific watchlist by ID.
+func (m *WatchlistManager) SpecificWatchlist(ctx context.Context, watchlistID string) (*Watchlist, error) {
 	const op = "Watchlist.GetSpecificWatchlist"
 	params := &client.GetSpecificWatchlistParams{Id: watchlistID}
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
@@ -110,8 +110,8 @@ func (m *WatchlistManager) PostNewWatchlist(ctx context.Context, id, name string
 	return nil
 }
 
-// GetAllWatchlists returns all watchlists.
-func (m *WatchlistManager) GetAllWatchlists(ctx context.Context) ([]Watchlist, error) {
+// AllWatchlists returns all watchlists.
+func (m *WatchlistManager) AllWatchlists(ctx context.Context) ([]Watchlist, error) {
 	const op = "Watchlist.GetAllWatchlists"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.GetAllWatchlists(ctx, nil)
