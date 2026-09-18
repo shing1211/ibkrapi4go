@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-18
+
+### Added
+
+- **Three new ADRs:** ADR 0015 (public API surface and stability contract),
+  ADR 0016 (error handling philosophy), ADR 0017 (logging interface).
+- **Godoc sprint:** 65 previously undocumented exported symbols across 7 files
+  now have godoc comments, including multi-line docs with usage examples for
+  complex types (`RESTClientInstruction`, `RESTTransaction`, `Form`, `Bank`,
+  `CashBalanceDetail`, `ListRequestsFilter`, `RESTRequestSummary`,
+  `RESTAccountSummary`, `RESTAccountStatus`, `RegistrationTaskItem`,
+  `TaxVoucherDividend`, `TaxVoucherState`).
+- **4 new examples:** `portfolio`, `marketdata-streaming`, `orders`, `models`
+  with updated `examples/README.md`.
+- **Integration test scaffold:** `test/integration_test.go` with
+  `//go:build integration` gate and env-gated skip; `make test-integration`
+  target.
+- **Shape conformance guard:** `TestFixtureShapeConformance` (180 passing
+  tests) in `pkg/ibkr/fixture_shape_conformance_test.go` using
+  `fixtures.go` `All()` method.
+- **Spec drift detection:** `.github/workflows/spec-drift.yml` (daily cron +
+  workflow_dispatch) with `scripts/check_spec_version.py`.
+- **`docs/STABILITY.md`:** user-facing stability contract derived from ADR 0015.
+
+### Changed
+
+- **ADR 0008 compliance (banking types):** `AssetTransferRequest`,
+  `CashTransferRequest`, `InternalAssetTransferRequest`,
+  `InternalCashTransferRequest`, and `PositionV2Request` field types changed
+  from `float32` to `string` for `ClientInstructionID`, `Quantity`, `Amount`,
+  and `TransferQuantity`. Call sites use `strToF32`/`strPtrToF32Ptr` helpers
+  at the generated-client boundary.
+
+### Deprecated
+
+- `ErrStreamDisconnected` — use `ErrWSDisconnected` instead (removed in v0.3.0).
+- `ErrStreamReconnected` — use `ErrWSReconnected` instead (removed in v0.3.0).
+
+### Fixed
+
+- Remaining ADR 0008 violations in `rest_banking.go` call sites (pos.Quantity,
+  req.TransferPrice, InternalCashTransferInstruction.ClientInstructionID).
+
+### Internal
+
+- 4 wrapper types unexported: `LoginMessagesWrapper` →
+  `loginMessagesWrapper`, `AccountStatusBulkWrapper` →
+  `accountStatusBulkWrapper`, `Au10TixWrapper` → `au10tixWrapper`,
+  `RegistrationTasksWrapper` → `registrationTasksWrapper`.
+- 8 stale `FIX:` comments removed from REST wrappers.
+
 ## [0.1.1] - 2026-09-17
 
 ### Fixed
@@ -147,6 +198,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/shing1211/ibkrapi4go/releases/tag/v0.1.0

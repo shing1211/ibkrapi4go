@@ -56,7 +56,7 @@
 | Métricas + logging | ✅ Implementadas ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (cobertura, pre-commit) | ✅ Implementados |
 | Sitio web de documentación + Discussions | ✅ Implementado ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Lanzamiento | ✅ v0.1.1 (GitHub + Gitee) |
+| Lanzamiento | ✅ v0.2.0 (GitHub + Gitee) |
 
 Este repositorio contiene el **cliente OpenAPI generado**, documentación y
 herramientas de generación de código. Las 185 operaciones de la API están

@@ -9,4 +9,4 @@
 | T5 | `rest_requests.go` — 4 symbols | docs | done | — | `go vet ./...` passes |
 | T6 | `rest.go` (TaxVouchers) — 9 symbols | docs | done | — | `go vet ./...` passes |
 | T7 | `rest_accounts.go` (types) — 8 symbols | docs | done | — | `go vet ./...` passes |
-| T8 | Verify + commit + push | release | doing | T1–T7 | `make check` green, both remotes |
+| T8 | Verify + commit + push | release | done | T1–T7 | `make check` green, both remotes |

@@ -17,9 +17,11 @@ set is complete (see [ROADMAP.md](./ROADMAP.md)). Until `v1.0.0`:
   called out explicitly in the changelog.
 - Tags may be deleted or rewritten before `v1.0.0`.
 
+See [STABILITY.md](./STABILITY.md) and [ADR 0015](./adr/0015-stability.md) for the full stability contract.
+
 ## Release checklist
 
-1. Ensure `make check` and `make codegen-verify` pass on `main`.
+1. Ensure `make check`, `make license-check`, and `make codegen-verify` pass on `main`.
 2. Confirm docs match [SPEC.md](./SPEC.md) counts and CHANGELOG is current.
 3. Update `CHANGELOG.md`: move `Unreleased` → the new version, add the date.
 4. Tag: `git tag -s vX.Y.Z -m "vX.Y.Z"` (signed tag).

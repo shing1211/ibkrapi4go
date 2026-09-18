@@ -56,7 +56,7 @@
 | メトリクス + ロギング | ✅ 実装済み（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 品質ゲート（カバレッジ、プレコミット） | ✅ 実装済み |
 | ドキュメントサイト + Discussions | ✅ 実装済み（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| リリース | ✅ v0.1.1（GitHub + Gitee） |
+| リリース | ✅ v0.2.0（GitHub + Gitee） |
 
 現在のリポジトリには**生成済みの OpenAPI クライアント**、ドキュメント、
 コード生成ツールが含まれます。すべての 185 の API オペレーションが実装済みです。
