@@ -11,12 +11,15 @@ import (
 	"github.com/shing1211/ibkrapi4go/internal"
 )
 
+// RESTRestrictions provides account and user restriction queries.
 type RESTRestrictions struct {
 	surface *RESTSurface
 }
 
+// Restrictions returns the restrictions sub-manager for the REST surface.
 func (s *RESTSurface) Restrictions() *RESTRestrictions { return &RESTRestrictions{surface: s} }
 
+// AccountRestrictions retrieves restriction IDs for the given account.
 func (r *RESTRestrictions) AccountRestrictions(ctx context.Context, accountID AccountID) ([]int64, error) {
 	const op = "Restrictions.Account"
 	if err := r.surface.owner.checkOpen(); err != nil {
@@ -43,6 +46,7 @@ func (r *RESTRestrictions) AccountRestrictions(ctx context.Context, accountID Ac
 	return raw.toPublic(), nil
 }
 
+// UserRestrictions retrieves restriction IDs for the given username.
 func (r *RESTRestrictions) UserRestrictions(ctx context.Context, username string) ([]int64, error) {
 	const op = "Restrictions.User"
 	if err := r.surface.owner.checkOpen(); err != nil {

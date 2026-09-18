@@ -14,6 +14,18 @@ import (
 	"github.com/shing1211/ibkrapi4go/internal"
 )
 
+// ListRequestsFilter specifies filter criteria for listing requests.
+// All fields are optional; zero-valued fields are ignored.
+//
+// Example:
+//
+//	filter := ibkr.ListRequestsFilter{
+//	    From:   time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+//	    To:     time.Date(2026, 6, 30, 0, 0, 0, 0, time.UTC),
+//	    Status: "Pending",
+//	    Limit:  10,
+//	}
+//	results, err := rest.ListRequests(ctx, filter)
 type ListRequestsFilter struct {
 	From   time.Time
 	To     time.Time
@@ -22,6 +34,7 @@ type ListRequestsFilter struct {
 	Offset int64
 }
 
+// ListRequests returns requests matching the given filter criteria.
 func (m *RESTRequests) ListRequests(ctx context.Context, f ListRequestsFilter) ([]RESTRequestSummary, error) {
 	const op = "Requests.List"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -64,6 +77,7 @@ func (m *RESTRequests) ListRequests(ctx context.Context, f ListRequestsFilter) (
 	return raw.toPublic(), nil
 }
 
+// UpdateRequestStatus updates the status of a request identified by requestID.
 func (m *RESTRequests) UpdateRequestStatus(ctx context.Context, requestID int64, status string) error {
 	const op = "Requests.UpdateStatus"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -85,6 +99,17 @@ func (m *RESTRequests) UpdateRequestStatus(ctx context.Context, requestID int64,
 	return nil
 }
 
+// RESTRequestSummary represents a summary of a submitted request.
+//
+// Example:
+//
+//	summary := ibkr.RESTRequestSummary{
+//	    ID:            12345,
+//	    AccountID:     ibkr.AccountID("U1234567"),
+//	    Type:          "NET_DEBIT_ORDER",
+//	    Status:        "Pending",
+//	    DateSubmitted: time.Now(),
+//	}
 type RESTRequestSummary struct {
 	ID            int64
 	AccountID     AccountID

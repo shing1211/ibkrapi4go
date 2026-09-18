@@ -615,10 +615,15 @@ func (m *RESTStatements) ListAvailable(ctx context.Context, id AccountID) (*Avai
 // TaxVouchers returns the REST tax vouchers manager.
 func (s *RESTSurface) TaxVouchers() *RESTTaxVouchers { return &RESTTaxVouchers{surface: s} }
 
+// RESTTaxVouchers is the sub-manager for tax-voucher operations on the hosted
+// IB REST API. Obtain it from RESTSurface.TaxVouchers.
 type RESTTaxVouchers struct {
 	surface *RESTSurface
 }
 
+// CreateRequests submits a tax-voucher request by posting the given CSV content.
+// It returns the request ID on success, an empty string if the response body is
+// empty, or an error if the request fails.
 func (m *RESTTaxVouchers) CreateRequests(ctx context.Context, csvContent string) (string, error) {
 	const op = "TaxVouchers.CreateRequests"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -641,6 +646,8 @@ func (m *RESTTaxVouchers) CreateRequests(ctx context.Context, csvContent string)
 	return strPtrVal((*resp.JSON200)[0].RequestId), nil
 }
 
+// ActiveCountries lists the country codes that have active tax-voucher
+// agreements. Returns nil on a nil response body.
 func (m *RESTTaxVouchers) ActiveCountries(ctx context.Context) ([]string, error) {
 	const op = "TaxVouchers.ActiveCountries"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -667,6 +674,8 @@ func (m *RESTTaxVouchers) ActiveCountries(ctx context.Context) ([]string, error)
 	return countries, nil
 }
 
+// Dividends retrieves dividend records for the given account, year, and
+// country code. Returns nil on a nil response body.
 func (m *RESTTaxVouchers) Dividends(ctx context.Context, accountID AccountID, year, countryCode string) ([]TaxVoucherDividend, error) {
 	const op = "TaxVouchers.Dividends"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -716,6 +725,8 @@ func (m *RESTTaxVouchers) Dividends(ctx context.Context, accountID AccountID, ye
 	return out, nil
 }
 
+// AvailableYears lists the tax years for which voucher data is available.
+// Returns nil on a nil response body.
 func (m *RESTTaxVouchers) AvailableYears(ctx context.Context) ([]string, error) {
 	const op = "TaxVouchers.AvailableYears"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -742,6 +753,9 @@ func (m *RESTTaxVouchers) AvailableYears(ctx context.Context) ([]string, error) 
 	return years, nil
 }
 
+// Download fetches the tax-voucher document for the given request ID and
+// returns its raw bytes. The caller is responsible for interpreting the
+// content type.
 func (m *RESTTaxVouchers) Download(ctx context.Context, requestID string) ([]byte, error) {
 	const op = "TaxVouchers.Download"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -761,6 +775,8 @@ func (m *RESTTaxVouchers) Download(ctx context.Context, requestID string) ([]byt
 	return resp.Body, nil
 }
 
+// RequestState queries the current processing state of a tax-voucher request.
+// Returns an error if the response body is nil or the request fails.
 func (m *RESTTaxVouchers) RequestState(ctx context.Context, requestID string) (*TaxVoucherState, error) {
 	const op = "TaxVouchers.RequestState"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -788,6 +804,15 @@ func (m *RESTTaxVouchers) RequestState(ctx context.Context, requestID string) (*
 	}, nil
 }
 
+// TaxVoucherDividend represents a single dividend detail for tax-voucher
+// reporting. All monetary fields are strings to preserve precision.
+//
+// Example:
+//
+//	dividends, err := rest.TaxVouchers().Dividends(ctx, accountID, "2025", "us")
+//	for _, d := range dividends {
+//	    fmt.Println(d.AccountID, d.Amount, d.CountryCode)
+//	}
 type TaxVoucherDividend struct {
 	CorpActionID   string
 	CountryCode    string
@@ -800,6 +825,16 @@ type TaxVoucherDividend struct {
 	WithheldAmount string
 }
 
+// TaxVoucherState describes the processing state of a previously submitted
+// tax-voucher request.
+//
+// Example:
+//
+//	state, err := rest.TaxVouchers().RequestState(ctx, requestID)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println(state.RequestID, state.RequestState)
 type TaxVoucherState struct {
 	RequestID    string
 	RequestState string

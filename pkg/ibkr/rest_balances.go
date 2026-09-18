@@ -11,12 +11,15 @@ import (
 	"github.com/shing1211/ibkrapi4go/internal"
 )
 
+// RESTBalances exposes REST balance queries.
 type RESTBalances struct {
 	surface *RESTSurface
 }
 
+// Balances returns the REST balances sub-manager.
 func (s *RESTSurface) Balances() *RESTBalances { return &RESTBalances{surface: s} }
 
+// Query returns the withdrawable cash equity for an account and currency.
 func (m *RESTBalances) Query(ctx context.Context, accountID AccountID, currency string) ([]CashBalanceDetail, error) {
 	const op = "Balances.Query"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -52,6 +55,14 @@ func (m *RESTBalances) Query(ctx context.Context, accountID AccountID, currency 
 	return raw.toPublic(), nil
 }
 
+// CashBalanceDetail is the withdrawable cash balance for an account and currency.
+//
+// Example:
+//
+//	details, err := rest.Balances().Query(ctx, accountID, "USD")
+//	for _, d := range details {
+//	    fmt.Println(d.AccountID, d.Currency, d.CashBalance)
+//	}
 type CashBalanceDetail struct {
 	AccountID   AccountID
 	Currency    string

@@ -34,38 +34,73 @@ func strPtrToF32Ptr(s *string) *float32 {
 	return &v
 }
 
+// RESTBanking is the sub-manager for all IBKR banking REST endpoints,
+// including transfers, cash operations, and instruction management.
 type RESTBanking struct {
 	surface *RESTSurface
 }
 
+// Banking returns the banking sub-manager for accessing banking endpoints.
 func (s *RESTSurface) Banking() *RESTBanking { return &RESTBanking{surface: s} }
 
+// ExternalTransfers returns the external asset transfers sub-manager.
 func (b *RESTBanking) ExternalTransfers() *RESTExternalAssetTransfers {
 	return &RESTExternalAssetTransfers{surface: b.surface}
 }
+
+// InternalTransfers returns the internal asset transfers sub-manager.
 func (b *RESTBanking) InternalTransfers() *RESTInternalAssetTransfers {
 	return &RESTInternalAssetTransfers{surface: b.surface}
 }
+
+// CashTransfers returns the external cash transfers sub-manager.
 func (b *RESTBanking) CashTransfers() *RESTExternalCashTransfers {
 	return &RESTExternalCashTransfers{surface: b.surface}
 }
+
+// InternalCash returns the internal cash transfers sub-manager.
 func (b *RESTBanking) InternalCash() *RESTInternalCashTransfers {
 	return &RESTInternalCashTransfers{surface: b.surface}
 }
+
+// BankInstructions returns the bank instructions sub-manager for ACH and Open Banking operations.
 func (b *RESTBanking) BankInstructions() *RESTBankInstructions {
 	return &RESTBankInstructions{surface: b.surface}
 }
+
+// Instructions returns the instructions sub-manager for querying and canceling instructions.
 func (b *RESTBanking) Instructions() *RESTInstructions {
 	return &RESTInstructions{surface: b.surface}
 }
 
+// RESTExternalAssetTransfers provides external asset transfer operations (FOP, DWAC, etc.).
 type RESTExternalAssetTransfers struct{ surface *RESTSurface }
+
+// RESTInternalAssetTransfers provides internal asset transfer operations between IBKR accounts.
 type RESTInternalAssetTransfers struct{ surface *RESTSurface }
+
+// RESTExternalCashTransfers provides external cash transfer operations (deposits and withdrawals).
 type RESTExternalCashTransfers struct{ surface *RESTSurface }
+
+// RESTInternalCashTransfers provides internal cash transfer operations between IBKR accounts.
 type RESTInternalCashTransfers struct{ surface *RESTSurface }
+
+// RESTBankInstructions provides bank instruction management (ACH, Open Banking).
 type RESTBankInstructions struct{ surface *RESTSurface }
+
+// RESTInstructions provides instruction query and status tracking.
 type RESTInstructions struct{ surface *RESTSurface }
 
+// RESTClientInstruction represents a client instruction with its associated sub-instructions.
+//
+// Example:
+//
+//	ci, err := surface.Banking().ClientInstruction(ctx, 12345)
+//	if err != nil { ... }
+//	fmt.Println(ci.Status)
+//	for _, ins := range ci.Instructions {
+//	    fmt.Println(ins.ID, ins.Status)
+//	}
 type RESTClientInstruction struct {
 	ID           int64
 	AccountID    AccountID
@@ -75,6 +110,7 @@ type RESTClientInstruction struct {
 	Instructions []RESTInstruction
 }
 
+// RESTInstructionSet represents a set of instructions grouped under one account.
 type RESTInstructionSet struct {
 	ID           int64
 	AccountID    AccountID
@@ -82,6 +118,7 @@ type RESTInstructionSet struct {
 	Instructions []RESTInstruction
 }
 
+// RESTInstruction represents a single instruction with ID, type, status, and timestamp.
 type RESTInstruction struct {
 	ID        int64
 	Type      string
@@ -89,6 +126,17 @@ type RESTInstruction struct {
 	CreatedAt time.Time
 }
 
+// RESTTransaction represents a banking transaction record.
+//
+// Example:
+//
+//	txs, err := surface.Banking().QueryTransactions(ctx, TransactionQueryRequest{
+//	    AccountID: "U1234567",
+//	    Days:      30,
+//	})
+//	for _, tx := range txs {
+//	    fmt.Println(tx.Date, tx.Type, tx.Amount, tx.Currency)
+//	}
 type RESTTransaction struct {
 	ID          string
 	Date        time.Time
@@ -99,16 +147,26 @@ type RESTTransaction struct {
 	Description string
 }
 
+// CancelInstructionRequest represents a request to cancel an instruction.
+//
+// Example:
+//
+//	err := surface.Banking().CancelInstruction(ctx, CancelInstructionRequest{
+//	    InstructionID: 67890,
+//	    Reason:        "no longer needed",
+//	})
 type CancelInstructionRequest struct {
 	InstructionID int64
 	Reason        string
 }
 
+// TransactionQueryRequest represents a request to query transactions for an account.
 type TransactionQueryRequest struct {
 	AccountID AccountID
 	Days      int
 }
 
+// ClientInstruction retrieves a client instruction by its ID, including all sub-instructions.
 func (b *RESTBanking) ClientInstruction(ctx context.Context, id int64) (*RESTClientInstruction, error) {
 	const op = "Banking.ClientInstruction"
 	if err := b.surface.owner.checkOpen(); err != nil {
@@ -134,6 +192,7 @@ func (b *RESTBanking) ClientInstruction(ctx context.Context, id int64) (*RESTCli
 	return raw.toPublic(), nil
 }
 
+// InstructionSet retrieves an instruction set by its ID.
 func (b *RESTBanking) InstructionSet(ctx context.Context, id int64) (*RESTInstructionSet, error) {
 	const op = "Banking.InstructionSet"
 	if err := b.surface.owner.checkOpen(); err != nil {
@@ -159,6 +218,7 @@ func (b *RESTBanking) InstructionSet(ctx context.Context, id int64) (*RESTInstru
 	return raw.toPublic(), nil
 }
 
+// Instruction retrieves a single instruction by its ID.
 func (b *RESTBanking) Instruction(ctx context.Context, id int64) (*RESTInstruction, error) {
 	const op = "Banking.Instruction"
 	if err := b.surface.owner.checkOpen(); err != nil {
@@ -184,6 +244,7 @@ func (b *RESTBanking) Instruction(ctx context.Context, id int64) (*RESTInstructi
 	return raw.toPublic(), nil
 }
 
+// QueryTransactions queries transactions for an account over a specified number of days.
 func (b *RESTBanking) QueryTransactions(ctx context.Context, req TransactionQueryRequest) ([]RESTTransaction, error) {
 	const op = "Banking.QueryTransactions"
 	if err := b.surface.owner.checkOpen(); err != nil {
@@ -225,6 +286,7 @@ func (b *RESTBanking) QueryTransactions(ctx context.Context, req TransactionQuer
 	return raw.toPublic(), nil
 }
 
+// CancelInstruction cancels a pending instruction.
 func (b *RESTBanking) CancelInstruction(ctx context.Context, req CancelInstructionRequest) error {
 	const op = "Banking.CancelInstruction"
 	if err := b.surface.owner.checkOpen(); err != nil {
@@ -250,6 +312,7 @@ func (b *RESTBanking) CancelInstruction(ctx context.Context, req CancelInstructi
 	return nil
 }
 
+// CancelInstructionsBulk cancels multiple pending instructions in a single request.
 func (b *RESTBanking) CancelInstructionsBulk(ctx context.Context, reqs []CancelInstructionRequest) error {
 	const op = "Banking.CancelInstructionsBulk"
 	if err := b.surface.owner.checkOpen(); err != nil {

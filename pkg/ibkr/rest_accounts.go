@@ -421,6 +421,18 @@ func (m *RESTAccounts) AssignTask(ctx context.Context, accountID AccountID, task
 
 // Public types for REST accounts
 
+// RESTAccountSummary represents the summary of a single account,
+// including its identifier, alias, base currency, and classification.
+//
+// Example:
+//
+//	accounts, err := ibkr.ListAccounts(ctx)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	for _, acct := range accounts {
+//	    fmt.Printf("%s %s (%s)\n", acct.ID, acct.AccountAlias, acct.AccountType)
+//	}
 type RESTAccountSummary struct {
 	ID            AccountID `json:"id"`
 	AccountAlias  string    `json:"accountAlias"`
@@ -430,6 +442,8 @@ type RESTAccountSummary struct {
 	MasterAccount string    `json:"masterAccount"`
 }
 
+// LoginMessage represents a login message displayed to the user,
+// such as a compliance notice or terms-of-service acknowledgment.
 type LoginMessage struct {
 	ID          int64     `json:"id"`
 	Description string    `json:"description"`
@@ -441,6 +455,18 @@ type LoginMessage struct {
 	Tasks       []int64   `json:"tasks"`
 }
 
+// RESTAccountStatus represents the detailed status of an account,
+// including its current state, approval status, and relevant dates.
+//
+// Example:
+//
+//	statuses, err := ibkr.GetAccountStatusBulk(ctx)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	for _, s := range statuses {
+//	    fmt.Printf("%s: %s (%s)\n", s.AccountID, s.Status, s.State)
+//	}
 type RESTAccountStatus struct {
 	AccountID       AccountID `json:"accountId"`
 	AdminAccountID  string    `json:"adminAccountId"`
@@ -454,6 +480,20 @@ type RESTAccountStatus struct {
 	Status          string    `json:"status"`
 }
 
+// RegistrationTaskItem represents a registration task (form) that may
+// require user action before an account can be approved.
+//
+// Example:
+//
+//	tasks, err := ibkr.GetRegistrationTasks(ctx)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	for _, t := range tasks {
+//	    if !t.IsCompleted {
+//	        fmt.Printf("Pending: %s (action=%s)\n", t.FormName, t.Action)
+//	    }
+//	}
 type RegistrationTaskItem struct {
 	TaskID                string    `json:"taskId"`
 	Action                string    `json:"action"`
@@ -469,18 +509,24 @@ type RegistrationTaskItem struct {
 	Warning               string    `json:"warning"`
 }
 
+// AccountConfiguration represents a single account configuration setting,
+// identified by a type label and carrying a typed value.
 type AccountConfiguration struct {
 	AccountID AccountID
 	Type      *string
 	Value     *bool
 }
 
+// TaskUpdate represents an update to a registration task's completion state,
+// sent when the user accepts or declines a form.
 type TaskUpdate struct {
 	TaskID      string
 	IsCompleted bool
 	Action      string
 }
 
+// TaskAssignment represents assignment details for a registration task,
+// including the form it references and its current completion status.
 type TaskAssignment struct {
 	ExternalID            *string  `json:"externalId,omitempty"`
 	FormName              *string  `json:"formName,omitempty"`

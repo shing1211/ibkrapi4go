@@ -9,3 +9,4 @@
 | 2026-09-17 | [ci-quality-gates](./2026-09-17-ci-quality-gates/) | BUILD | complete | `09e9dfe` | `919b576` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-17 | [docs-website](./2026-09-17-docs-website/) | BUILD | complete | `83f040f` | `bee953b` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-17 | [d1-root-cause](./2026-09-17-d1-root-cause/) | BUILD | complete | `b94e677` | `3aea82e` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
+| 2026-09-18 | [track-c-sentinel-rename](./2026-09-18-track-c-sentinel-rename/) | BUILD | complete | `7cbc084` | `7cbc084` | `plan.md`, `todos.md`, `report.md` |

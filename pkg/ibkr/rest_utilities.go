@@ -11,12 +11,17 @@ import (
 	"github.com/shing1211/ibkrapi4go/internal"
 )
 
+// RESTUtilities is the sub-manager for utility endpoints (enumerations,
+// forms, banks, and username validation).
 type RESTUtilities struct {
 	surface *RESTSurface
 }
 
+// Utilities returns the utilities sub-manager for accessing enumeration,
+// form, bank, and validation endpoints.
 func (s *RESTSurface) Utilities() *RESTUtilities { return &RESTUtilities{surface: s} }
 
+// Enumerations retrieves the list of valid values for a given enumeration type.
 func (m *RESTUtilities) Enumerations(ctx context.Context, enumType string) ([]string, error) {
 	const op = "Utilities.Enumerations"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -45,6 +50,8 @@ func (m *RESTUtilities) Enumerations(ctx context.Context, enumType string) ([]st
 	return out, nil
 }
 
+// ComplexAssetTransferBrokers lists the brokers that support complex asset
+// transfers (e.g., DWAC, FOP).
 func (m *RESTUtilities) ComplexAssetTransferBrokers(ctx context.Context) ([]string, error) {
 	const op = "Utilities.ComplexAssetTransferBrokers"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -67,6 +74,7 @@ func (m *RESTUtilities) ComplexAssetTransferBrokers(ctx context.Context) ([]stri
 	return resp.JSON200.Brokers, nil
 }
 
+// Forms retrieves forms by their form numbers, returning their names and content.
 func (m *RESTUtilities) Forms(ctx context.Context, formNos []int64) ([]Form, error) {
 	const op = "Utilities.Forms"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -92,6 +100,7 @@ func (m *RESTUtilities) Forms(ctx context.Context, formNos []int64) ([]Form, err
 	return raw.toPublic(), nil
 }
 
+// RequiredForms lists the forms required for opening an account.
 func (m *RESTUtilities) RequiredForms(ctx context.Context) ([]Form, error) {
 	const op = "Utilities.RequiredForms"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -118,6 +127,8 @@ func (m *RESTUtilities) RequiredForms(ctx context.Context) ([]Form, error) {
 	return out, nil
 }
 
+// ParticipatingBanks lists the banks participating in the deposit and
+// withdrawal program.
 func (m *RESTUtilities) ParticipatingBanks(ctx context.Context) ([]Bank, error) {
 	const op = "Utilities.ParticipatingBanks"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -143,6 +154,7 @@ func (m *RESTUtilities) ParticipatingBanks(ctx context.Context) ([]Bank, error) 
 	return raw.toPublic(), nil
 }
 
+// ValidateUsername checks whether the given username is available for use.
 func (m *RESTUtilities) ValidateUsername(ctx context.Context, username string) (bool, error) {
 	const op = "Utilities.ValidateUsername"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -168,12 +180,34 @@ func (m *RESTUtilities) ValidateUsername(ctx context.Context, username string) (
 	return raw.Available, nil
 }
 
+// Form is an IBKR form with its number, human-readable name, and content.
+//
+// Example:
+//
+//	forms, err := surf.Utilities().Forms(ctx, []int64{1234})
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	for _, f := range forms {
+//	    fmt.Printf("Form %d: %s\n", f.FormNo, f.Name)
+//	}
 type Form struct {
 	FormNo  int64
 	Name    string
 	Content string
 }
 
+// Bank is a participating bank with its identifier and display name.
+//
+// Example:
+//
+//	banks, err := surf.Utilities().ParticipatingBanks(ctx)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	for _, b := range banks {
+//	    fmt.Printf("%s (%s)\n", b.Name, b.ID)
+//	}
 type Bank struct {
 	ID   string
 	Name string

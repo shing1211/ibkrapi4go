@@ -7,4 +7,4 @@
 | T3 | Update `docs/ERRORS.md` — sentinel block + text references | docs | done | — | No stale `ErrStream*` in docs |
 | T4 | Update `docs/STREAMING.md` — all `ErrStream*` → `ErrWS*` | docs | done | — | No stale `ErrStream*` in docs |
 | T5 | Verify — full `make check` + race tests | tester | done | T1–T4 | All green |
-| T6 | Commit and push to origin + gitee | release | doing | T5 | Both remotes updated |
+| T6 | Commit and push to origin + gitee | release | done | T5 | Both remotes updated |
