@@ -92,7 +92,7 @@ func TestWS_ReconnectResubscribes(t *testing.T) {
 				gotUpdate = true
 			}
 		case err := <-sub.Errors():
-			if errors.Is(err, ErrStreamReconnected) {
+			if errors.Is(err, ErrWSReconnected) {
 				gotReconnect = true
 			}
 		case <-deadline:
@@ -132,7 +132,7 @@ func TestWS_MetricsConnectsAndReconnects(t *testing.T) {
 				gotUpdate = true
 			}
 		case err := <-sub.Errors():
-			if errors.Is(err, ErrStreamReconnected) {
+			if errors.Is(err, ErrWSReconnected) {
 				gotReconnect = true
 			}
 		case <-deadline:

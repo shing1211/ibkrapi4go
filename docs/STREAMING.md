@@ -56,8 +56,8 @@ for {
         if !ok { return nil } // stream closed
         fmt.Printf("%d %s=%s\n", u.ConID, u.Field, u.Value)
     case err := <-sub.Errors():
-        // connection-level event; use errors.Is(err, ibkr.ErrStreamReconnected)
-        // or ibkr.ErrStreamDisconnected to distinguish reconnect notices.
+        // connection-level event; use errors.Is(err, ibkr.ErrWSReconnected)
+        // or ibkr.ErrWSDisconnected to distinguish reconnect notices.
         log.Println("stream error:", err)
     }
 }
@@ -84,11 +84,11 @@ Design rules:
 
 On unexpected disconnect:
 
-1. Emit `ErrStreamDisconnected` on every subscription's `Errors()` channel.
+1. Emit `ErrWSDisconnected` on every subscription's `Errors()` channel.
 2. Backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s, with full jitter.
 3. Re-establish the connection.
 4. Re-send active subscriptions with new request ids.
-5. Emit `ErrStreamReconnected` on each `Errors()` channel so callers can react.
+5. Emit `ErrWSReconnected` on each `Errors()` channel so callers can react.
 
 Reconnect does **not** guarantee gap-free data; consumers needing continuity must
 resubscribe to snapshots.
