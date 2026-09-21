@@ -15,4 +15,6 @@
 | 2026-09-18 | [v030-ergonomics](./2026-09-18-v030-ergonomics/) | BUILD | complete | `e8deb89` | `e8deb89` | `plan.md`, `todos.md`, `report.md` |
 | 2026-09-20 | [next-15-phases](./2026-09-20-next-15-phases/) | BUILD | complete | `86c2e2f` | `86c2e2f` | `plan.md`, `todos.md`, `report.md`, `next-phase.md`, `docs-plan.md`, `release-plan.md` |
 | 2026-09-21 | [otel-first-class](./2026-09-21-otel-first-class/) | BUILD | complete | `696c8f4` | `06bd32d` | `plan.md`, `todos.md`, `report.md` |
-| 2026-09-21 | [live-examples](./2026-09-21-live-examples/) | BUILD | complete | `05f5498` | `05f5498` | `plan.md`, `todos.md` |
+| 2026-09-21 | [live-examples](./2026-09-21-live-examples/) | BUILD | complete | `05f5498` | `06845a3` | `plan.md`, `todos.md` |
+| 2026-09-21 | [community](./2026-09-21-community/) | BUILD | complete | `cfc7d68` | `cfc7d68` | `plan.md`, `todos.md` |
+| 2026-09-21 | [v1.0.0-final](./2026-09-21-v1.0.0-final/) | BUILD | complete | `86c2e2f` | `afaf68b` | `plan.md`, `todos.md` |
