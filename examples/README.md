@@ -69,6 +69,8 @@ modified, and no transfers are initiated.
   symbol, then fetch call and put strikes for a given expiry month.
 - [`screener/main.go`](./screener/main.go) — fetch available scanner parameters
   (instruments, locations, scan types), then run a market scanner.
+- [`multi-account/main.go`](./multi-account/main.go) — aggregate accounts and
+  positions across multiple clients using `MultiClient`.
 
 ## See also
 
