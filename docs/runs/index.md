@@ -18,3 +18,4 @@
 | 2026-09-21 | [live-examples](./2026-09-21-live-examples/) | BUILD | complete | `05f5498` | `06845a3` | `plan.md`, `todos.md` |
 | 2026-09-21 | [community](./2026-09-21-community/) | BUILD | complete | `cfc7d68` | `cfc7d68` | `plan.md`, `todos.md` |
 | 2026-09-21 | [v1.0.0-final](./2026-09-21-v1.0.0-final/) | BUILD | complete | `86c2e2f` | `afaf68b` | `plan.md`, `todos.md` |
+| 2026-09-21 | [multi-gateway](./2026-09-21-multi-gateway/) | BUILD | complete | `e7c114f` | `e7c114f` | `plan.md`, `todos.md` |
