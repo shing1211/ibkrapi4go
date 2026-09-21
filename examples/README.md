@@ -31,6 +31,8 @@ go run ./examples/mock
   positions.
 - [`middleware/main.go`](./middleware/main.go) — inject custom HTTP middleware via
   `WithTransportMiddleware`.
+- [`mock/error-handling.go`](./mock/error-handling.go) — retry, error types, and
+  graceful degradation patterns.
 
 ### Mock gateway configuration
 
@@ -71,6 +73,8 @@ modified, and no transfers are initiated.
   (instruments, locations, scan types), then run a market scanner.
 - [`multi-account/main.go`](./multi-account/main.go) — aggregate accounts and
   positions across multiple clients using `MultiClient`.
+- [`live/oauth2-flow.go`](./live/oauth2-flow.go) — OAuth2 token acquisition and
+  refresh for IB REST API.
 
 ## See also
 

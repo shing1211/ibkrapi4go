@@ -116,6 +116,29 @@ be merged.
 
 ---
 
+## Finding a First Issue
+
+New contributors welcome! Here is how to find a good starting point:
+
+- **Good first issues** — look for the
+  [`good first issue` label](https://github.com/shing1211/ibkrapi4go/labels/good%20first%20issue)
+  on GitHub. These are small, well-defined tasks with a clear scope and existing
+  tests.
+- **Help wanted** — issues labeled
+  [`help wanted`](https://github.com/shing1211/ibkrapi4go/labels/help%20wanted)
+  are useful contributions that may be more involved.
+- **Where to start** — areas well-suited for first contributions include:
+  - Documentation improvements (clarifications, missing examples, typo fixes)
+  - New examples under `examples/`
+  - Test coverage additions
+  - Reconciling [docs/SPEC.md](./docs/SPEC.md) with the committed generated code
+- **Before you start** — check whether an issue already exists for what you want
+  to work on. Comment on the issue before starting to avoid duplicate effort.
+
+See all open issues at <https://github.com/shing1211/ibkrapi4go/issues>.
+
+---
+
 ## Codegen Workflow
 
 When the IBKR OpenAPI spec changes:
