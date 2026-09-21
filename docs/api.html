@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ibkrapi4go — API Reference</title>
+  <link rel="stylesheet" href="css/api.css">
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="logo">ibkr<span>api4</span>go</div>
+    <p class="tagline">API Reference — all exported symbols in <code>pkg/ibkr</code></p>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="api.html" class="active">API Reference</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="decisions.html">Decisions</a>
+      <a href="https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr">pkg.go.dev</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <h1>API Reference</h1>
+
+  <div class="search-bar">
+    <input type="text" id="search" placeholder="Search symbols... (e.g. AccountManager, WithRateLimit, ErrClosed)">
+  </div>
+
+  <div id="no-results" class="no-results">No symbols match your search.</div>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Client & Construction -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section id="client">
+    <h2><span class="section-tag">Entry point</span>Client</h2>
+    <div class="symbol-list">
+      <div class="symbol"><span class="kind">type</span><span class="name">Client</span><span class="sig">struct</span><span class="desc">composition root — session, managers, HTTP transport</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">NewClient</span><span class="sig">(opts ...Option) (*Client, error)</span><span class="desc">build client from functional options</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Close</span><span class="sig">() error</span><span class="desc">stop tickle, best-effort logout</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).REST</span><span class="sig">() (*RESTSurface, error)</span><span class="desc">IB REST surface (OAuth2)</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Session</span><span class="sig">() *SessionManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Account</span><span class="sig">() *AccountManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Portfolio</span><span class="sig">() *PortfolioManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Trade</span><span class="sig">() *TradeManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).MarketData</span><span class="sig">() *MarketDataManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).TradingAccount</span><span class="sig">() *TradingAccountManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Alert</span><span class="sig">() *AlertManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Forecast</span><span class="sig">() *ForecastManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Scanner</span><span class="sig">() *ScannerManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Allocation</span><span class="sig">() *AllocationManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Model</span><span class="sig">() *ModelManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).FYI</span><span class="sig">() *FYIManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).OAuth</span><span class="sig">() *OAuthManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Watchlist</span><span class="sig">() *WatchlistManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).Performance</span><span class="sig">() *PerformanceManager</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).GatewayURL</span><span class="sig">() string</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">(*Client).HTTPClient</span><span class="sig">() *http.Client</span></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Options -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section id="options">
+    <h2><span class="section-tag">Configuration</span>Options</h2>
+    <div class="symbol-list">
+      <div class="symbol"><span class="kind">type</span><span class="name">Option</span><span class="sig">func(*config) error</span><span class="desc">functional option for NewClient</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithGatewayURL</span><span class="sig">(u string) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithHTTPClient</span><span class="sig">(hc *http.Client) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithRequestTimeout</span><span class="sig">(d time.Duration) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithEndpointTimeout</span><span class="sig">(d time.Duration) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithTickleInterval</span><span class="sig">(d time.Duration) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithUserAgent</span><span class="sig">(ua string) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithLogger</span><span class="sig">(l *slog.Logger) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithInsecureSkipVerify</span><span class="sig">(skip bool) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithRateLimit</span><span class="sig">(rps float64, burst int) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithGlobalRateLimit</span><span class="sig">(rps float64) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithRetryPolicy</span><span class="sig">(p RetryPolicy) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithCircuitBreaker</span><span class="sig">(threshold int, cooldown time.Duration) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithCircuitBreakerBudget</span><span class="sig">(budget, size int) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithStreamingLimits</span><span class="sig">(l StreamingLimits) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithTelemetry</span><span class="sig">(t Telemetry) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithMetrics</span><span class="sig">(m Metrics) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithTransportMiddleware</span><span class="sig">(mw func(http.RoundTripper) http.RoundTripper) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithRESTGateway</span><span class="sig">(url string) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2</span><span class="sig">(cfg OAuth2Config) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2ClientCredentials</span><span class="sig">(clientID, clientSecret string) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2RefreshToken</span><span class="sig">(refreshToken string) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2Scope</span><span class="sig">(scope string) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2TokenURL</span><span class="sig">(url string) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2JWTKey</span><span class="sig">(key *rsa.PrivateKey) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2JWTKeyFile</span><span class="sig">(path string) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2JWTKeyPEM</span><span class="sig">(pemData []byte) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2JWTKeyReader</span><span class="sig">(r io.Reader) Option</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">WithOAuth2JWTExpiry</span><span class="sig">(duration string) Option</span></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Managers -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section id="managers">
+    <h2><span class="section-tag">Domain managers</span>Managers</h2>
+    <div class="symbol-list">
+
+      <div class="symbol"><span class="kind">type</span><span class="name">SessionManager</span><span class="sig">struct</span><span class="desc">session lifecycle, tickle, logout</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*SessionManager).Initialize</span><span class="sig">(ctx) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*SessionManager).Close</span><span class="sig">(ctx) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*SessionManager).State</span><span class="sig">() SessionState</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*SessionManager).Status</span><span class="sig">(ctx) (*AuthStatus, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*SessionManager).SessionValidation</span><span class="sig">(ctx) (*SessionValidation, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*SessionManager).SessionToken</span><span class="sig">(ctx) (*SessionToken, error)</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">AccountManager</span><span class="sig">struct</span><span class="desc">account listing, summaries, P&L</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AccountManager).List</span><span class="sig">(ctx) ([]Account, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AccountManager).Summary</span><span class="sig">(ctx, AccountID) (*AccountSummary, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AccountManager).PnL</span><span class="sig">(ctx) ([]AccountPnLRow, error)</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">PortfolioManager</span><span class="sig">struct</span><span class="desc">positions, ledger, allocation, summaries</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).Accounts</span><span class="sig">(ctx) ([]PortfolioAccount, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).Subaccounts</span><span class="sig">(ctx) ([]PortfolioAccount, error)</span> <span class="tag tag-deprecated">deprecated</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).SubaccountsPager</span><span class="sig">(ctx) *Pager[PortfolioAccount]</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).Positions</span><span class="sig">(ctx, AccountID) ([]Position, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).PositionsPaginated</span><span class="sig">(ctx, AccountID) *PositionIterator</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).Position</span><span class="sig">(ctx, AccountID, ConID) (*Position, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).Ledger</span><span class="sig">(ctx, AccountID) (map[string]LedgerCurrency, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).Allocation</span><span class="sig">(ctx, AccountID) (Allocation, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).Summary</span><span class="sig">(ctx, AccountID) (PortfolioSummary, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).Meta</span><span class="sig">(ctx, AccountID) (*PortfolioAccount, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).Invalidate</span><span class="sig">(ctx, AccountID) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).AllAccountsForConid</span><span class="sig">(ctx, ConID) ([]PortfolioAccount, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).ManySubaccounts</span><span class="sig">(ctx) ([]PortfolioAccount, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).ComboPositions</span><span class="sig">(ctx, AccountID) ([]ComboPosition, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PortfolioManager).UncachedPositions</span><span class="sig">(ctx, AccountID) ([]Position, error)</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">TradeManager</span><span class="sig">struct</span><span class="desc">orders, contracts, trade history</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).Submit</span><span class="sig">(ctx, AccountID, OrderRequest) (*SubmitResult, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).Confirm</span><span class="sig">(ctx, string, bool) (*SubmitResult, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).WhatIf</span><span class="sig">(ctx, AccountID, OrderRequest) (*WhatIfResult, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).Modify</span><span class="sig">(ctx, AccountID, string, OrderRequest) (*SubmitResult, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).Cancel</span><span class="sig">(ctx, AccountID, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).OpenOrders</span><span class="sig">(ctx) ([]Order, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).OrderStatus</span><span class="sig">(ctx, string) (*OrderStatus, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).Trades</span><span class="sig">(ctx, int) ([]Trade, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).SuppressOrderReplies</span><span class="sig">(ctx, []string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).ResetOrderSuppression</span><span class="sig">(ctx) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).SearchContracts</span><span class="sig">(ctx, string) ([]ContractSummary, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).ContractInfo</span><span class="sig">(ctx, ConID) (*Contract, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).ContractRules</span><span class="sig">(ctx, ConID) (*ContractRules, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).Strikes</span><span class="sig">(ctx, ConID, string, string) (*Strikes, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).TradingSchedule</span><span class="sig">(ctx, ConID, *string) (*TradingSchedule, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).AlgosByInstrument</span><span class="sig">(ctx, ConID) (json.RawMessage, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).InfoAndRules</span><span class="sig">(ctx, ConID) (*InfoAndRules, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).CurrencyPairs</span><span class="sig">(ctx, string) ([]CurrencyPair, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).ExchangeRates</span><span class="sig">(ctx, string, string) ([]ExchangeRate, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).BondFilters</span><span class="sig">(ctx, string, string) ([]BondFilter, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).SecDefInfos</span><span class="sig">(ctx, ConID) ([]SecDefInfo, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).ContractSymbolsFromBody</span><span class="sig">(ctx, string) ([]SymbolSearchResult, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).ConidsByExchange</span><span class="sig">(ctx, string) ([]ConidByExchange, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).FutureBySymbol</span><span class="sig">(ctx, string, *string) ([]FutureBySymbol, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).InstrumentDefinition</span><span class="sig">(ctx, string) ([]InstrumentDefinition, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).TradingScheduleBySymbol</span><span class="sig">(ctx, string, string) (*TradingSchedule, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradeManager).StockBySymbol</span><span class="sig">(ctx, string) ([]StockBySymbol, error)</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">MarketDataManager</span><span class="sig">struct</span><span class="desc">snapshots, history, WebSocket subscriptions</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*MarketDataManager).Snapshot</span><span class="sig">(ctx, []ConID, []Field) ([]Snapshot, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*MarketDataManager).History</span><span class="sig">(ctx, HistoryOptions) (*History, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*MarketDataManager).Subscribe</span><span class="sig">(ctx, []ConID, []Field) (*Subscription, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*MarketDataManager).Unsubscribe</span><span class="sig">(ctx, ConID) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*MarketDataManager).UnsubscribeAll</span><span class="sig">(ctx) error</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">TradingAccountManager</span><span class="sig">struct</span><span class="desc">trading account details, balances, margins</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradingAccountManager).AccountOwners</span><span class="sig">(ctx, AccountID) (json.RawMessage, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradingAccountManager).SetActiveAccount</span><span class="sig">(ctx, AccountID) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradingAccountManager).DynamicAccounts</span><span class="sig">(ctx, string) ([]DynamicAccount, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradingAccountManager).FundSummary</span><span class="sig">(ctx, AccountID) (*FundSummary, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradingAccountManager).BalanceSummary</span><span class="sig">(ctx, AccountID) (*BalanceSummary, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradingAccountManager).MarginSummary</span><span class="sig">(ctx, AccountID) (*MarginSummary, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradingAccountManager).AccountMarketSummary</span><span class="sig">(ctx, AccountID) (*AccountMarketSummary, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradingAccountManager).BrokerageAccounts</span><span class="sig">(ctx) (json.RawMessage, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*TradingAccountManager).SetDynamicAccount</span><span class="sig">(ctx, AccountID) error</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">AlertManager</span><span class="sig">struct</span><span class="desc">alert CRUD and server prompts</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AlertManager).AlertDetail</span><span class="sig">(ctx, int64, string) (*AlertDetails, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AlertManager).MtaDetail</span><span class="sig">(ctx) (*MTADetails, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AlertManager).CreateAlert</span><span class="sig">(ctx, AccountID, string, string) (*AlertCreationResult, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AlertManager).ActivateAlert</span><span class="sig">(ctx, AccountID, int64, bool) (*AlertActivationResult, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AlertManager).DeleteAlert</span><span class="sig">(ctx, AccountID, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AlertManager).AllAlerts</span><span class="sig">(ctx, AccountID) ([]AlertDetails, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AlertManager).AckServerPrompt</span><span class="sig">(ctx, int64) error</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">ForecastManager</span><span class="sig">struct</span><span class="desc">event/forecast operations</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ForecastManager).ForecastCategories</span><span class="sig">(ctx) ([]ForecastCategory, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ForecastManager).ForecastContract</span><span class="sig">(ctx, ConID) (*ForecastContractDetails, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ForecastManager).ForecastMarkets</span><span class="sig">(ctx, ConID, *string) ([]ForecastMarket, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ForecastManager).ForecastRules</span><span class="sig">(ctx, ConID) ([]ForecastRule, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ForecastManager).ForecastSchedule</span><span class="sig">(ctx, ConID) ([]ForecastSchedule, error)</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">ScannerManager</span><span class="sig">struct</span><span class="desc">scanner parameters and results</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ScannerManager).ScannerParameters</span><span class="sig">(ctx) (json.RawMessage, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ScannerManager).ScannerResults</span><span class="sig">(ctx, map[string]interface{}) ([]ScannerResult, error)</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">AllocationManager</span><span class="sig">struct</span><span class="desc">FA allocation groups and presets</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AllocationManager).AllocatableSubaccounts</span><span class="sig">(ctx) ([]string, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AllocationManager).AllocationGroups</span><span class="sig">(ctx) ([]AllocationGroup, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AllocationManager).CreateAllocationGroup</span><span class="sig">(ctx, string, []Subaccount) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AllocationManager).ModifyAllocationGroup</span><span class="sig">(ctx, string, []Subaccount) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AllocationManager).DeleteAllocationGroup</span><span class="sig">(ctx, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AllocationManager).SingleAllocationGroup</span><span class="sig">(ctx, string) (*AllocationGroup, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AllocationManager).AllocationPresets</span><span class="sig">(ctx) ([]AllocationPreset, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*AllocationManager).SetAllocationPreset</span><span class="sig">(ctx, []AllocationPreset) error</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">ModelManager</span><span class="sig">struct</span><span class="desc">model portfolios</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).ModelPresets</span><span class="sig">(ctx, int64) ([]ModelPreset, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).SetModelPresets</span><span class="sig">(ctx, []ModelPreset) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).AccountsInModel</span><span class="sig">(ctx, string) ([]ModelAccount, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).SetAccountInvestmentInModel</span><span class="sig">(ctx, string, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).InvestedAccountsInModel</span><span class="sig">(ctx, string) (json.RawMessage, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).ModelsPager</span><span class="sig">(ctx, int64) *Pager[string]</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).AllModels</span><span class="sig">(ctx, int64) ([]string, error)</span> <span class="tag tag-deprecated">deprecated</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).AllModelPositions</span><span class="sig">(ctx, string) ([]ModelPosition, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).SetModelTargetPositions</span><span class="sig">(ctx, string, []map[string]interface{}) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).SubmitModelOrders</span><span class="sig">(ctx, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*ModelManager).ModelSummarySingle</span><span class="sig">(ctx, string) (*ModelSummary, error)</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">FYIManager</span><span class="sig">struct</span><span class="desc">FYI notifications and delivery</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).FYIDelivery</span><span class="sig">(ctx) ([]FYIDelivery, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).ModifyFYIDelivery</span><span class="sig">(ctx, string, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).ModifyFYIEmails</span><span class="sig">(ctx, bool) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).DeleteFYIDevice</span><span class="sig">(ctx, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).FYIDisclaimers</span><span class="sig">(ctx, string) (*FYIDisclaimer, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).ReadFYIDisclaimer</span><span class="sig">(ctx, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).FYIsPager</span><span class="sig">(ctx, int64) *Pager[FYINotification]</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).AllFYIs</span><span class="sig">(ctx, int64) ([]FYINotification, error)</span> <span class="tag tag-deprecated">deprecated</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).ReadFYINotification</span><span class="sig">(ctx, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).FYISettings</span><span class="sig">(ctx) ([]FYISettings, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).ModifyFYINotification</span><span class="sig">(ctx, string, bool) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*FYIManager).UnreadFYIs</span><span class="sig">(ctx) (*UnreadFYIs, error)</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">WatchlistManager</span><span class="sig">struct</span><span class="desc">watchlist CRUD</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*WatchlistManager).DeleteWatchlist</span><span class="sig">(ctx, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*WatchlistManager).SpecificWatchlist</span><span class="sig">(ctx, string) (*Watchlist, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*WatchlistManager).PostNewWatchlist</span><span class="sig">(ctx, string, string, []ConID) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*WatchlistManager).AllWatchlists</span><span class="sig">(ctx) ([]Watchlist, error)</span></div>
+
+      <div class="symbol"><span class="kind">type</span><span class="name">PerformanceManager</span><span class="sig">struct</span><span class="desc">performance analyst operations</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PerformanceManager).CreateAllocationPA</span><span class="sig">(ctx, []string, string) error</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PerformanceManager).PerformanceAllPeriods</span><span class="sig">(ctx, []string, string) (json.RawMessage, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PerformanceManager).SinglePerformancePeriod</span><span class="sig">(ctx, []string, string) (*PerformanceData, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PerformanceManager).TransactionsPager</span><span class="sig">(ctx, []string, string, string) *Pager[Transaction]</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*PerformanceManager).Transactions</span><span class="sig">(ctx, []string, string, string) ([]Transaction, error)</span> <span class="tag tag-deprecated">deprecated</span></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- REST Surface -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section id="rest">
+    <h2><span class="section-tag">IB REST API</span>REST Surface</h2>
+    <div class="symbol-list">
+      <div class="symbol"><span class="kind">type</span><span class="name">RESTSurface</span><span class="sig">struct</span><span class="desc">hosted IB REST API (OAuth2)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).Accounts</span><span class="sig">() *RESTAccounts</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).Statements</span><span class="sig">() *RESTStatements</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).Requests</span><span class="sig">() *RESTRequests</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).TaxDocuments</span><span class="sig">() *RESTTaxDocuments</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).TradeConfirmations</span><span class="sig">() *RESTTradeConfirmations</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).Balances</span><span class="sig">() *RESTBalances</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).Banking</span><span class="sig">() *RESTBanking</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).TaxVouchers</span><span class="sig">() *RESTTaxVouchers</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).SSO</span><span class="sig">() *RESTSSOSessions</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).Utilities</span><span class="sig">() *RESTUtilities</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).Restrictions</span><span class="sig">() *RESTRestrictions</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).Token</span><span class="sig">(ctx) (string, error)</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">(*RESTSurface).GatewayURL</span><span class="sig">() string</span></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Types -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section id="types">
+    <h2><span class="section-tag">Domain types</span>Types</h2>
+    <div class="symbol-list">
+      <div class="symbol"><span class="kind">type</span><span class="name">AccountID</span><span class="sig">string</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ConID</span><span class="sig">int</span><span class="desc">IBKR contract identifier</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Field</span><span class="sig">string</span><span class="desc">market-data field code</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Side</span><span class="sig">string</span><span class="desc">BUY or SELL</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">OrderType</span><span class="sig">string</span><span class="desc">MKT, LMT, STP, etc.</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">TimeInForce</span><span class="sig">string</span><span class="desc">DAY, GTC, IOC, OPG</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">SessionState</span><span class="sig">= internal.SessionState</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Error</span><span class="sig">= internal.Error</span><span class="desc">API error type</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ConfigError</span><span class="sig">struct</span><span class="desc">invalid client configuration</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">RetryPolicy</span><span class="sig">= internal.RetryPolicy</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Telemetry</span><span class="sig">= internal.Telemetry</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">RequestInfo</span><span class="sig">= internal.RequestInfo</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ResponseInfo</span><span class="sig">= internal.ResponseInfo</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Metrics</span><span class="sig">= internal.Metrics</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Attr</span><span class="sig">= internal.Attr</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">InMemoryMetrics</span><span class="sig">= internal.InMemoryMetrics</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">MetricsSnapshot</span><span class="sig">= internal.MetricsSnapshot</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Middleware</span><span class="sig">= internal.Middleware</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">OAuth2Config</span><span class="sig">= internal.OAuthConfig</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">StreamingLimits</span><span class="sig">struct</span><span class="desc">streaming subscription bounds</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Subscription</span><span class="sig">struct</span><span class="desc">channel-based market-data subscription</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Update</span><span class="sig">struct</span><span class="desc">single field update from WebSocket</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Pager[T]</span><span class="sig">struct</span><span class="desc">generic paginated iterator</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">PositionIterator</span><span class="sig">struct</span><span class="desc">paginated position iterator</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Account</span><span class="sig">struct</span><span class="desc">account ID + alias</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AccountSummary</span><span class="sig">struct</span><span class="desc">at-a-glance account values</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AccountPnLRow</span><span class="sig">struct</span><span class="desc">P&L for one account</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">CashBalance</span><span class="sig">struct</span><span class="desc">cash position for one currency</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">PortfolioAccount</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Position</span><span class="sig">struct</span><span class="desc">single instrument holding</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ComboPosition</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">LedgerCurrency</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">SummaryValue</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">PortfolioSummary</span><span class="sig">map[string]SummaryValue</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AllocationBreakdown</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Allocation</span><span class="sig">map[string]AllocationBreakdown</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AuthStatus</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">SessionValidation</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">SessionToken</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">OrderRequest</span><span class="sig">struct</span><span class="desc">order to submit/modify</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">SubmitResult</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Reply</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Order</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">OrderStatus</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Trade</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">WhatIfResult</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ContractSummary</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Contract</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ContractRules</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Strikes</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">TradingSchedule</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">InfoAndRules</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">CurrencyPair</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ExchangeRate</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">BondFilter</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">SecDefInfo</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">SymbolSearchResult</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ConidByExchange</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">FutureBySymbol</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">InstrumentDefinition</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">StockBySymbol</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Snapshot</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Bar</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">History</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">HistoryOptions</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AlertDetails</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">MTADetails</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AlertActivationResult</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AlertCreationResult</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AlertDeletionResult</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ForecastCategory</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ForecastContractDetails</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ForecastMarket</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ForecastRule</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ForecastSchedule</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ScannerParameter</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ScannerResult</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Subaccount</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AllocationGroup</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AllocationPreset</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ModelPreset</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ModelAccount</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ModelPosition</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ModelSummary</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">FYIDelivery</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">FYIDisclaimer</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">FYINotification</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">FYISettings</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">UnreadFYIs</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Watchlist</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">WatchlistInstrument</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">PerformanceData</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">Transaction</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AccountOwner</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">DynamicAccount</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">FundSummary</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">BalanceSummary</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">MarginSummary</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">AccountMarketSummary</span><span class="sig">struct</span></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Builders -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section id="builders">
+    <h2><span class="section-tag">Fluent construction</span>Builders</h2>
+    <div class="symbol-list">
+      <div class="symbol"><span class="kind">type</span><span class="name">OrderBuilder</span><span class="sig">struct</span><span class="desc">chainable OrderRequest construction</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">NewOrderBuilder</span><span class="sig">() *OrderBuilder</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">ContractBuilder</span><span class="sig">struct</span><span class="desc">chainable Contract construction</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">NewContractBuilder</span><span class="sig">() *ContractBuilder</span></div>
+      <div class="symbol"><span class="kind">type</span><span class="name">TransferInstructionBuilder</span><span class="sig">struct</span></div>
+      <div class="symbol"><span class="kind">  func</span><span class="name">NewTransferInstructionBuilder</span><span class="sig">() *TransferInstructionBuilder</span></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Errors -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section id="errors">
+    <h2><span class="section-tag">Error handling</span>Errors &amp; Sentinels</h2>
+    <div class="symbol-list">
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrNotAuthenticated</span><span class="desc">session not authenticated</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrSessionExpired</span><span class="desc">session token expired</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrRateLimited</span><span class="desc">rate limit exceeded</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrNotFound</span><span class="desc">resource not found</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrInvalidRequest</span><span class="desc">invalid request parameters</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrOrderRejected</span><span class="desc">order rejected by gateway</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrClosed</span><span class="desc">client has been closed</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrStreamingLimit</span><span class="desc">streaming subscription limit</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrWSDisconnected</span><span class="desc">WebSocket disconnected</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrWSReconnected</span><span class="desc">WebSocket reconnected</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">ErrCircuitOpen</span><span class="desc">circuit breaker is open</span></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Constants -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section id="constants">
+    <h2><span class="section-tag">Defaults</span>Constants</h2>
+    <div class="symbol-list">
+      <div class="symbol"><span class="kind">const</span><span class="name">DefaultGatewayURL</span><span class="sig">= "https://localhost:5000"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">DefaultRequestTimeout</span><span class="sig">= 15s</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">DefaultTickleInterval</span><span class="sig">= 60s</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">DefaultPerEndpointRPS</span><span class="sig">= 10</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">DefaultGlobalRPS</span><span class="sig">= 50</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">DefaultRESTGatewayURL</span><span class="sig">= "https://api.ibkr.com"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">Version</span><span class="sig">= "v0.1.0"</span></div>
+      <div class="symbol"><span class="kind">var</span><span class="name">GoVersion</span><span class="sig">= runtime.Version()</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">StateDisconnected</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">StateInitializing</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">StateAuthenticated</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">StateExpired</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">StateClosed</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">SideBuy</span><span class="sig">= "BUY"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">SideSell</span><span class="sig">= "SELL"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">OrderTypeMarket</span><span class="sig">= "MKT"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">OrderTypeLimit</span><span class="sig">= "LMT"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">OrderTypeStop</span><span class="sig">= "STP"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">OrderTypeStopLimit</span><span class="sig">= "STOP_LIMIT"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">OrderTypeMarketOnClose</span><span class="sig">= "MOC"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">OrderTypeLimitOnClose</span><span class="sig">= "LOC"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">TimeInForceDay</span><span class="sig">= "DAY"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">TimeInForceGTC</span><span class="sig">= "GTC"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">TimeInForceIOC</span><span class="sig">= "IOC"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">TimeInForceOPG</span><span class="sig">= "OPG"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldLastPrice</span><span class="sig">= "31"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldBidPrice</span><span class="sig">= "84"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldAskPrice</span><span class="sig">= "86"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldBidSize</span><span class="sig">= "88"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldAskSize</span><span class="sig">= "85"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldVolume</span><span class="sig">= "87"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldOpen</span><span class="sig">= "7295"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldHigh</span><span class="sig">= "70"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldLow</span><span class="sig">= "71"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldClose</span><span class="sig">= "7296"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldChange</span><span class="sig">= "82"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldChangePercent</span><span class="sig">= "83"</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">FieldSymbol</span><span class="sig">= "55"</span></div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Metrics -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section id="metrics">
+    <h2><span class="section-tag">Observability</span>Metrics &amp; Helpers</h2>
+    <div class="symbol-list">
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricHTTPRequests</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricHTTPErrors</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricHTTPDuration</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricOrdersSubmitted</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricOrdersConfirmed</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricOrdersModified</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricOrdersCancelled</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricOrdersRejected</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricRateLimitWaits</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricRateLimitWaitMS</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricBreakerState</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricWSConnects</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricWSReconnects</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricOAuthTokenRefreshes</span></div>
+      <div class="symbol"><span class="kind">const</span><span class="name">MetricOAuthTokenFailures</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">NewInMemoryMetrics</span><span class="sig">() *InMemoryMetrics</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">NopMetrics</span><span class="sig">() Metrics</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">SeriesKey</span><span class="sig">(name string, attrs ...Attr) string</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">DefaultRetryPolicy</span><span class="sig">() RetryPolicy</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">DebugInfo</span><span class="sig">() string</span></div>
+      <div class="symbol"><span class="kind">func</span><span class="name">NewPager[T]</span><span class="sig">(fetch func) *Pager[T]</span></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p>ibkrapi4go &mdash; Apache License 2.0 &mdash; &copy; 2026 shing1211</p>
+  </div>
+</footer>
+
+<script src="js/api.js"></script>
+</body>
+</html>

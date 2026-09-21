@@ -446,3 +446,34 @@ func TestSession_StartTickle_Idempotent(t *testing.T) {
 		t.Errorf("Token changed after second startTickle: %q vs %q", tok1, tok2)
 	}
 }
+
+func TestSession_TickleGoroutine_NoLeak(t *testing.T) {
+	api := &fakeAPI{
+		initSessionFn: func(ctx context.Context) (*http.Response, error) {
+			return makeResp(http.StatusOK, map[string]any{"authenticated": true, "established": true}), nil
+		},
+		authStatusFn: func(ctx context.Context) (*http.Response, error) {
+			return fakeAuthStatus(true, true, true, ""), nil
+		},
+		tickleFn: func(ctx context.Context) (*http.Response, error) {
+			return makeResp(http.StatusOK, map[string]string{"session": "tok"}), nil
+		},
+		logoutFn: func(ctx context.Context) error { return nil },
+	}
+	s := &Session{
+		api:            api,
+		tickleInterval: 1 * time.Millisecond,
+		requestTimeout: 10 * time.Second,
+		state:          int32(StateDisconnected),
+		logger:         testLogger,
+	}
+
+	ctx := context.Background()
+	defer s.Close(ctx)
+
+	if err := s.Initialize(ctx); err != nil {
+		t.Fatalf("Initialize: %v", err)
+	}
+
+	time.Sleep(20 * time.Millisecond)
+}

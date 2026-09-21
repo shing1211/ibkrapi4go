@@ -18,24 +18,25 @@ import (
 // TransportConfig assembles the client's HTTP middleware chain. Zero fields are
 // skipped. Middlewares are applied outermost-first in the order below.
 type TransportConfig struct {
-	RequestID  func() string
-	UserAgent  string
-	AuthHeader string
-	Token      func() (string, bool)
-	Logger     *slog.Logger
-	Telemetry  Telemetry
-	Metrics    Metrics
-	Breaker    *Breaker
-	Retry      RetryPolicy
-	Limiter    *Limiter
-	Timeout    time.Duration
+	RequestID      func() string
+	UserAgent      string
+	AuthHeader     string
+	Token          func() (string, bool)
+	Logger         *slog.Logger
+	Telemetry      Telemetry
+	Metrics        Metrics
+	Breaker        *Breaker
+	Retry          RetryPolicy
+	Limiter        RateLimiter
+	Timeout        time.Duration
+	UserMiddleware []Middleware
 }
 
 // NewClientTransport builds the RoundTripper chain used by the SDK. Order
 // (outer → inner): requestID → userAgent → auth → … → errorDecode → base.
 func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundTripper {
 	if base == nil {
-		base = http.DefaultTransport
+		base = newDefaultTransport()
 	}
 	var ms []func(http.RoundTripper) http.RoundTripper
 	if cfg.RequestID != nil {
@@ -66,6 +67,7 @@ func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundT
 		ms = append(ms, Timeout(cfg.Timeout))
 	}
 	ms = append(ms, ErrorDecode())
+	ms = append(ms, cfg.UserMiddleware...)
 	return Chain(base, ms...)
 }
 
@@ -82,6 +84,18 @@ func Chain(base http.RoundTripper, ms ...func(http.RoundTripper) http.RoundTripp
 		base = ms[i](base)
 	}
 	return base
+}
+
+// newDefaultTransport returns an *http.Transport tuned for IBKR's long-lived
+// HTTPS connections with HTTP/2 multiplexing and connection pooling.
+func newDefaultTransport() *http.Transport {
+	return &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		ForceAttemptHTTP2:   true,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
 }
 
 // RequestID returns a middleware that injects X-request-id from f.

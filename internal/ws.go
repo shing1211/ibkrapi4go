@@ -74,6 +74,7 @@ type wsSub struct {
 type WSConn struct {
 	wsURL string
 	opts  WSOptions
+	ctx   context.Context
 
 	mu   sync.Mutex
 	conn *websocket.Conn
@@ -113,6 +114,7 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 	c := &WSConn{
 		wsURL:  wsURL,
 		opts:   opts,
+		ctx:    ctx,
 		subs:   map[*wsSub]struct{}{},
 		out:    make(chan []byte, 64),
 		stopCh: make(chan struct{}),
@@ -123,10 +125,18 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 	}
 	incrCounter(ctx, c.opts.Metrics, MetricWSConnects, 1)
 	c.wg.Add(3)
-	go func() { defer c.wg.Done(); c.readLoop() }()
-	go func() { defer c.wg.Done(); c.writeLoop() }()
-	go func() { defer c.wg.Done(); c.pingLoop() }()
-	go func() { c.wg.Wait(); close(c.doneCh) }()
+	go c.wgDoneWrapper(c.readLoop)
+	go c.wgDoneWrapper(c.writeLoop)
+	go c.wgDoneWrapper(c.pingLoop)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				c.opts.Logger.Error("ibkr.ws goroutine panicked", "panic", r)
+			}
+		}()
+		c.wg.Wait()
+		close(c.doneCh)
+	}()
 	return c, nil
 }
 
@@ -214,6 +224,11 @@ func (c *WSConn) readLoop() {
 		if c.closed.Load() {
 			return
 		}
+		select {
+		case <-c.ctx.Done():
+			return
+		default:
+		}
 		conn := c.currentConn()
 		if conn == nil {
 			if !c.opts.Reconnect || c.reconnect(&attempt) != nil {
@@ -221,13 +236,16 @@ func (c *WSConn) readLoop() {
 			}
 			continue
 		}
-		_, data, err := conn.Read(context.Background())
+		_, data, err := conn.Read(c.ctx)
 		if err == nil {
 			attempt = 0
 			c.dispatch(data)
 			continue
 		}
 		if c.closed.Load() {
+			return
+		}
+		if c.ctx.Err() != nil {
 			return
 		}
 		if !c.opts.Reconnect {
@@ -248,12 +266,17 @@ func (c *WSConn) reconnect(attempt *int) error {
 		case <-time.After(delay):
 		case <-c.stopCh:
 			return ErrClosed
+		case <-c.ctx.Done():
+			return c.ctx.Err()
 		}
 		if c.closed.Load() {
 			return ErrClosed
 		}
-		incrCounter(context.Background(), c.opts.Metrics, MetricWSReconnects, 1)
-		if err := c.dial(context.Background()); err != nil {
+		if c.ctx.Err() != nil {
+			return c.ctx.Err()
+		}
+		incrCounter(c.ctx, c.opts.Metrics, MetricWSReconnects, 1)
+		if err := c.dial(c.ctx); err != nil {
 			c.opts.Logger.Warn("ibkr.ws reconnect failed", "err", err)
 			*attempt++
 			continue
@@ -267,7 +290,7 @@ func (c *WSConn) reconnect(attempt *int) error {
 
 func (c *WSConn) resubscribeAll() {
 	for _, s := range c.snapshotSubs() {
-		_ = c.send(context.Background(), "subscribe", subscribeParams(s))
+		_ = c.send(c.ctx, "subscribe", subscribeParams(s))
 	}
 }
 
@@ -279,12 +302,14 @@ func (c *WSConn) writeLoop() {
 			if conn == nil {
 				continue
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
 			if err := conn.Write(ctx, websocket.MessageText, b); err != nil {
 				c.opts.Logger.Warn("ibkr.ws write failed", "err", err)
 			}
 			cancel()
 		case <-c.stopCh:
+			return
+		case <-c.ctx.Done():
 			return
 		}
 	}
@@ -300,7 +325,7 @@ func (c *WSConn) pingLoop() {
 			if conn == nil {
 				continue
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), c.opts.PongTimeout)
+			ctx, cancel := context.WithTimeout(c.ctx, c.opts.PongTimeout)
 			err := conn.Ping(ctx)
 			cancel()
 			if err != nil {
@@ -308,6 +333,8 @@ func (c *WSConn) pingLoop() {
 				_ = conn.Close(websocket.StatusPolicyViolation, "ping timeout")
 			}
 		case <-c.stopCh:
+			return
+		case <-c.ctx.Done():
 			return
 		}
 	}
@@ -329,7 +356,24 @@ func (c *WSConn) send(ctx context.Context, method string, params map[string]any)
 		return ErrClosed
 	case <-ctx.Done():
 		return ctx.Err()
+	case <-c.ctx.Done():
+		return c.ctx.Err()
 	}
+}
+
+func (c *WSConn) wgDoneWrapper(fn func()) {
+	defer c.wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			c.opts.Logger.Error("ibkr.ws goroutine panicked", "panic", r)
+		}
+	}()
+	fn()
+}
+
+func (c *WSConn) waitForDone() {
+	c.wg.Wait()
+	close(c.doneCh)
 }
 
 func (c *WSConn) dispatch(data []byte) {
@@ -498,4 +542,13 @@ func jsonNumberToInt64(n json.Number) int64 {
 		return int64(f)
 	}
 	return 0
+}
+
+// NewTestWSHandle returns a *WSHandle whose Close method is a no-op. It is
+// intended for use in unit tests where a WSClient fake needs to return a
+// concrete handle without a live connection.
+func NewTestWSHandle() *WSHandle {
+	h := &WSHandle{}
+	h.once.Do(func() {}) // pre-trigger so Close() is safe
+	return h
 }

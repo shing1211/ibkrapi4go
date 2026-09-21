@@ -127,7 +127,32 @@ func (m *PortfolioManager) Accounts(ctx context.Context) ([]PortfolioAccount, er
 	return accountsFromRaw(raw), nil
 }
 
+// SubaccountsPager returns a paginated iterator over the account's subaccounts.
+//
+//	pager := client.Portfolio().SubaccountsPager(ctx)
+//	for pager.Next(ctx) {
+//	    acct := pager.Value()
+//	    // ...
+//	}
+//	if err := pager.Err(); err != nil { ... }
+func (m *PortfolioManager) SubaccountsPager(_ context.Context) *Pager[PortfolioAccount] {
+	fetched := false
+	return NewPager(func(ctx context.Context, page int) ([]PortfolioAccount, error) {
+		if fetched || page > 0 {
+			return nil, nil
+		}
+		accts, err := m.Subaccounts(ctx)
+		if err != nil {
+			return nil, err
+		}
+		fetched = true
+		return accts, nil
+	})
+}
+
 // Subaccounts returns the account's subaccounts.
+//
+// Deprecated: Use SubaccountsPager instead for paginated iteration.
 func (m *PortfolioManager) Subaccounts(ctx context.Context) ([]PortfolioAccount, error) {
 	const op = "Portfolio.Subaccounts"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {

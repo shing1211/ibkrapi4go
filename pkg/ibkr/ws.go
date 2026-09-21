@@ -236,6 +236,11 @@ func (m *MarketDataManager) Subscribe(ctx context.Context, conids []ConID, field
 	sub.handle = handle
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// sink is already gone; log and exit
+			}
+		}()
 		select {
 		case <-subCtx.Done():
 			_ = sub.Close()

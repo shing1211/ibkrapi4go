@@ -124,6 +124,8 @@ type Session struct {
 	tickleStop      atomic.Bool
 	tickleStopCh    chan struct{}
 	tickleDoneCh    chan struct{}
+	ctx             context.Context
+	cancel          context.CancelFunc
 	logger          *slog.Logger
 }
 
@@ -148,12 +150,15 @@ func NewSession(cfg SessionConfig) *Session {
 	if cfg.Logger == nil {
 		cfg.Logger = NopLogger()
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Session{
 		api:            newHTTPAPI(cfg.HTTPClient, cfg.ServerURL),
 		tickleInterval: cfg.TickleInterval,
 		requestTimeout: cfg.RequestTimeout,
 		logger:         cfg.Logger,
 		state:          int32(StateDisconnected),
+		ctx:            ctx,
+		cancel:         cancel,
 	}
 }
 
@@ -179,6 +184,16 @@ func (s *Session) Token() (token string, ok bool) {
 
 func (s *Session) HTTPClient() *http.Client {
 	return s.api.(*httpAPI).client
+}
+
+// SetHTTPClient replaces the session's internal HTTP client. This is used by
+// TransportPool to inject a shared client after the session is created (breaking
+// the circular dependency between session and transport).
+func (s *Session) SetHTTPClient(c *http.Client) {
+	h, ok := s.api.(*httpAPI)
+	if ok {
+		h.client = c
+	}
 }
 
 func (s *Session) Initialize(ctx context.Context) error {
@@ -291,14 +306,25 @@ func (s *Session) startTickle() {
 	s.mu.Unlock()
 
 	go func() {
-		defer close(doneCh)
+		defer func() {
+			if r := recover(); r != nil {
+				s.logger.Error("ibkr.session tickle goroutine panicked", "panic", r)
+			}
+			close(doneCh)
+		}()
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
+		var ctxDone <-chan struct{}
+		if s.ctx != nil {
+			ctxDone = s.ctx.Done()
+		}
 		for {
 			select {
 			case <-ticker.C:
 				s.tickleRound()
 			case <-stopCh:
+				return
+			case <-ctxDone:
 				return
 			}
 		}
@@ -309,7 +335,11 @@ func (s *Session) tickleRound() {
 	if s.tickleStop.Load() {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), s.requestTimeout)
+	parentCtx := context.Background()
+	if s.ctx != nil {
+		parentCtx = s.ctx
+	}
+	ctx, cancel := context.WithTimeout(parentCtx, s.requestTimeout)
 	defer cancel()
 
 	resp, err := s.api.tickle(ctx)
@@ -383,11 +413,17 @@ func (s *Session) Close(ctx context.Context) error {
 	current := SessionState(atomic.LoadInt32(&s.state))
 	if current == StateClosed || current == StateDisconnected {
 		s.setState(StateClosed)
+		if s.cancel != nil {
+			s.cancel()
+		}
 		return nil
 	}
 	s.setState(StateClosed)
 
 	s.stopTickle()
+	if s.cancel != nil {
+		s.cancel()
+	}
 
 	s.logger.Info("ibkr.session closing")
 	_ = s.api.logout(ctx)

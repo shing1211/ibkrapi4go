@@ -1,0 +1,102 @@
+name: supply-chain
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 8 * * 1'  # Weekly on Monday at 08:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    name: SBOM generation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+          check-latest: true
+
+      - name: Generate SBOM
+        run: bash scripts/sbom-gen.sh > sbom.txt
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.txt
+          retention-days: 90
+
+  secret-scan:
+    name: secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Scan for hardcoded secrets
+        run: |
+          FOUND=0
+
+          # Credentials / passwords
+          if grep -rn --include='*.go' --include='*.yaml' --include='*.yml' --include='*.json' --include='*.toml' \
+              -E '(password|passwd|secret|token)\s*[:=]\s*"[^"]{8,}"' . 2>/dev/null; then
+            echo "::error::Potential hardcoded secret detected"
+            FOUND=1
+          fi
+
+          # API keys
+          if grep -rn --include='*.go' --include='*.yaml' --include='*.yml' --include='*.json' --include='*.toml' \
+              -E '(api_key|apikey|api[-_]?secret|access_token)\s*[:=]\s*"[^"]{8,}"' . 2>/dev/null; then
+            echo "::error::Potential hardcoded API key detected"
+            FOUND=1
+          fi
+
+          # Private keys
+          if grep -rn --include='*.go' --include='*.pem' --include='*.key' \
+              -E '-----BEGIN (RSA |EC )?PRIVATE KEY-----' . 2>/dev/null; then
+            echo "::error::Private key material detected"
+            FOUND=1
+          fi
+
+          if [ "$FOUND" -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "No secrets detected."
+
+  dep-audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+          check-latest: true
+
+      - name: Verify go.sum integrity
+        run: go mod verify
+
+      - name: Tidy check
+        run: |
+          go mod tidy
+          if ! git diff --quiet go.mod go.sum; then
+            echo "::error::go.mod or go.sum is not tidy"
+            git diff go.mod go.sum
+            exit 1
+          fi
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        run: govulncheck ./...

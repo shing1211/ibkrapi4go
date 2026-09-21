@@ -183,7 +183,32 @@ func (m *ModelManager) InvestedAccountsInModel(ctx context.Context, modelName st
 	return result, nil
 }
 
+// ModelsPager returns a paginated iterator over all model portfolio names.
+//
+//	pager := client.Models().ModelsPager(ctx, reqID)
+//	for pager.Next(ctx) {
+//	    name := pager.Value()
+//	    // ...
+//	}
+//	if err := pager.Err(); err != nil { ... }
+func (m *ModelManager) ModelsPager(_ context.Context, reqID int64) *Pager[string] {
+	fetched := false
+	return NewPager(func(ctx context.Context, page int) ([]string, error) {
+		if fetched || page > 0 {
+			return nil, nil
+		}
+		names, err := m.AllModels(ctx, reqID)
+		if err != nil {
+			return nil, err
+		}
+		fetched = true
+		return names, nil
+	})
+}
+
 // AllModels returns all model portfolios.
+//
+// Deprecated: Use ModelsPager instead for paginated iteration.
 func (m *ModelManager) AllModels(ctx context.Context, reqID int64) ([]string, error) {
 	const op = "Model.GetAllModels"
 	bodyJSON := map[string]interface{}{"reqID": reqID}

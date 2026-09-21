@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ibkrapi4go — Architecture</title>
+  <link rel="stylesheet" href="css/api.css">
+  <style>
+    .diagram-section { margin-top: 2rem; }
+    .diagram-section h2 { margin-top: 0; }
+
+    .arch-ascii {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--text);
+      margin-bottom: 1.5rem;
+    }
+    .arch-ascii .hl-pub   { color: var(--accent); font-weight: 600; }
+    .arch-ascii .hl-int   { color: var(--accent-orange); font-weight: 600; }
+    .arch-ascii .hl-gen   { color: var(--accent-purple); font-weight: 600; }
+    .arch-ascii .hl-mock  { color: var(--accent-green); }
+    .arch-ascii .arrow    { color: var(--text-muted); }
+    .arch-ascii .comment  { color: var(--text-muted); }
+
+    .principle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .principle-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem 1.1rem;
+    }
+    .principle-card h3 {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.2rem;
+    }
+    .principle-card p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .principle-card .adr-link {
+      font-size: 0.75rem;
+      margin-top: 0.3rem;
+      display: inline-block;
+    }
+
+    .dep-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.75rem;
+      font-size: 0.82rem;
+    }
+    .dep-table th, .dep-table td {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    .dep-table th {
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .dep-table td { background: var(--surface); }
+    .dep-table td:first-child {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      color: var(--accent);
+    }
+    .dep-table .tag-rt {
+      display: inline-block;
+      font-size: 0.6rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+    .tag-rt-yes { background: var(--accent-green); color: #000; }
+    .tag-rt-no  { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .lifecycle-flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 1rem;
+    }
+    .lifecycle-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.5rem 0.9rem;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+    .lifecycle-step.highlight { border-color: var(--accent); color: var(--accent); }
+    .lifecycle-arrow { color: var(--text-muted); font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="logo">ibkr<span>api4</span>go</div>
+    <p class="tagline">Architecture — layering, transport, and design principles</p>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="api.html">API Reference</a>
+      <a href="architecture.html" class="active">Architecture</a>
+      <a href="decisions.html">Decisions</a>
+      <a href="https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr">pkg.go.dev</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <h1>Architecture</h1>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Layer Diagram -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section class="diagram-section">
+    <h2><span class="section-tag">Overview</span>Layering</h2>
+    <div class="arch-ascii"><span class="comment">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="comment">│</span>  <span class="hl-pub">pkg/ibkr/</span>                                                   <span class="comment">│</span>
+<span class="comment">│</span>  Public API: <span class="hl-pub">Client</span>, managers, options, errors, types          <span class="comment">│</span>
+<span class="comment">│</span>                                                                 <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-pub">AccountManager</span>  <span class="hl-pub">PortfolioManager</span>  <span class="hl-pub">TradeManager</span>                <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-pub">MarketDataManager</span>  <span class="hl-pub">SessionManager</span>  <span class="hl-pub">RESTSurface</span>               <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-pub">AlertManager</span>  <span class="hl-pub">ScannerManager</span>  <span class="hl-pub">WatchlistManager</span> ...        <span class="comment">│</span>
+<span class="comment">└────────────────────────────────┬────────────────────────────────┘</span>
+                                 <span class="arrow">│</span>
+                    ┌──────────────┴──────────────┐
+                    <span class="arrow">▼</span>                             <span class="arrow">▼</span>
+<span class="comment">┌──────────────────────────────┐  ┌──────────────────────────────────┐</span>
+<span class="comment">│</span>  <span class="hl-int">internal/</span>                  <span class="comment">│  │</span>  <span class="hl-mock">internal/mockgateway/</span>           <span class="comment">│</span>
+<span class="comment">│</span>  Transport, session, auth   <span class="comment">│  │</span>  Mock IBKR gateway (test/dev)   <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-int">transport.go</span>  middleware chain <span class="comment">│  │</span>  Both API surfaces              <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-int">session.go</span>    state machine  <span class="comment">│  │</span>  Scriptable faults &amp; latency   <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-int">oauth.go</span>      token source   <span class="comment">│  │</span>  Standalone binary:             <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-int">ratelimit.go</span>  token buckets  <span class="comment">│  │</span>  <span class="hl-mock">cmd/ibkr-mock-gateway</span>          <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-int">retry.go</span>      safe methods   <span class="comment">│  │</span>                                  <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-int">breaker.go</span>    circuit breaker<span class="comment">│  │</span>  <span class="comment">Not in the request path above</span>   <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-int">ws.go</span>         WebSocket      <span class="comment">│  │</span>  <span class="comment">Used by tests &amp; examples only</span>  <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-int">jwt.go</span>        RS256 JWT      <span class="comment">│  │</span>                                  <span class="comment">│</span>
+<span class="comment">│</span>  <span class="hl-int">observability.go</span>            <span class="comment">│  └──────────────────────────────────┘</span>
+<span class="comment">└────────────────────────────┬─────────────────────────────────┘</span>
+                             <span class="arrow">│</span>
+                             <span class="arrow">▼</span>
+<span class="comment">┌──────────────────────────────────────────────────────────────────┐</span>
+<span class="comment">│</span>  <span class="hl-gen">client/*.gen.go</span>                                               <span class="comment">│</span>
+<span class="comment">│</span>  Generated OpenAPI types + HTTP client                          <span class="comment">│</span>
+<span class="comment">│</span>  <span class="comment">DO NOT EDIT — regenerate via make codegen</span>                     <span class="comment">│</span>
+<span class="comment">│</span>  Generated code never leaks to callers                          <span class="comment">│</span>
+<span class="comment">└──────────────────────────────────────────────────────────────────┘</span></div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Package Structure -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section class="diagram-section">
+    <h2><span class="section-tag">Layout</span>Package Structure</h2>
+    <div class="arch-ascii"><span class="hl-pub">ibkrapi4go/</span>
+├── <span class="hl-gen">client/</span>            <span class="comment"># Generated (DO NOT EDIT)</span>
+├── <span class="hl-pub">pkg/ibkr/</span>
+│   ├── <span class="hl-pub">client.go</span>      <span class="comment"># Client, NewClient, options, Close, accessors</span>
+│   ├── <span class="hl-pub">auth.go</span>        <span class="comment"># SessionManager</span>
+│   ├── <span class="hl-pub">account.go</span>     <span class="comment"># AccountManager</span>
+│   ├── <span class="hl-pub">portfolio.go</span>   <span class="comment"># PortfolioManager</span>
+│   ├── <span class="hl-pub">contract.go</span>    <span class="comment"># TradeManager + contract lookups</span>
+│   ├── <span class="hl-pub">trade.go</span>       <span class="comment"># TradeManager (orders)</span>
+│   ├── <span class="hl-pub">marketdata.go</span>  <span class="comment"># MarketDataManager</span>
+│   ├── <span class="hl-pub">trading_accounts.go</span>  <span class="comment"># TradingAccountManager</span>
+│   ├── <span class="hl-pub">alerts.go</span>      <span class="comment"># AlertManager</span>
+│   ├── <span class="hl-pub">events.go</span>      <span class="comment"># ForecastManager (event contracts)</span>
+│   ├── <span class="hl-pub">scanner.go</span>     <span class="comment"># ScannerManager</span>
+│   ├── <span class="hl-pub">allocation.go</span>  <span class="comment"># AllocationManager</span>
+│   ├── <span class="hl-pub">models.go</span>      <span class="comment"># ModelManager</span>
+│   ├── <span class="hl-pub">notifications.go</span> <span class="comment"># FYIManager</span>
+│   ├── <span class="hl-pub">oauth1.go</span>      <span class="comment"># OAuthManager (OAuth1)</span>
+│   ├── <span class="hl-pub">watchlists.go</span>  <span class="comment"># WatchlistManager</span>
+│   ├── <span class="hl-pub">performance.go</span> <span class="comment"># PerformanceManager</span>
+│   ├── <span class="hl-pub">rest.go</span>        <span class="comment"># RESTSurface (accounts, statements, ...)</span>
+│   ├── <span class="hl-pub">rest_*.go</span>      <span class="comment"># REST banking, utilities, balances, ...</span>
+│   ├── <span class="hl-pub">response.go</span>    <span class="comment"># netDo + json.Number decoding helpers</span>
+│   ├── <span class="hl-pub">ids.go</span>         <span class="comment"># ConID, Field, Side, OrderType, TimeInForce</span>
+│   ├── <span class="hl-pub">pagination.go</span>  <span class="comment"># PositionIterator</span>
+│   ├── <span class="hl-pub">ws.go</span>          <span class="comment"># streaming Subscription (coder/websocket)</span>
+│   ├── <span class="hl-pub">oauth.go</span>       <span class="comment"># OAuth2 options for the REST surface</span>
+│   └── <span class="hl-pub">doc.go</span>
+├── <span class="hl-int">internal/</span>
+│   ├── <span class="hl-int">transport.go</span>     <span class="comment"># middleware chain (request id, UA, auth, ...)</span>
+│   ├── <span class="hl-int">session.go</span>       <span class="comment"># state machine + tickle</span>
+│   ├── <span class="hl-int">ws.go</span>            <span class="comment"># WebSocket connection management</span>
+│   ├── <span class="hl-int">oauth.go</span>         <span class="comment"># OAuth2 token source</span>
+│   ├── <span class="hl-int">jwt.go</span>           <span class="comment"># RS256 JWT assertions</span>
+│   ├── <span class="hl-int">ratelimit.go</span>     <span class="comment"># per-endpoint + global token buckets</span>
+│   ├── <span class="hl-int">retry.go</span>         <span class="comment"># safe-method retry + Retry-After</span>
+│   ├── <span class="hl-int">observability.go</span> <span class="comment"># request logging, redaction, telemetry</span>
+│   ├── <span class="hl-int">breaker.go</span>       <span class="comment"># optional circuit breaker</span>
+│   ├── <span class="hl-int">errors.go</span>        <span class="comment"># *Error type, sentinels, ConfigError</span>
+│   └── <span class="hl-mock">mockgateway/</span>     <span class="comment"># in-repo mock of both API surfaces</span>
+├── cmd/                 <span class="comment"># standalone binaries (ibkr-mock-gateway)</span>
+├── examples/            <span class="comment"># runnable examples (mock)</span>
+├── scripts/
+└── docs/</div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Transport Chain -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section class="diagram-section">
+    <h2><span class="section-tag">Request path</span>Transport Middleware Chain</h2>
+    <div class="arch-ascii"><span class="hl-pub">Request</span>
+  <span class="arrow">→</span> request ID + User-Agent
+  <span class="arrow">→</span> auth header injection (bearer)
+  <span class="arrow">→</span> logging + telemetry hooks
+  <span class="arrow">→</span> circuit breaker (optional)
+  <span class="arrow">→</span> retry (safe methods only; honors Retry-After)
+  <span class="arrow">→</span> per-endpoint rate limiter
+  <span class="arrow">→</span> global rate limiter
+  <span class="arrow">→</span> per-request timeout (when the caller sets none)
+  <span class="arrow">→</span> HTTP call
+  <span class="arrow">→</span> error parsing (IBKR envelope → <span class="hl-pub">*ibkr.Error</span>)
+<span class="hl-pub">Response</span></div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Client Lifecycle -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section class="diagram-section">
+    <h2><span class="section-tag">Lifecycle</span>Client Lifecycle</h2>
+    <div class="lifecycle-flow">
+      <div class="lifecycle-step highlight">NewClient(options...)</div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step">Session.Initialize(ctx)</div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step">tickle goroutine starts</div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step highlight">Manager calls</div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step">Client.Close()</div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step">tickle stops, logout, ws closed</div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Design Principles -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section class="diagram-section">
+    <h2><span class="section-tag">Principles</span>Design Principles</h2>
+    <div class="principle-grid">
+      <div class="principle-card">
+        <h3>OpenAPI-first</h3>
+        <p>Types are generated from the official spec; the index is regenerated, not hand-maintained.</p>
+        <a class="adr-link" href="adr/0003-openapi-codegen.md">ADR-0003</a>
+      </div>
+      <div class="principle-card">
+        <h3>Two surfaces, explicitly</h3>
+        <p><code>/v1/api</code> (ssoBearer) and <code>/gw/api/*</code> (oauth2Bearer) are distinct and both implemented.</p>
+        <a class="adr-link" href="adr/0001-two-api-surfaces.md">ADR-0001</a>
+        <a class="adr-link" href="adr/0011-oauth2-surface.md">ADR-0011</a>
+      </div>
+      <div class="principle-card">
+        <h3>Idiomatic Go, not OpenAPI-native</h3>
+        <p>Generated code is a starting point; the public API wraps it in managers.</p>
+      </div>
+      <div class="principle-card">
+        <h3>Session is a state machine</h3>
+        <p>Disconnected → Initializing → Authenticated; tickle heartbeat keeps it alive.</p>
+      </div>
+      <div class="principle-card">
+        <h3>WebSocket is channel-based</h3>
+        <p>Updates as values on channels, cancelled by <code>context.Context</code>.</p>
+        <a class="adr-link" href="adr/0006-context-channel-api.md">ADR-0006</a>
+      </div>
+      <div class="principle-card">
+        <h3>Money is never float64</h3>
+        <p>Represented as <code>string</code> or <code>json.Number</code> to preserve decimal precision.</p>
+        <a class="adr-link" href="adr/0008-numeric-precision.md">ADR-0008</a>
+      </div>
+      <div class="principle-card">
+        <h3>Order mutations never retry</h3>
+        <p>Resubmitting after timeout can create duplicates — a serious financial error.</p>
+        <a class="adr-link" href="adr/0009-no-auto-retry-orders.md">ADR-0009</a>
+      </div>
+      <div class="principle-card">
+        <h3>Minimal dependencies</h3>
+        <p>Small transitive footprint; new runtime deps require an ADR.</p>
+        <a class="adr-link" href="adr/0004-minimal-dependencies.md">ADR-0004</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Dependencies -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <section class="diagram-section">
+    <h2><span class="section-tag">Budget</span>Dependencies</h2>
+    <table class="dep-table">
+      <thead>
+        <tr><th>Library</th><th>Purpose</th><th>Runtime</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>github.com/coder/websocket</td>
+          <td>WebSocket client — context-aware, idiomatic, maintained</td>
+          <td><span class="tag-rt tag-rt-yes">yes</span></td>
+        </tr>
+        <tr>
+          <td>golang.org/x/time/rate</td>
+          <td>Rate limiting (token bucket)</td>
+          <td><span class="tag-rt tag-rt-yes">yes</span></td>
+        </tr>
+        <tr>
+          <td>github.com/oapi-codegen/runtime</td>
+          <td>Runtime helpers used by generated code</td>
+          <td><span class="tag-rt tag-rt-yes">yes</span></td>
+        </tr>
+        <tr>
+          <td>go.uber.org/goleak</td>
+          <td>Goroutine leak detection (test-only)</td>
+          <td><span class="tag-rt tag-rt-no">no (test)</span></td>
+        </tr>
+        <tr>
+          <td>oapi-codegen</td>
+          <td>OpenAPI → Go codegen (build-time only)</td>
+          <td><span class="tag-rt tag-rt-no">no (build)</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:0.75rem; font-size:0.82rem; color:var(--text-muted);">
+      No web frameworks. No DI frameworks. Standard <code>net/http</code> for all HTTP client operations.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p>ibkrapi4go &mdash; Apache License 2.0 &mdash; &copy; 2026 shing1211</p>
+  </div>
+</footer>
+
+</body>
+</html>

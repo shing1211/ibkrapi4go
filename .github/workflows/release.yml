@@ -23,8 +23,16 @@ jobs:
         run: |
           if [ -f go.mod ]; then go build ./... && go test ./... -count=1; fi
 
+      - name: Generate changelog
+        run: bash scripts/changelog-gen.sh > CHANGELOG_UNRELEASED.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          generate_release_notes: true
+          body_path: CHANGELOG_UNRELEASED.md
           draft: false
+
+      - name: Push to Gitee
+        run: |
+          git remote add gitee https://gitee.com/shing1211/ibkrapi4go.git
+          git push gitee main --tags

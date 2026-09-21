@@ -110,3 +110,60 @@ func TestCircuitBreakerMiddleware_ShortCircuits(t *testing.T) {
 		t.Errorf("base calls = %d; want 1 (short-circuited)", calls.Load())
 	}
 }
+
+func TestBreaker_ErrorBudget_TripsOnBudget(t *testing.T) {
+	b := NewBreaker(100, time.Minute)
+	b.SetErrorBudget(3, 10)
+
+	for i := 0; i < 2; i++ {
+		b.Record(nil, 500)
+		if err := b.Allow(); err != nil {
+			t.Fatalf("Allow after %d failures: %v", i+1, err)
+		}
+	}
+	// Third failure exhausts the budget.
+	b.Record(nil, 500)
+	if err := b.Allow(); !errors.Is(err, ErrCircuitOpen) {
+		t.Fatalf("Allow after budget exhaustion = %v; want ErrCircuitOpen", err)
+	}
+}
+
+func TestBreaker_ErrorBudget_DoesNotTripBelowBudget(t *testing.T) {
+	b := NewBreaker(100, time.Minute)
+	b.SetErrorBudget(3, 10)
+
+	b.Record(nil, 500)
+	b.Record(nil, 200) // success resets consecutive but budget still counts
+	b.Record(nil, 500)
+
+	if err := b.Allow(); err != nil {
+		t.Fatalf("Allow with 2 budget failures: %v; want nil", err)
+	}
+}
+
+func TestBreaker_ErrorBudget_NilBudgetIsNoop(t *testing.T) {
+	b := NewBreaker(100, time.Minute)
+	// No budget set — consecutive threshold is 100.
+	for i := 0; i < 99; i++ {
+		b.Record(nil, 500)
+	}
+	if err := b.Allow(); err != nil {
+		t.Fatalf("Allow after 99 failures (threshold=100): %v; want nil", err)
+	}
+}
+
+func TestBreaker_SetErrorBudget_NilReceiver(t *testing.T) {
+	var b *Breaker
+	b.SetErrorBudget(5, 10) // should not panic
+}
+
+func TestErrorBudget_EvictsOldEntries(t *testing.T) {
+	eb := newErrorBudget(2, 5)
+	now := time.Now()
+	eb.record(now.Add(-10 * time.Second))
+	eb.record(now.Add(-9 * time.Second))
+	eb.record(now) // third entry; evict should not remove since size=5
+	if len(eb.window) != 3 {
+		t.Fatalf("window len = %d; want 3", len(eb.window))
+	}
+}

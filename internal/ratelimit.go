@@ -205,7 +205,7 @@ func isAuthPath(path string) bool {
 }
 
 // RateLimit returns a middleware that waits on l before dispatching.
-func RateLimit(l *Limiter) func(http.RoundTripper) http.RoundTripper {
+func RateLimit(l RateLimiter) func(http.RoundTripper) http.RoundTripper {
 	return func(base http.RoundTripper) http.RoundTripper {
 		if l == nil {
 			return base

@@ -50,6 +50,7 @@ type config struct {
 	gatewayURL         string
 	httpClient         *http.Client
 	requestTimeout     time.Duration
+	endpointTimeout    time.Duration
 	tickleInterval     time.Duration
 	userAgent          string
 	logger             *slog.Logger
@@ -65,6 +66,7 @@ type config struct {
 	restGatewayURL     string
 	oauth2             internal.OAuthConfig
 	tokenSource        *internal.TokenSource
+	userMiddleware     []internal.Middleware
 }
 
 // Rate-limit defaults (see docs/RATE-LIMITING.md).
@@ -257,6 +259,21 @@ func WithCircuitBreaker(threshold int, cooldown time.Duration) Option {
 	}
 }
 
+// WithCircuitBreakerBudget installs a sliding-window error budget on the
+// circuit breaker. When budget failures occur within the last size outcomes
+// the breaker opens, even if the consecutive-failure threshold has not been
+// reached. Requires WithCircuitBreaker to be set first. budget<=0 disables
+// the budget. size should be >= budget.
+func WithCircuitBreakerBudget(budget, size int) Option {
+	return func(c *config) error {
+		if c.breaker == nil {
+			return &ConfigError{Field: "CircuitBreakerBudget", Message: "requires WithCircuitBreaker"}
+		}
+		c.breaker.SetErrorBudget(budget, size)
+		return nil
+	}
+}
+
 // WithRetryPolicy overrides the retry policy. Set MaxAttempts to 1 to disable
 // retries.
 func WithRetryPolicy(p RetryPolicy) Option {
@@ -295,7 +312,8 @@ type Client struct {
 	session    *internal.Session
 	generated  *client.ClientWithResponses
 
-	closed atomic.Bool
+	closed  atomic.Bool
+	release func() // pool-managed cleanup callback; nil for standalone clients
 
 	wsMu sync.Mutex
 	ws   *internal.WSConn
@@ -385,6 +403,11 @@ func NewClient(opts ...Option) (*Client, error) {
 		cfg.breaker.SetMetrics(cfg.metrics)
 	}
 
+	transportTimeout := cfg.requestTimeout
+	if cfg.endpointTimeout > 0 {
+		transportTimeout = cfg.endpointTimeout
+	}
+
 	var session *internal.Session
 	transport := internal.NewClientTransport(base, internal.TransportConfig{
 		RequestID:  newRequestID,
@@ -396,13 +419,14 @@ func NewClient(opts ...Option) (*Client, error) {
 			}
 			return session.Token()
 		},
-		Logger:    cfg.logger,
-		Telemetry: cfg.telemetry,
-		Metrics:   cfg.metrics,
-		Breaker:   cfg.breaker,
-		Retry:     cfg.retry,
-		Limiter:   limiter,
-		Timeout:   cfg.requestTimeout,
+		Logger:         cfg.logger,
+		Telemetry:      cfg.telemetry,
+		Metrics:        cfg.metrics,
+		Breaker:        cfg.breaker,
+		Retry:          cfg.retry,
+		Limiter:        limiter,
+		Timeout:        transportTimeout,
+		UserMiddleware: cfg.userMiddleware,
 	})
 	httpClient := &http.Client{Transport: transport, Jar: jar}
 
@@ -512,6 +536,10 @@ func (c *Client) Close() error {
 	if ws != nil {
 		_ = ws.Close()
 	}
+	if c.release != nil {
+		c.release()
+		return nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), closeLogoutTimeout)
 	defer cancel()
 	return c.session.Close(ctx)
@@ -555,7 +583,14 @@ func baseTransport(cfg config) (http.RoundTripper, http.CookieJar) {
 		}
 		jar = cfg.httpClient.Jar
 	} else if cfg.insecureSkipVerify {
-		base = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint:gosec // opt-in, localhost only
+		base = &http.Transport{ //nolint:gosec // opt-in, localhost only
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 10,
+			IdleConnTimeout:     90 * time.Second,
+			ForceAttemptHTTP2:   true,
+			TLSHandshakeTimeout: 10 * time.Second,
+		}
 	}
 	if jar == nil {
 		if j, err := cookiejar.New(nil); err == nil {
