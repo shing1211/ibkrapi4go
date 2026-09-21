@@ -10,4 +10,4 @@
 | O3 | Unit tests for OTelMetrics | tester | done | O2 | All 3 methods tested; concurrent-safe |
 | O4 | Example `contrib/otel/examples/otel/main.go` | docs | done | O2 | Compiles and demonstrates usage |
 | O5 | Update OBSERVABILITY.md | docs | done | O2 | References contrib package |
-| O6 | Commit + push | release | todo | O3,O4,O5 | Clean tree, both remotes updated |
+| O6 | Commit + push | release | done | O3,O4,O5 | `696c8f4` — both remotes updated |

@@ -1,33 +1,23 @@
 # Examples
 
-Runnable examples that target the in-repo mock gateway by default, so they need
-no IBKR account and no network access to the real API.
+Runnable examples demonstrating the SDK. There are two groups: **mock** examples that
+need no credentials, and **live** examples that require paper trading credentials.
 
-## Run the mock and an example
+## Mock examples
 
-In one terminal, start the mock:
+Run the mock gateway in one terminal:
 
 ```bash
 go run ./cmd/ibkr-mock-gateway
 ```
 
-The binary prints the base URLs it serves and the environment variables to use.
-Every surface is served on one port (default `:5001`):
-
-| Surface | Path | SDK configuration |
-|---------|------|-------------------|
-| CPAPI | `/v1/api/*` | `IBKR_GATEWAY_URL` / `ibkr.WithGatewayURL` |
-| CPAPI WebSocket | `/v1/api/ws` | derived from `IBKR_GATEWAY_URL` |
-| IB REST | `/gw/api/v1/*`, `/gw/api/v2/*` | `IBKR_REST_GATEWAY_URL` / `ibkr.WithRESTGateway` |
-| OAuth2 token | `/oauth2/api/v1/token` | OAuth2 client options |
-
-In another terminal, run an example:
+Then run an example in another terminal:
 
 ```bash
 go run ./examples/mock
 ```
 
-## Index
+### Index (mock — no credentials required)
 
 - [`mock/main.go`](./mock/main.go) — connect to the mock, initialize a session,
   and list accounts.
@@ -39,20 +29,50 @@ go run ./examples/mock
   it, and list open orders.
 - [`models/main.go`](./models/main.go) — list model portfolios and their
   positions.
+- [`middleware/main.go`](./middleware/main.go) — inject custom HTTP middleware via
+  `WithTransportMiddleware`.
 
-## Pointing at a different gateway
+### Mock gateway configuration
 
-Both examples read `IBKR_GATEWAY_URL`, so an already-running mock (or the real
-local Client Portal Gateway) can be used:
+The mock is served on `:5001` by default. Override with `IBKR_GATEWAY_URL`:
 
 ```bash
 IBKR_GATEWAY_URL=https://localhost:5000 go run ./examples/mock
 ```
 
-When the gateway uses a self-signed certificate, also set
-`IBKR_INSECURE_SKIP_VERIFY=true`.
+## Live examples (paper trading)
+
+Live examples require a running IBKR Client Portal Gateway and paper trading
+credentials. Set these environment variables before running any live example:
+
+| Variable | Description |
+|----------|-------------|
+| `IBKR_GATEWAY` | Gateway base URL (e.g. `https://localhost:5000`) |
+| `IBKR_USERNAME` | Paper trading username |
+| `IBKR_PASSWORD` | Paper trading password |
+
+```bash
+IBKR_GATEWAY=https://localhost:5000 \
+IBKR_USERNAME=yourpaperusername \
+IBKR_PASSWORD=yourpaperpassword \
+  go run ./examples/live-portfolio
+```
+
+All live examples are **read-only** — no orders are submitted, no positions are
+modified, and no transfers are initiated.
+
+### Index (live — paper trading required)
+
+- [`live-portfolio/main.go`](./live-portfolio/main.go) — Session.Initialize,
+  Account.List, Portfolio.Positions/Ledger/Summary.
+- [`options-chain/main.go`](./options-chain/main.go) — search for a stock by
+  symbol, then fetch call and put strikes for a given expiry month.
+- [`screener/main.go`](./screener/main.go) — fetch available scanner parameters
+  (instruments, locations, scan types), then run a market scanner.
 
 ## See also
 
 - [`docs/MOCK-GATEWAY.md`](../docs/MOCK-GATEWAY.md) — mock gateway usage, flags,
   exposed URLs, and the Go test API.
+- [`test/integration_test.go`](../test/integration_test.go) — integration tests
+  using the same paper-trading env vars.
