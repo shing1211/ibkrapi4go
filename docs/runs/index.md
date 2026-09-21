@@ -13,4 +13,4 @@
 | 2026-09-18 | [track-d-godoc-sprint](./2026-09-18-track-d-godoc-sprint/) | BUILD | complete | `ab5f6be` | `ab5f6be` | `plan.md`, `todos.md`, `report.md` |
 | 2026-09-18 | [track-fg-release-prep](./2026-09-18-track-fg-release-prep/) | BUILD | complete | `5cb0141` | `5cb0141` | `plan.md`, `todos.md`, `report.md` |
 | 2026-09-18 | [v030-ergonomics](./2026-09-18-v030-ergonomics/) | BUILD | complete | `e8deb89` | `e8deb89` | `plan.md`, `todos.md`, `report.md` |
-| 2026-09-20 | [next-15-phases](./2026-09-20-next-15-phases/) | BUILD | planned | — | — | `plan.md`, `todos.md`, `report.md`, `next-phase.md`, `docs-plan.md`, `release-plan.md` |
+| 2026-09-20 | [next-15-phases](./2026-09-20-next-15-phases/) | BUILD | complete | `86c2e2f` | `86c2e2f` | `plan.md`, `todos.md`, `report.md`, `next-phase.md`, `docs-plan.md`, `release-plan.md` |

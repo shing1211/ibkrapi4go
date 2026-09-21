@@ -40,3 +40,4 @@ Single source of truth for all tasks in this run. Update after every task state 
 |----|----------|------|--------|
 | R1 | report.md | orchestrator | done |
 | R2 | index.md update | orchestrator | done |
+| R3 | git commit + push | release | done |
