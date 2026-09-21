@@ -253,7 +253,7 @@ Exit criteria:
 The feature roadmap is complete: all 185 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v0.2.0`**.
+**`v1.0.0`**.
 
 All known correctness defects are closed, including the generated-client
 nil-`interface{}` panic class, which is now fixed at the spec level

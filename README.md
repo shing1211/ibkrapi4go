@@ -6,12 +6,12 @@
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
 
-> **⚠️ Unofficial & alpha.** ibkrapi4go is a community Go SDK for the
+> **⚠️ Unofficial.** ibkrapi4go is a community Go SDK for the
 > Interactive Brokers Web API. It is **not affiliated with Interactive Brokers**.
 > All 185 API operations are implemented (115 CPAPI + 70 IB REST).
 > See [DISCLAIMER.md](./DISCLAIMER.md) and [docs/ROADMAP.md](./docs/ROADMAP.md).
@@ -53,7 +53,7 @@
 | Metrics + logging | ✅ Shipped ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (coverage, pre-commit) | ✅ Shipped |
 | Docs website + Discussions | ✅ Shipped ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Release | ✅ v0.2.0 (GitHub + Gitee) |
+| Release | ✅ v1.0.0 (GitHub + Gitee) |
 
 This repository contains the **generated OpenAPI client**, documentation, and
 codegen tooling. All 185 API operations are implemented across both CPAPI and IB REST

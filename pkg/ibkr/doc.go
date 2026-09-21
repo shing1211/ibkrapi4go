@@ -6,8 +6,7 @@
 // hand-written public API: a Client composition root, session management, and
 // domain managers.
 //
-// v1 targets the CPAPI surface (`/v1/api/*`, `ssoBearer`) only. See
-// docs/ARCHITECTURE.md and docs/adr/0005-v1-scope.md.
+// v1 covers both the Client Portal API (CPAPI, `/v1/api/*`, `ssoBearer`) and the IB REST API (`/gw/api/*`, `oauth2Bearer`).
 //
 // Monetary and quantity values are decimal strings, never float64, to preserve
 // precision (ADR 0008).
@@ -16,7 +15,7 @@ package ibkr
 import "runtime"
 
 // Version is the SDK version.
-const Version = "v0.1.0"
+const Version = "v1.0.0"
 
 // GoVersion is the Go runtime version the SDK was built with.
 var GoVersion = runtime.Version()

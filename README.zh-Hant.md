@@ -22,7 +22,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本文件是英文 [README](./README.md) 的社群翻譯。**英文版本為準。**
-> 同步於 / Last synced: b7f2b81
+> 同步於 / Last synced: 81df4c0
 
 ## 目錄
 
@@ -55,7 +55,7 @@
 | 指標 + 日誌 | ✅ 已實作（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 品質閘道（覆蓋率、預提交） | ✅ 已實作 |
 | 文件網站 + Discussions | ✅ 已實作（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| 發佈 | ✅ v0.2.0（GitHub + Gitee） |
+| 發佈 | ✅ v1.0.0（GitHub + Gitee） |
 
 目前倉庫包含**產生的 OpenAPI 用戶端**、文件與程式碼產生工具。全部 185 個 API
 操作已實作。建置計畫見 [docs/ROADMAP.md](./docs/ROADMAP.md)。

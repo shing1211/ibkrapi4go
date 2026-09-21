@@ -1,7 +1,7 @@
 # Architecture
 
 Design decisions, tradeoffs, and implementation rationale.
-Status: **Pre-alpha — all 185 operations implemented (115 CPAPI + 70 IB REST).**
+Status: **Stable — all 185 operations implemented (115 CPAPI + 70 IB REST).**
 
 ## Dependencies
 

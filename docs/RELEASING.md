@@ -10,12 +10,8 @@
 
 ## Pre-1.0 policy
 
-The project is **alpha**. All 185 operations are implemented and the core feature
-set is complete (see [ROADMAP.md](./ROADMAP.md)). Until `v1.0.0`:
-
-- The public API may still change in a **MINOR** release; breaking changes are
-  called out explicitly in the changelog.
-- Tags may be deleted or rewritten before `v1.0.0`.
+v1.0.0 is the first stable release. All 185 operations are implemented and the
+core feature set is complete (see [ROADMAP.md](./ROADMAP.md)):
 
 See [STABILITY.md](./STABILITY.md) and [ADR 0015](./adr/0015-stability.md) for the full stability contract.
 
