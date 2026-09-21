@@ -208,7 +208,7 @@ func (m *PortfolioManager) PositionsPaginated(ctx context.Context, account Accou
 func (m *PortfolioManager) Position(ctx context.Context, account AccountID, conid ConID) (*Position, error) {
 	const op = "Portfolio.Position"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
-		return m.client.generated.GetPositionByConid(ctx, string(account), int64(conid))
+		return m.client.generated.GetPositionByConid(ctx, string(account), int64(conid), nil)
 	})
 	if err != nil {
 		return nil, err
@@ -228,7 +228,7 @@ func (m *PortfolioManager) Position(ctx context.Context, account AccountID, coni
 func (m *PortfolioManager) Ledger(ctx context.Context, account AccountID) (map[string]LedgerCurrency, error) {
 	const op = "Portfolio.Ledger"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
-		return m.client.generated.GetPortfolioLedger(ctx, string(account))
+		return m.client.generated.GetPortfolioLedger(ctx, string(account), nil)
 	})
 	if err != nil {
 		return nil, err
@@ -281,7 +281,7 @@ func (m *PortfolioManager) Allocation(ctx context.Context, account AccountID) (A
 func (m *PortfolioManager) Summary(ctx context.Context, account AccountID) (PortfolioSummary, error) {
 	const op = "Portfolio.Summary"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
-		return m.client.generated.GetPortfolioSummary(ctx, string(account))
+		return m.client.generated.GetPortfolioSummary(ctx, string(account), nil)
 	})
 	if err != nil {
 		return nil, err

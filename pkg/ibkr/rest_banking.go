@@ -24,6 +24,11 @@ func strToF32(s string) float32 {
 	return float32(v)
 }
 
+func strToInt(s string) int {
+	v, _ := strconv.ParseInt(s, 10, 64)
+	return int(v)
+}
+
 // strPtrToF32Ptr converts an optional decimal string to *float32 for the generated
 // client payload.
 func strPtrToF32Ptr(s *string) *float32 {
@@ -286,7 +291,7 @@ func (b *RESTBanking) CancelInstruction(ctx context.Context, req CancelInstructi
 	}
 	payload := client.CreateInstructionsCancelJSONRequestBody{
 		Instruction: client.CancelInstruction{
-			InstructionId: float32(req.InstructionID),
+			InstructionId: int(req.InstructionID),
 			Reason:        req.Reason,
 		},
 	}
@@ -315,7 +320,7 @@ func (b *RESTBanking) CancelInstructionsBulk(ctx context.Context, reqs []CancelI
 	}
 	for i, r := range reqs {
 		payload.Instructions[i] = client.CancelInstruction{
-			InstructionId: float32(r.InstructionID),
+			InstructionId: int(r.InstructionID),
 		}
 	}
 	resp, err := b.surface.generated.BulkInstructionsCancelWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
@@ -579,7 +584,7 @@ func (m *RESTExternalAssetTransfers) Transfer(ctx context.Context, req AssetTran
 	instr := client.CreateExternalAssetTransfersJSONBody_Instruction{}
 	_ = instr.FromFopInstruction(client.FopInstruction{
 		AccountId:             string(req.AccountID),
-		ClientInstructionId:   strToF32(req.ClientInstructionID),
+		ClientInstructionId:   strToInt(req.ClientInstructionID),
 		ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 		ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 		Direction:             client.FopInstructionDirection(req.Direction),
@@ -608,7 +613,7 @@ func (m *RESTExternalAssetTransfers) Transfer(ctx context.Context, req AssetTran
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
 }
 
 // TransferBulk initiates multiple external asset transfers in a single request
@@ -626,7 +631,7 @@ func (m *RESTExternalAssetTransfers) TransferBulk(ctx context.Context, reqs []As
 	for i, req := range reqs {
 		payload.Instructions[i] = client.FopInstruction{
 			AccountId:             string(req.AccountID),
-			ClientInstructionId:   strToF32(req.ClientInstructionID),
+			ClientInstructionId:   strToInt(req.ClientInstructionID),
 			ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 			Direction:             client.FopInstructionDirection(req.Direction),
@@ -665,12 +670,12 @@ func (m *RESTExternalAssetTransfers) TransferV2(ctx context.Context, req AssetTr
 	positions := make([]client.TradingInstrumentV2, len(req.Positions))
 	for i, pos := range req.Positions {
 		positions[i] = client.TradingInstrumentV2{Quantity: strToF32(pos.Quantity)}
-		_ = positions[i].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: float32(pos.ConID)})
+		_ = positions[i].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: int(pos.ConID)})
 	}
 
 	_ = instr.FromFopInstructionV2(client.FopInstructionV2{
 		AccountId:             string(req.AccountID),
-		ClientInstructionId:   strToF32(req.ClientInstructionID),
+		ClientInstructionId:   strToInt(req.ClientInstructionID),
 		ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 		ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 		Direction:             client.FopInstructionV2Direction(req.Direction),
@@ -698,7 +703,7 @@ func (m *RESTExternalAssetTransfers) TransferV2(ctx context.Context, req AssetTr
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
 }
 
 // TransferBulkV2 initiates multiple external asset transfers using V2 API
@@ -717,11 +722,11 @@ func (m *RESTExternalAssetTransfers) TransferBulkV2(ctx context.Context, reqs []
 		positions := make([]client.TradingInstrumentV2, len(req.Positions))
 		for j, pos := range req.Positions {
 			positions[j] = client.TradingInstrumentV2{Quantity: strToF32(pos.Quantity)}
-			_ = positions[j].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: float32(pos.ConID)})
+			_ = positions[j].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: int(pos.ConID)})
 		}
 		payload.Instructions[i] = client.FopInstructionV2{
 			AccountId:             string(req.AccountID),
-			ClientInstructionId:   strToF32(req.ClientInstructionID),
+			ClientInstructionId:   strToInt(req.ClientInstructionID),
 			ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
 			Direction:             client.FopInstructionV2Direction(req.Direction),
@@ -760,7 +765,7 @@ func (m *RESTInternalAssetTransfers) Transfer(ctx context.Context, req InternalA
 	}
 
 	instr := client.InternalPositionTransferInstruction{
-		ClientInstructionId: strToF32(req.ClientInstructionID),
+		ClientInstructionId: strToInt(req.ClientInstructionID),
 		SourceAccountId:     string(req.SourceAccountID),
 		TargetAccountId:     string(req.TargetAccountID),
 		TradingInstrument:   makeTradingInstrumentRef(req.ConID),
@@ -797,7 +802,7 @@ func (m *RESTInternalAssetTransfers) Transfer(ctx context.Context, req InternalA
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
 }
 
 // TransferBulk initiates multiple internal asset transfers in a single request
@@ -814,7 +819,7 @@ func (m *RESTInternalAssetTransfers) TransferBulk(ctx context.Context, reqs []In
 
 	for i, req := range reqs {
 		instr := client.InternalPositionTransferInstruction{
-			ClientInstructionId: strToF32(req.ClientInstructionID),
+			ClientInstructionId: strToInt(req.ClientInstructionID),
 			SourceAccountId:     string(req.SourceAccountID),
 			TargetAccountId:     string(req.TargetAccountID),
 			TradingInstrument:   makeTradingInstrumentRef(req.ConID),
@@ -869,7 +874,7 @@ func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransf
 			AccountId:             string(req.AccountID),
 			Amount:                strToF32(req.Amount),
 			BankInstructionMethod: client.DepositFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
-			ClientInstructionId:   strToF32(req.ClientInstructionID),
+			ClientInstructionId:   strToInt(req.ClientInstructionID),
 			Currency:              req.Currency,
 		}
 		if req.BankInstructionName != nil {
@@ -882,7 +887,7 @@ func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransf
 			Amount:                strToF32(req.Amount),
 			BankInstructionMethod: client.WithdrawFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
 			BankInstructionName:   derefStr(req.BankInstructionName),
-			ClientInstructionId:   strToF32(req.ClientInstructionID),
+			ClientInstructionId:   strToInt(req.ClientInstructionID),
 			Currency:              req.Currency,
 		}
 		_ = instr.FromWithdrawFundsInstruction(withdrawInstr)
@@ -916,7 +921,7 @@ func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransf
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
 }
 
 // TransferBulk initiates multiple external cash transfers in a single request
@@ -944,7 +949,7 @@ func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []Cas
 				AccountId:             string(req.AccountID),
 				Amount:                strToF32(req.Amount),
 				BankInstructionMethod: client.DepositFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
-				ClientInstructionId:   strToF32(req.ClientInstructionID),
+				ClientInstructionId:   strToInt(req.ClientInstructionID),
 				Currency:              req.Currency,
 			}
 			if req.BankInstructionName != nil {
@@ -957,7 +962,7 @@ func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []Cas
 				Amount:                strToF32(req.Amount),
 				BankInstructionMethod: client.WithdrawFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
 				BankInstructionName:   derefStr(req.BankInstructionName),
-				ClientInstructionId:   strToF32(req.ClientInstructionID),
+				ClientInstructionId:   strToInt(req.ClientInstructionID),
 				Currency:              req.Currency,
 			}
 			payload.Instructions[i] = withdrawInstr
@@ -1049,7 +1054,7 @@ func (m *RESTInternalCashTransfers) Transfer(ctx context.Context, req InternalCa
 
 	instr := client.InternalCashTransferInstruction{
 		Amount:              strToF32(req.Amount),
-		ClientInstructionId: strToF32(req.ClientInstructionID),
+		ClientInstructionId: strToInt(req.ClientInstructionID),
 		Currency:            req.Currency,
 		SourceAccountId:     string(req.SourceAccountID),
 		TargetAccountId:     string(req.TargetAccountID),
@@ -1079,7 +1084,7 @@ func (m *RESTInternalCashTransfers) Transfer(ctx context.Context, req InternalCa
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
 }
 
 // TransferBulk initiates multiple internal cash transfers in a single request
@@ -1097,7 +1102,7 @@ func (m *RESTInternalCashTransfers) TransferBulk(ctx context.Context, reqs []Int
 	for i, req := range reqs {
 		instr := client.InternalCashTransferInstruction{
 			Amount:              strToF32(req.Amount),
-			ClientInstructionId: strToF32(req.ClientInstructionID),
+			ClientInstructionId: strToInt(req.ClientInstructionID),
 			Currency:            req.Currency,
 			SourceAccountId:     string(req.SourceAccountID),
 			TargetAccountId:     string(req.TargetAccountID),
@@ -1144,7 +1149,7 @@ func (m *RESTBankInstructions) Create(ctx context.Context, req BankInstructionCr
 		AchType:             client.AchInstructionAchType(req.AchType),
 		BankInstructionCode: client.AchInstructionBankInstructionCode(req.BankInstructionCode),
 		BankInstructionName: req.BankInstructionName,
-		ClientInstructionId: float32(req.ClientInstructionID),
+		ClientInstructionId: int(req.ClientInstructionID),
 		Currency:            req.Currency,
 		ClientAccountInfo: struct {
 			BankAccountNumber   string                                                    `json:"bankAccountNumber"`
@@ -1180,7 +1185,7 @@ func (m *RESTBankInstructions) Create(ctx context.Context, req BankInstructionCr
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return fmt.Sprintf("%.0f", resp.JSON202.InstructionSetId), nil
+	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
 }
 
 // Query queries bank instructions
@@ -1240,7 +1245,7 @@ func (m *RESTBankInstructions) CreateBulk(ctx context.Context, reqs []BankInstru
 			AchType:             client.AchInstructionAchType(req.AchType),
 			BankInstructionCode: client.AchInstructionBankInstructionCode(req.BankInstructionCode),
 			BankInstructionName: req.BankInstructionName,
-			ClientInstructionId: float32(req.ClientInstructionID),
+			ClientInstructionId: int(req.ClientInstructionID),
 			Currency:            req.Currency,
 			ClientAccountInfo: struct {
 				BankAccountNumber   string                                                    `json:"bankAccountNumber"`
@@ -1290,7 +1295,7 @@ type BankInstructionResult struct {
 // makeTradingInstrumentRef creates a TradingInstrumentRef from conid
 func makeTradingInstrumentRef(conid ConID) client.TradingInstrumentRef {
 	ref := client.TradingInstrumentRef{}
-	_ = ref.FromTradingInstrumentRef0(client.TradingInstrumentRef0{Conid: float32(conid)})
+	_ = ref.FromTradingInstrumentRef0(client.TradingInstrumentRef0{Conid: int(conid)})
 	return ref
 }
 
@@ -1309,7 +1314,7 @@ func extractBulkResults(results *[]struct {
 			ClientInstructionID: int64(r.InstructionResult.ClientInstructionId),
 			InstructionID:       int64(r.InstructionResult.InstructionId),
 			InstructionStatus:   string(r.InstructionResult.InstructionStatus),
-			IbReferenceID:       f32PtrToInt64Ptr(r.InstructionResult.IbReferenceId),
+			IbReferenceID:       intPtrToInt64Ptr(r.InstructionResult.IbReferenceId),
 			Description:         r.InstructionResult.Description,
 		})
 	}
@@ -1326,6 +1331,14 @@ func derefStr(ptr *string) string {
 
 // f32PtrToInt64Ptr converts a *float32 to *int64, returning nil if the input is nil.
 func f32PtrToInt64Ptr(p *float32) *int64 {
+	if p == nil {
+		return nil
+	}
+	v := int64(*p)
+	return &v
+}
+
+func intPtrToInt64Ptr(p *int) *int64 {
 	if p == nil {
 		return nil
 	}

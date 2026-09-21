@@ -5,6 +5,39 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **WS system frame routing:** `Subscription.SystemUpdates()` channel exposes
+  `sts`, `ntf`, `sor`, `usr` frames separately from market data. Existing
+  `Updates()` behavior is unchanged. See `pkg/ibkr/ws.go`.
+
+### Fixed
+
+- **`decodeJSON` consistency:** All 7 `json.Unmarshal` calls in
+  `pkg/ibkr/rest_accounts.go` now use `decodeJSONBytes` (`UseNumber` mode),
+  preserving decimal precision per ADR 0008.
+- **`patch_spec.py` defect 5:** ConID and banking ID fields (`conid`,
+  `clientInstructionId`, `instructionId`, `instructionSetId`, `ibReferenceId`)
+  now generate as `int64` instead of `float32` — eliminates silent precision
+  loss for IDs exceeding 2^24.
+- **`patch_spec.py` defect 6:** `twsInvestDivestResponse` schema renamed to
+  `TwsInvestDivestResponseData` to avoid collision with the auto-generated
+  HTTP response wrapper type (v2.40.0 spec).
+- **`patch_spec.py` defect 7:** 16 money amount fields (SMA, Balance,
+  BuyingPower, NetLiquidationValue, etc.) now generate as `string` instead
+  of `float64` per ADR 0008.
+- **`portfolio.go`/`rest_banking.go`:** Updated calls to match regenerated
+  client signatures (Params structs, int64 ID types).
+
+### Changed
+
+- **Spec updated to v2.40.0:** `specs/ibkr_spec.json` refreshed; all 7 defects
+  applied before codegen.
+- **`client/client.gen.go` regenerated:** ConID as `int64`, banking IDs as
+  `int64`, money fields as `string`.
+
 ## [1.0.0] - 2026-09-21
 
 This release marks the first stable API surface. All public symbols in `pkg/ibkr`

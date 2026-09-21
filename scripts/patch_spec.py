@@ -4,8 +4,8 @@
 """
 patch_spec.py — fix known defects in the IBKR OpenAPI spec before codegen.
 
-The published spec (v2.39.0) does not generate cleanly with oapi-codegen.
-This script applies five deterministic, idempotent fixes:
+The published spec (v2.39.0/v2.40.0) does not generate cleanly with oapi-codegen.
+This script applies seven deterministic, idempotent fixes:
 
   1. Reconcile path parameters with the path template. Some operations declare
      a path parameter that is absent from the path (or whose name differs), and
@@ -28,10 +28,23 @@ This script applies five deterministic, idempotent fixes:
       nil-safe.  See docs/CODEGEN.md defect 4.
 
    5. Replace `type: float` with `type: integer` for ID-named fields.
-      oapi-codegen maps `type: float` → Go `float32`.  ConIDs can exceed 2^24
-      (16,777,216) causing silent precision loss in float32.  The affected
-      fields are: conid, clientInstructionId, instructionId, instructionSetId,
-      ibReferenceId.
+       oapi-codegen maps `type: float` → Go `float32`.  ConIDs can exceed 2^24
+       (16,777,216) causing silent precision loss in float32.  The affected
+       fields are: conid, clientInstructionId, instructionId, instructionSetId,
+       ibReferenceId.
+
+    6. Rename `twsInvestDivestResponse` schema via `x-go-name` to avoid collision
+        with the auto-generated HTTP response wrapper type of the same name in
+        oapi-codegen v2.8.  v2.40.0 introduced `/fa/model/tws-invest-divest`
+        which returns this schema; oapi-codegen generates a wrapper struct with
+        the same name, producing a "redeclared" compile error.  Renaming the
+        schema to `TwsInvestDivestResponseData` breaks the collision.
+
+    7. Replace `type: number` with `type: string` for money-amount fields.
+        ADR 0008 requires money quantities (SMA, Cash, Balance, Equity, Margin,
+        etc.) to be `string`/`json.Number`, never `float64`.  This prevents
+        precision loss on large values.  Rate/percentage fields (Weight,
+        ExchangeRate, OwnershipPercentage) are left unchanged.
 
 Usage:
     python3 scripts/patch_spec.py specs/ibkr_spec.json > specs/ibkr_patched.json
@@ -157,6 +170,28 @@ def patch(spec: dict) -> collections.Counter:
         "ibReferenceId",
     ])
 
+    # 7. Replace `type: number` with `type: string` for money-amount fields.
+    # ADR 0008: money quantities must be string/json.Number, never float64.
+    MONEY_FIELDS = frozenset([
+        "sma",
+        "accruedinterest",
+        "availablefunds",
+        "balance",
+        "buyingpower",
+        "equitywithloanvalue",
+        "excessliquidity",
+        "initialmargin",
+        "maintenancemargin",
+        "netliquidationvalue",
+        "regtloan",
+        "regtmargin",
+        "securitiesgvp",
+        "totalcashvalue",
+        "settledcash",
+        "nav",
+        "payout",
+    ])
+
     def patch_schema(schema: dict) -> None:
         if not isinstance(schema, dict):
             return
@@ -168,7 +203,7 @@ def patch(spec: dict) -> collections.Counter:
         props = schema.get("properties")
         if isinstance(props, dict):
             for name, prop in props.items():
-                if name in ID_NAMES and prop.get("type") == "float":
+                if name in ID_NAMES and prop.get("type") in ("float", "number"):
                     prop["type"] = "integer"
                     report["float_id_patched"] += 1
         for key in ("allOf", "anyOf", "oneOf"):
@@ -180,12 +215,42 @@ def patch(spec: dict) -> collections.Counter:
     for schema in schemas.values():
         patch_schema(schema)
 
+    # 6. Rename twsInvestDivestResponse to avoid collision with the
+    #    oapi-codegen HTTP response wrapper type of the same name.
+    if "twsInvestDivestResponse" in schemas:
+        schemas["twsInvestDivestResponse"]["x-go-name"] = "TwsInvestDivestResponseData"
+        report["tws_rename"] = 1
+
+    # 7. Replace money-amount number fields with type: string.
+    def patch_money_schema(schema: dict) -> None:
+        if not isinstance(schema, dict):
+            return
+        if "$ref" in schema:
+            ref = schema["$ref"].split("/")[-1]
+            if ref in schemas:
+                patch_money_schema(schemas[ref])
+            return
+        props = schema.get("properties")
+        if isinstance(props, dict):
+            for name, prop in props.items():
+                if name.lower() in MONEY_FIELDS and prop.get("type") == "number":
+                    prop["type"] = "string"
+                    report["money_field_patched"] += 1
+        for key in ("allOf", "anyOf", "oneOf"):
+            for sub in schema.get(key, []):
+                patch_money_schema(sub)
+        if schema.get("type") == "array":
+            patch_money_schema(schema.get("items"))
+
+    for schema in schemas.values():
+        patch_money_schema(schema)
+
     return report
 
 
 def main() -> None:
     src = sys.argv[1] if len(sys.argv) > 1 else "-"
-    with open(src if src != "-" else 0) as fh:
+    with open(src if src != "-" else 0, encoding="utf-8") as fh:
         spec = json.load(fh)
 
     report = patch(spec)

@@ -9127,16 +9127,16 @@ func (e SingleOrderSubmissionRequestTif) Valid() bool {
 
 // Defines values for SingleOrderSubmissionRequestTrailingType.
 const (
-	Amt     SingleOrderSubmissionRequestTrailingType = "amt"
-	Percent SingleOrderSubmissionRequestTrailingType = "%"
+	SingleOrderSubmissionRequestTrailingTypeAmt     SingleOrderSubmissionRequestTrailingType = "amt"
+	SingleOrderSubmissionRequestTrailingTypePercent SingleOrderSubmissionRequestTrailingType = "%"
 )
 
 // Valid indicates whether the value is a known member of the SingleOrderSubmissionRequestTrailingType enum.
 func (e SingleOrderSubmissionRequestTrailingType) Valid() bool {
 	switch e {
-	case Amt:
+	case SingleOrderSubmissionRequestTrailingTypeAmt:
 		return true
-	case Percent:
+	case SingleOrderSubmissionRequestTrailingTypePercent:
 		return true
 	default:
 		return false
@@ -10013,6 +10013,99 @@ func (e GetOpenOrdersParamsFilters) Valid() bool {
 	}
 }
 
+// Defines values for SubmitModelPortfolioOrderJSONBodyOrdersOrderType.
+const (
+	LMT       SubmitModelPortfolioOrderJSONBodyOrdersOrderType = "LMT"
+	MIDPRICE  SubmitModelPortfolioOrderJSONBodyOrdersOrderType = "MIDPRICE"
+	MKT       SubmitModelPortfolioOrderJSONBodyOrdersOrderType = "MKT"
+	STOPLIMIT SubmitModelPortfolioOrderJSONBodyOrdersOrderType = "STOP_LIMIT"
+	STP       SubmitModelPortfolioOrderJSONBodyOrdersOrderType = "STP"
+	TRAIL     SubmitModelPortfolioOrderJSONBodyOrdersOrderType = "TRAIL"
+	TRAILLMT  SubmitModelPortfolioOrderJSONBodyOrdersOrderType = "TRAILLMT"
+)
+
+// Valid indicates whether the value is a known member of the SubmitModelPortfolioOrderJSONBodyOrdersOrderType enum.
+func (e SubmitModelPortfolioOrderJSONBodyOrdersOrderType) Valid() bool {
+	switch e {
+	case LMT:
+		return true
+	case MIDPRICE:
+		return true
+	case MKT:
+		return true
+	case STOPLIMIT:
+		return true
+	case STP:
+		return true
+	case TRAIL:
+		return true
+	case TRAILLMT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubmitModelPortfolioOrderJSONBodyOrdersSide.
+const (
+	SubmitModelPortfolioOrderJSONBodyOrdersSideBUY  SubmitModelPortfolioOrderJSONBodyOrdersSide = "BUY"
+	SubmitModelPortfolioOrderJSONBodyOrdersSideSELL SubmitModelPortfolioOrderJSONBodyOrdersSide = "SELL"
+)
+
+// Valid indicates whether the value is a known member of the SubmitModelPortfolioOrderJSONBodyOrdersSide enum.
+func (e SubmitModelPortfolioOrderJSONBodyOrdersSide) Valid() bool {
+	switch e {
+	case SubmitModelPortfolioOrderJSONBodyOrdersSideBUY:
+		return true
+	case SubmitModelPortfolioOrderJSONBodyOrdersSideSELL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubmitModelPortfolioOrderJSONBodyOrdersTif.
+const (
+	SubmitModelPortfolioOrderJSONBodyOrdersTifDAY SubmitModelPortfolioOrderJSONBodyOrdersTif = "DAY"
+	SubmitModelPortfolioOrderJSONBodyOrdersTifGTC SubmitModelPortfolioOrderJSONBodyOrdersTif = "GTC"
+	SubmitModelPortfolioOrderJSONBodyOrdersTifIOC SubmitModelPortfolioOrderJSONBodyOrdersTif = "IOC"
+	SubmitModelPortfolioOrderJSONBodyOrdersTifOPG SubmitModelPortfolioOrderJSONBodyOrdersTif = "OPG"
+)
+
+// Valid indicates whether the value is a known member of the SubmitModelPortfolioOrderJSONBodyOrdersTif enum.
+func (e SubmitModelPortfolioOrderJSONBodyOrdersTif) Valid() bool {
+	switch e {
+	case SubmitModelPortfolioOrderJSONBodyOrdersTifDAY:
+		return true
+	case SubmitModelPortfolioOrderJSONBodyOrdersTifGTC:
+		return true
+	case SubmitModelPortfolioOrderJSONBodyOrdersTifIOC:
+		return true
+	case SubmitModelPortfolioOrderJSONBodyOrdersTifOPG:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubmitModelPortfolioOrderJSONBodyOrdersTrailingType.
+const (
+	SubmitModelPortfolioOrderJSONBodyOrdersTrailingTypeAmt     SubmitModelPortfolioOrderJSONBodyOrdersTrailingType = "amt"
+	SubmitModelPortfolioOrderJSONBodyOrdersTrailingTypePercent SubmitModelPortfolioOrderJSONBodyOrdersTrailingType = "%"
+)
+
+// Valid indicates whether the value is a known member of the SubmitModelPortfolioOrderJSONBodyOrdersTrailingType enum.
+func (e SubmitModelPortfolioOrderJSONBodyOrdersTrailingType) Valid() bool {
+	switch e {
+	case SubmitModelPortfolioOrderJSONBodyOrdersTrailingTypeAmt:
+		return true
+	case SubmitModelPortfolioOrderJSONBodyOrdersTrailingTypePercent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetAlgosByInstrumentParamsAlgos.
 const (
 	Adaptive GetAlgosByInstrumentParamsAlgos = "Adaptive"
@@ -10798,7 +10891,7 @@ type AchInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -11194,7 +11287,7 @@ type AsynchronousInstructionSetResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -11287,7 +11380,7 @@ type BulkMultiStatusResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the bulk request.
 	//
@@ -11351,12 +11444,12 @@ type CancelInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// InstructionId Funds and Banking identifier of the instruction to cancel.
 	//
 	// Example: 43085477
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// Reason Free-text reason for the request.
 	//
@@ -11462,7 +11555,7 @@ type ComplexAssetTransferInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// ContraBrokerInfo Details of the contra (external) broker for the transfer.
 	ContraBrokerInfo ContraBrokerInfoRef `json:"contraBrokerInfo"`
@@ -11504,7 +11597,7 @@ type ComplexAssetTransferInstructionV2 struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// ContraBrokerInfo Details of the contra (external) broker for the transfer.
 	ContraBrokerInfo ContraBrokerInfoRef `json:"contraBrokerInfo"`
@@ -11748,7 +11841,7 @@ type DeleteBankInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -11831,7 +11924,7 @@ type DepositFundsInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -11937,7 +12030,7 @@ type DepositFundsPollingResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -11950,7 +12043,7 @@ type DepositFundsPollingResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32         `json:"clientInstructionId"`
+	ClientInstructionId int             `json:"clientInstructionId"`
 	DepositDetails      *DepositDetails `json:"depositDetails,omitempty"`
 
 	// Description Human-readable note about the result.
@@ -11973,12 +12066,12 @@ type DepositFundsPollingResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -12153,7 +12246,7 @@ type DwacInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// ContraBrokerAccountId Account identifier at the contra broker.
 	//
@@ -12204,7 +12297,7 @@ type DwacInstructionV2 struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// ContraBrokerAccountId Account identifier at the contra broker.
 	//
@@ -12295,7 +12388,7 @@ type EddaInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -12456,7 +12549,7 @@ type ExternalPositionTransfer struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Signature Client signature authorizing the instruction. Expected to input the account title at IBKR.
 	//
@@ -12549,7 +12642,7 @@ type FopInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// ContraBrokerAccountId Account identifier at the contra broker.
 	//
@@ -12590,7 +12683,7 @@ type FopInstructionV2 struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// ContraBrokerAccountId Account identifier at the contra broker.
 	//
@@ -13494,7 +13587,7 @@ type InstructionErrorResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// DepositDetails Present only for the DEPOSIT instruction type.
 	DepositDetails *DepositDetails `json:"depositDetails,omitempty"`
@@ -13519,12 +13612,12 @@ type InstructionErrorResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -13563,7 +13656,7 @@ type InstructionPollingResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -13579,7 +13672,7 @@ type InstructionResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -13592,7 +13685,7 @@ type InstructionResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// DepositDetails Present only for the DEPOSIT instruction type.
 	DepositDetails *DepositDetails `json:"depositDetails,omitempty"`
@@ -13608,12 +13701,12 @@ type InstructionResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -13687,7 +13780,7 @@ type InternalCashTransferInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// ClientNote Optional free-text note attached to the transfer.
 	//
@@ -13718,7 +13811,7 @@ type InternalPositionTransferInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// SettleDate If settleDate is provided then tradeDate is also required
 	//
@@ -13810,7 +13903,7 @@ type IsaTransferInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// ProviderName Name of the current ISA provider; must exactly match a provider name returned by the GET ISA providers API.
 	//
@@ -14212,7 +14305,7 @@ type OpenBankingInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -14481,7 +14574,7 @@ type PollingInstructionResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// DepositDetails Present only for the DEPOSIT instruction type.
 	DepositDetails *DepositDetails `json:"depositDetails,omitempty"`
@@ -14506,12 +14599,12 @@ type PollingInstructionResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -14562,7 +14655,7 @@ type PredefinedDestinationInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -14725,7 +14818,7 @@ type QueryBankInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 }
 
 // QueryBankInstructionBankInstructionMethod Funding method / payment rail for the bank instruction.
@@ -14741,7 +14834,7 @@ type QueryBankInstructionResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -14793,7 +14886,7 @@ type QueryBankInstructionResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// DepositDetails Present only for the DEPOSIT instruction type.
 	DepositDetails *DepositDetails `json:"depositDetails,omitempty"`
@@ -14809,12 +14902,12 @@ type QueryBankInstructionResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -14858,7 +14951,7 @@ type QueryIRAContributions struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Year Contribution tax year.
 	//
@@ -14874,7 +14967,7 @@ type QueryIRAContributionsResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -14890,7 +14983,7 @@ type QueryIRAContributionsResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Contributions List of contribution limit records.
 	Contributions []struct {
@@ -14927,12 +15020,12 @@ type QueryIRAContributionsResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -14977,7 +15070,7 @@ type QueryRecentInstructionResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -14990,7 +15083,7 @@ type QueryRecentInstructionResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// DepositDetails Present only for the DEPOSIT instruction type.
 	DepositDetails *DepositDetails `json:"depositDetails,omitempty"`
@@ -15015,7 +15108,7 @@ type QueryRecentInstructionResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionHistory Recent instruction history.
 	InstructionHistory struct {
@@ -15032,7 +15125,7 @@ type QueryRecentInstructionResult struct {
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -15073,7 +15166,7 @@ type QueryRecentInstructions struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// TransactionHistory Filter/summary of the transaction history.
 	TransactionHistory struct {
@@ -15102,7 +15195,7 @@ type QueryRecentRecurringEventResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -15118,7 +15211,7 @@ type QueryRecentRecurringEventResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	Currency string `json:"currency"`
@@ -15137,12 +15230,12 @@ type QueryRecentRecurringEventResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -15205,12 +15298,12 @@ type QueryRecentRecurringEvents struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// IbReferenceId Interactive Brokers global identifier of the recurring instruction request.
 	//
 	// Example: -343872793
-	IbReferenceId float32 `json:"ibReferenceId"`
+	IbReferenceId int `json:"ibReferenceId"`
 
 	// NumberOfTransactions Number of recent transactions to return.
 	//
@@ -15228,7 +15321,7 @@ type QueryRecurringInstructions struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 }
 
 // QueryRecurringInstructionsResponse Response containing recurring instructions for an account.
@@ -15245,7 +15338,7 @@ type QueryRecurringInstructionsResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// DepositDetails Present only for the DEPOSIT instruction type.
 	DepositDetails *DepositDetails `json:"depositDetails,omitempty"`
@@ -15261,12 +15354,12 @@ type QueryRecurringInstructionsResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -15341,7 +15434,7 @@ type QueryWithdrawableAmountsInstructionResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	Currency string `json:"currency"`
@@ -15369,12 +15462,12 @@ type QueryWithdrawableAmountsInstructionResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -15419,7 +15512,7 @@ type QueryWithdrawableAmountsResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -15435,7 +15528,7 @@ type QueryWithdrawableAmountsWithoutOriginHoldResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -15451,7 +15544,7 @@ type QueryWithdrawableAmountsWithoutOriginHoldResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	Currency string `json:"currency"`
@@ -15479,12 +15572,12 @@ type QueryWithdrawableAmountsWithoutOriginHoldResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -15531,7 +15624,7 @@ type QueryWithdrawableCashEquity struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -15547,7 +15640,7 @@ type QueryWithdrawableCashEquityResponse struct {
 	// InstructionSetId Identifier of the instruction set grouping the submitted instructions.
 	//
 	// Example: -1988905739
-	InstructionSetId float32 `json:"instructionSetId"`
+	InstructionSetId int `json:"instructionSetId"`
 
 	// Status HTTP status code for the request.
 	//
@@ -15566,7 +15659,7 @@ type QueryWithdrawableCashEquityResult struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	Currency string `json:"currency"`
@@ -15594,12 +15687,12 @@ type QueryWithdrawableCashEquityResult struct {
 	// IbReferenceId Interactive Brokers global identifier of the request.
 	//
 	// Example: 23456745
-	IbReferenceId *float32 `json:"ibReferenceId,omitempty"`
+	IbReferenceId *int `json:"ibReferenceId,omitempty"`
 
 	// InstructionId Funds and Banking identifier of the instruction.
 	//
 	// Example: 45123654
-	InstructionId float32 `json:"instructionId"`
+	InstructionId int `json:"instructionId"`
 
 	// InstructionStatus Processing state of the instruction.
 	//
@@ -15658,7 +15751,7 @@ type QueryWithdrawableFunds struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -16370,7 +16463,7 @@ type TradingInstrumentRef0 struct {
 	// Conid Interactive Brokers contract identifier of the instrument.
 	//
 	// Example: 459200101
-	Conid float32 `json:"conid"`
+	Conid int `json:"conid"`
 }
 
 // TradingInstrumentRef1 defines model for TradingInstrumentRef.1.
@@ -16418,7 +16511,7 @@ type TradingInstrumentV20 struct {
 	// Conid Interactive Brokers contract identifier of the instrument.
 	//
 	// Example: 459200101
-	Conid float32 `json:"conid"`
+	Conid int `json:"conid"`
 }
 
 // TradingInstrumentV21 defines model for TradingInstrumentV2.1.
@@ -16497,7 +16590,7 @@ type TraditionalBankInstructionVerification struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// CreditAmount1 First micro-deposit amount used to verify the bank instruction; Order is not important.
 	//
@@ -16928,7 +17021,7 @@ type WithdrawFundsInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -16985,7 +17078,7 @@ type WithdrawalBankInstruction struct {
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
 	// Example: 1012983
-	ClientInstructionId float32 `json:"clientInstructionId"`
+	ClientInstructionId int `json:"clientInstructionId"`
 
 	// Currency ISO 4217 currency code (e.g. "USD").
 	//
@@ -17163,22 +17256,22 @@ type AccountAttributesType string
 // AccountSummaryResponse Successful return contianing an array of at-a-glance account details.
 type AccountSummaryResponse struct {
 	// SMA Simple Moving Average of the account.
-	SMA *float64 `json:"SMA,omitempty"`
+	SMA *string `json:"SMA,omitempty"`
 
 	// AccountType Describes the unique account type. For standard individual accounts, an empty string is returned.
 	AccountType *string `json:"accountType,omitempty"`
 
 	// AccruedInterest Accrued interest is the interest accruing on a security since the previous coupon date. If a security is sold between two payment dates, the buyer usually compensates the seller for the interest accrued, either within the price or as a separate payment.
-	AccruedInterest *float64 `json:"accruedInterest,omitempty"`
+	AccruedInterest *string `json:"accruedInterest,omitempty"`
 
 	// AvailableFunds The amount of equity you have available for trading. For both the Securities and Commodities segments, this is calculated as: Equity with Loan Value – Initial Margin.
-	AvailableFunds *float64 `json:"availableFunds,omitempty"`
+	AvailableFunds *string `json:"availableFunds,omitempty"`
 
 	// Balance Returns the total account balance.
-	Balance *float64 `json:"balance,omitempty"`
+	Balance *string `json:"balance,omitempty"`
 
 	// BuyingPower Total buying power available for the account.
-	BuyingPower *float64 `json:"buyingPower,omitempty"`
+	BuyingPower *string `json:"buyingPower,omitempty"`
 
 	// CashBalances An array containing balance information for all currencies held by the account.
 	CashBalances *[]struct {
@@ -17193,28 +17286,28 @@ type AccountSummaryResponse struct {
 	} `json:"cashBalances,omitempty"`
 
 	// EquityWithLoanValue The basis for determining whether you have the necessary assets to either initiate or maintain security assets.
-	EquityWithLoanValue *float64 `json:"equityWithLoanValue,omitempty"`
+	EquityWithLoanValue *string `json:"equityWithLoanValue,omitempty"`
 
 	// ExcessLiquidity The amount of cash in excess of the usual requirement in your account.
-	ExcessLiquidity *float64 `json:"excessLiquidity,omitempty"`
+	ExcessLiquidity *string `json:"excessLiquidity,omitempty"`
 
 	// InitialMargin The available initial margin for the account.
-	InitialMargin *float64 `json:"initialMargin,omitempty"`
+	InitialMargin *string `json:"initialMargin,omitempty"`
 
 	// MaintenanceMargin The available maintenance margin for the account.
-	MaintenanceMargin *float64 `json:"maintenanceMargin,omitempty"`
+	MaintenanceMargin *string `json:"maintenanceMargin,omitempty"`
 
 	// NetLiquidationValue The basis for determining the price of the assets in your account.
-	NetLiquidationValue *float64 `json:"netLiquidationValue,omitempty"`
+	NetLiquidationValue *string `json:"netLiquidationValue,omitempty"`
 
 	// RegTLoan The Federal Reserve Board regulation governing the amount of credit that broker dealers may extend to clients who borrow money to buy securities on margin.
-	RegTLoan *float64 `json:"regTLoan,omitempty"`
+	RegTLoan *string `json:"regTLoan,omitempty"`
 
 	// RegTMargin The initial margin requirements calculated under US Regulation T rules for both the securities and commodities segment of your account.
-	RegTMargin *float64 `json:"regTMargin,omitempty"`
+	RegTMargin *string `json:"regTMargin,omitempty"`
 
 	// SecuritiesGVP Absolute value of the Long Stock Value + Short Stock Value + Long Option Value + Short Option Value + Fund Value.
-	SecuritiesGVP *float64 `json:"securitiesGVP,omitempty"`
+	SecuritiesGVP *string `json:"securitiesGVP,omitempty"`
 
 	// Status If the account is currently non-tradeable, a status message will be dispalyed.
 	Status *string `json:"status,omitempty"`
@@ -17223,7 +17316,7 @@ type AccountSummaryResponse struct {
 	//  *  Trades executed directly through the FX market.
 	//  *  Trades executed as a result of automatic IB conversions, which occur when you trade a product in a non-base currency.
 	//  *  Trades deliberately executed to close non-base currency positions using the FXCONV destination.
-	TotalCashValue *float64 `json:"totalCashValue,omitempty"`
+	TotalCashValue *string `json:"totalCashValue,omitempty"`
 }
 
 // AdvancedOrderReject Relates a message generated in response to the rejection of the submitted order ticket. In some cases, it may also present a mechanism to resubmit the same order following a prompted decision.
@@ -17931,6 +18024,33 @@ type BrokerageSessionStatus struct {
 	} `json:"serverInfo,omitempty"`
 }
 
+// CashAnalyzerResponse Response envelope returned by `/fa/model/cash-analyzer`, summarizing the cash transfers, FX conversion orders, and margin warnings for the currently pending model allocation plan.
+type CashAnalyzerResponse struct {
+	// CashTransfers Cash transfers required by the current allocation plan.
+	CashTransfers *[]TwsInvestDivestCashTransfer `json:"cashTransfers,omitempty"`
+
+	// Error Error message produced by the analyzer, or `null` if none.
+	Error *string `json:"error,omitempty"`
+
+	// Fxconvorders FX conversion orders required to fund the plan.
+	Fxconvorders *[]map[string]interface{} `json:"fxconvorders,omitempty"`
+
+	// MarginWarning True if the plan would trigger a margin warning.
+	MarginWarning *bool `json:"marginWarning,omitempty"`
+
+	// ReqID Request identifier echoed from the originating request.
+	ReqID *int64 `json:"reqID,omitempty"`
+
+	// SubscriptionStatus Describes if the model is in polling mode.
+	SubscriptionStatus *int64 `json:"subscriptionStatus,omitempty"`
+
+	// Success Signifies that the analyzer completed successfully.
+	Success *bool `json:"success,omitempty"`
+
+	// TransfersInstructionId Identifier that groups the resulting transfers; supply to downstream submit endpoints.
+	TransfersInstructionId *int64 `json:"transfersInstructionId,omitempty"`
+}
+
 // CategoryTreeResponse defines model for categoryTreeResponse.
 type CategoryTreeResponse struct {
 	// Categories A JSON object containing all category IDs and their relevant information.
@@ -18383,7 +18503,7 @@ type ForecastDetailsResponse struct {
 	MeasuredPeriod *string `json:"measured_period,omitempty"`
 
 	// Payout Ratio of payout scaling.
-	Payout *float64 `json:"payout,omitempty"`
+	Payout *string `json:"payout,omitempty"`
 
 	// Question Contract question (i.e. "Will this happen on this date?")
 	Question *string `json:"question,omitempty"`
@@ -18446,7 +18566,7 @@ type ForecastMarketResponse struct {
 	MarketName *string `json:"market_name,omitempty"`
 
 	// Payout Ratio of payout scaling.
-	Payout *float64 `json:"payout,omitempty"`
+	Payout *string `json:"payout,omitempty"`
 
 	// Symbol Market symbol.
 	Symbol *string `json:"symbol,omitempty"`
@@ -22583,6 +22703,129 @@ type Presets struct {
 	StrictCreditCheck *bool `json:"strict_credit_check,omitempty"`
 }
 
+// RebalanceAllocation Individual allocation instruction produced by the rebalancer.
+type RebalanceAllocation struct {
+	// Account Account identifier the allocation applies to (may be qualified with the model name).
+	Account *string `json:"account,omitempty"`
+
+	// BatchNumber Batch grouping used to order the submitted transfers.
+	BatchNumber *int64 `json:"batchNumber,omitempty"`
+
+	// CashQty Cash-denominated quantity for the allocation.
+	CashQty *string `json:"cashQty,omitempty"`
+
+	// ClosePosition True if this allocation fully closes the position.
+	ClosePosition *bool `json:"closePosition,omitempty"`
+
+	// Conid Contract identifier for the instrument being allocated.
+	Conid *int64 `json:"conid,omitempty"`
+
+	// FxHedgeConid Contract identifier for the FX hedge, when applicable.
+	FxHedgeConid *int64 `json:"fxHedgeConid,omitempty"`
+
+	// FxHedgeQuantity Quantity of the FX hedge, when applicable.
+	FxHedgeQuantity *string `json:"fxHedgeQuantity,omitempty"`
+
+	// IsCashQty True if the allocation is expressed as a cash amount rather than a share quantity.
+	IsCashQty *bool `json:"isCashQty,omitempty"`
+
+	// Quantity Share quantity for the allocation.
+	Quantity *string `json:"quantity,omitempty"`
+
+	// SecType Security type (e.g. `STK`).
+	SecType *string `json:"secType,omitempty"`
+}
+
+// RebalanceAllocationPreview Fully computed rebalance allocation preview returned by `/fa/model/rebalance/to-specific-targets`. Includes per-account allocations, per-instrument totals, transfer plans, and any warnings/errors produced by the rebalancer.
+type RebalanceAllocationPreview struct {
+	// AccountsCanTradeFractions Accounts eligible to trade fractional shares.
+	AccountsCanTradeFractions *[]string `json:"accountsCanTradeFractions,omitempty"`
+
+	// AllocationTotals Aggregate buy/sell totals per instrument.
+	AllocationTotals *[]RebalanceAllocationTotal `json:"allocationTotals,omitempty"`
+
+	// Allocations Individual allocation instructions produced by the rebalancer.
+	Allocations *[]RebalanceAllocation `json:"allocations,omitempty"`
+
+	// BaseCcy Base currency of the model.
+	BaseCcy *string `json:"baseCcy,omitempty"`
+
+	// ContractsAllocEnabled Contract identifiers for which allocation is enabled.
+	ContractsAllocEnabled *[]int64 `json:"contractsAllocEnabled,omitempty"`
+
+	// ContractsCashQtyEnabled Contract identifiers for which cash-quantity allocation is enabled.
+	ContractsCashQtyEnabled *[]int64 `json:"contractsCashQtyEnabled,omitempty"`
+
+	// ContractsFracEligible Contract identifiers eligible for fractional-share allocation.
+	ContractsFracEligible *[]int64 `json:"contractsFracEligible,omitempty"`
+
+	// Errors List of errors produced by the rebalancer. Empty when the preview is successful.
+	Errors *[]string `json:"errors,omitempty"`
+
+	// MiPositionTransfers Position transfers scheduled between managed-independent accounts.
+	MiPositionTransfers *[]map[string]interface{} `json:"miPositionTransfers,omitempty"`
+
+	// Model Name of the model that was rebalanced.
+	Model *string `json:"model,omitempty"`
+
+	// PositionTransfers Position transfers scheduled between the model and its accounts.
+	PositionTransfers *[]map[string]interface{} `json:"positionTransfers,omitempty"`
+
+	// ReqID Request identifier echoed from the originating request.
+	ReqID *int64 `json:"reqID,omitempty"`
+
+	// SubscriptionStatus Describes if the model is in polling mode.
+	SubscriptionStatus *int64 `json:"subscriptionStatus,omitempty"`
+
+	// TransfersInstructionId Identifier that groups the resulting transfers; supply to downstream submit endpoints.
+	TransfersInstructionId *string `json:"transfersInstructionId,omitempty"`
+
+	// Warnings Non-fatal warnings produced by the rebalancer.
+	Warnings *[]string `json:"warnings,omitempty"`
+}
+
+// RebalanceAllocationTotal Aggregate buy/sell totals for a single instrument in the rebalance preview.
+type RebalanceAllocationTotal struct {
+	// Conid Contract identifier for the instrument.
+	Conid *int64 `json:"conid,omitempty"`
+
+	// SecType Security type (e.g. `STK`).
+	SecType *string `json:"secType,omitempty"`
+
+	// TotalBuy Total shares to buy across all accounts.
+	TotalBuy *string `json:"totalBuy,omitempty"`
+
+	// TotalCashQtyBuy Total cash-denominated buy quantity across all accounts.
+	TotalCashQtyBuy *string `json:"totalCashQtyBuy,omitempty"`
+
+	// TotalCashQtySell Total cash-denominated sell quantity across all accounts.
+	TotalCashQtySell *string `json:"totalCashQtySell,omitempty"`
+
+	// TotalSell Total shares to sell across all accounts.
+	TotalSell *string `json:"totalSell,omitempty"`
+}
+
+// RebalanceSubscriptionResponse Envelope returned by the polling-style rebalance endpoints (`/fa/model/rebalance/to-existing-targets` and `/fa/model/rebalance/to-new-targets`). Callers should re-issue the request supplying the returned `subscriptionKey` until `subscriptionStatus` transitions out of the pending state.
+type RebalanceSubscriptionResponse struct {
+	// ReqID Request identifier echoed from the originating request.
+	//
+	// Example: 398899
+	ReqID *string `json:"reqID,omitempty"`
+
+	// SubscriptionKey Subscription key to include on follow-up poll requests.
+	//
+	// Example: 1
+	SubscriptionKey *string `json:"subscriptionKey,omitempty"`
+
+	// SubscriptionStatus Polling state indicator.
+	//  * `0` - Result is still being computed; continue polling.
+	//  * `1` - Result is ready.
+	//
+	//
+	// Example: 0
+	SubscriptionStatus *int64 `json:"subscriptionStatus,omitempty"`
+}
+
 // ScheduleResponse defines model for scheduleResponse.
 type ScheduleResponse struct {
 	// ExchangeTimeZone Returns the time zone the exchange trades in.
@@ -23761,6 +24004,90 @@ type TrsrvSecDefResponse struct {
 	} `json:"secdef,omitempty"`
 }
 
+// TwsInvestDivestAllocation Allocation instruction produced by the TWS invest/divest planner.
+type TwsInvestDivestAllocation struct {
+	// Account Account the allocation applies to.
+	Account *string `json:"account,omitempty"`
+
+	// BatchNumber Batch grouping used to order the submitted transfers.
+	BatchNumber *int64 `json:"batchNumber,omitempty"`
+
+	// CashQty Cash-denominated quantity for the allocation.
+	CashQty *string `json:"cashQty,omitempty"`
+
+	// ClosePosition True if this allocation fully closes the position.
+	ClosePosition *bool `json:"closePosition,omitempty"`
+
+	// Conid Contract identifier for the instrument being allocated.
+	Conid *int64 `json:"conid,omitempty"`
+
+	// IsCashQty True if the allocation is expressed as a cash amount rather than a share quantity.
+	IsCashQty *bool `json:"isCashQty,omitempty"`
+
+	// Model Destination model for the allocation.
+	Model *string `json:"model,omitempty"`
+
+	// Price Price used to compute the allocation.
+	Price *string `json:"price,omitempty"`
+
+	// Quantity Share quantity for the allocation.
+	Quantity *string `json:"quantity,omitempty"`
+
+	// RelatedRequestAccount Account associated with the related upstream request.
+	RelatedRequestAccount *string `json:"relatedRequestAccount,omitempty"`
+
+	// RelatedRequestID Identifier of the related upstream request that produced this allocation.
+	RelatedRequestID *string `json:"relatedRequestID,omitempty"`
+
+	// SecType Security type (e.g. `STK`).
+	SecType *string `json:"secType,omitempty"`
+}
+
+// TwsInvestDivestCashTransfer Cash transfer between a source and destination model produced by the TWS invest/divest planner.
+type TwsInvestDivestCashTransfer struct {
+	// Account Account the cash transfer applies to.
+	Account *string `json:"account,omitempty"`
+
+	// Amt Amount of cash to transfer, expressed in `ccy`.
+	Amt *string `json:"amt,omitempty"`
+
+	// BatchNumber Batch grouping used to order the submitted transfers.
+	BatchNumber *int64 `json:"batchNumber,omitempty"`
+
+	// Ccy Currency of the cash transfer (ISO 4217).
+	Ccy *string `json:"ccy,omitempty"`
+
+	// DestinationModel Model receiving the cash.
+	DestinationModel *string `json:"destinationModel,omitempty"`
+
+	// SourceModel Model supplying the cash (e.g. `Core` for the independent cash pool).
+	SourceModel *string `json:"sourceModel,omitempty"`
+}
+
+// TwsInvestDivestResponseData Response envelope returned by `/fa/model/tws-invest-divest`, containing the computed allocation plan, cash transfers between models, and any errors or pending position transfers.
+type TwsInvestDivestResponseData struct {
+	// Allocations Per-instrument allocation instructions produced by the invest/divest planner.
+	Allocations *[]TwsInvestDivestAllocation `json:"allocations,omitempty"`
+
+	// CashTransfers Cash movements between source and destination models required to fund the plan.
+	CashTransfers *[]TwsInvestDivestCashTransfer `json:"cashTransfers,omitempty"`
+
+	// Errors Errors produced by the planner. `null` when the plan is successful.
+	Errors *[]string `json:"errors,omitempty"`
+
+	// PositionTransfers Position transfers scheduled between the source and destination models.
+	PositionTransfers *[]map[string]interface{} `json:"positionTransfers,omitempty"`
+
+	// ReqID Request identifier echoed from the originating request.
+	ReqID *int64 `json:"reqID,omitempty"`
+
+	// SubscriptionStatus Describes if the model is in polling mode.
+	SubscriptionStatus *int64 `json:"subscriptionStatus,omitempty"`
+
+	// TransfersInstructionId Identifier that groups the resulting transfers; supply to downstream submit endpoints.
+	TransfersInstructionId *int64 `json:"transfersInstructionId,omitempty"`
+}
+
 // Typecodes Many FYI endpoints reference a "typecode" value. The table below lists the available codes and what they correspond to.
 //   - `BA` - Borrow Availability
 //   - `CA` - Comparable Algo
@@ -24565,6 +24892,17 @@ type GetModelPresetsJSONBody struct {
 	ReqID int64 `json:"reqID"`
 }
 
+// IsFullMasterJSONBody defines parameters for IsFullMaster.
+type IsFullMasterJSONBody struct {
+	// ReqID Request identifier to uniquely track a request.
+	//
+	// Example: 398899
+	ReqID int64 `json:"reqID"`
+
+	// SubscriptionKey Subscription key. Send an empty string on the initial request.
+	SubscriptionKey *string `json:"subscriptionKey,omitempty"`
+}
+
 // GetAccountsInModelJSONBody defines parameters for GetAccountsInModel.
 type GetAccountsInModelJSONBody struct {
 	// CalcPnls Determine if Profit and Loss values
@@ -24577,6 +24915,17 @@ type GetAccountsInModelJSONBody struct {
 	//
 	// Example: 540608
 	ReqID *int64 `json:"reqID,omitempty"`
+}
+
+// ModelCashAnalyzerJSONBody defines parameters for ModelCashAnalyzer.
+type ModelCashAnalyzerJSONBody struct {
+	// ReqID Request identifier to uniquely track a request.
+	//
+	// Example: 398899
+	ReqID int64 `json:"reqID"`
+
+	// SubscriptionKey Subscription key. Send an empty string on the initial request.
+	SubscriptionKey *string `json:"subscriptionKey,omitempty"`
 }
 
 // SetAccountinvestmentInModelJSONBody defines parameters for SetAccountinvestmentInModel.
@@ -24660,6 +25009,102 @@ type GetAllModelPositionsJSONBodySortDirection string
 // GetAllModelPositionsJSONBodySortField defines parameters for GetAllModelPositions.
 type GetAllModelPositionsJSONBodySortField string
 
+// RebalanceToExistingTargetsJSONBody defines parameters for RebalanceToExistingTargets.
+type RebalanceToExistingTargetsJSONBody struct {
+	// Model Name of the model to rebalance.
+	//
+	// Example: Sample-Model
+	Model string `json:"model"`
+
+	// ReqID Request identifier to uniquely track a request.
+	//
+	// Example: 398899
+	ReqID int64 `json:"reqID"`
+
+	// SubscriptionKey Subscription key returned by a prior polling response. Send an empty string on the initial request; supply the returned key on follow-up poll requests.
+	SubscriptionKey *string `json:"subscriptionKey,omitempty"`
+}
+
+// RebalanceToNewTargetsJSONBody defines parameters for RebalanceToNewTargets.
+type RebalanceToNewTargetsJSONBody struct {
+	// CashTargets Full replacement list of currency cash targets for the model.
+	CashTargets []struct {
+		// Ccy Currency code of the cash target (ISO 4217).
+		//
+		// Example: USD
+		Ccy *string `json:"ccy,omitempty"`
+
+		// Locked Whether the cash target is locked and should not be adjusted by the rebalancer.
+		Locked *bool `json:"locked,omitempty"`
+
+		// Target Target allocation for the currency, expressed as a fraction of the model.
+		//
+		// Example: 0
+		Target *float32 `json:"target,omitempty"`
+	} `json:"cashTargets"`
+
+	// Model Name of the model to rebalance.
+	//
+	// Example: Sample-Model
+	Model string `json:"model"`
+
+	// PositionTargets Full replacement list of position targets for the model.
+	PositionTargets []struct {
+		// Conid Contract identifier for the instrument to target.
+		//
+		// Example: 1715006
+		Conid *int64 `json:"conid,omitempty"`
+
+		// Locked Whether the target is locked and should not be adjusted by the rebalancer.
+		Locked *bool `json:"locked,omitempty"`
+
+		// Target Target allocation for the instrument, expressed as a fraction of the model (e.g. `0.3` = 30%).
+		//
+		// Example: 0
+		Target *float32 `json:"target,omitempty"`
+	} `json:"positionTargets"`
+
+	// ReqID Request identifier to uniquely track a request.
+	//
+	// Example: 398896
+	ReqID int64 `json:"reqID"`
+
+	// SubscriptionKey Subscription key returned by a prior polling response. Send an empty string on the initial request; supply the returned key on follow-up poll requests.
+	SubscriptionKey *string `json:"subscriptionKey,omitempty"`
+}
+
+// RebalanceToSpecificTargetsJSONBody defines parameters for RebalanceToSpecificTargets.
+type RebalanceToSpecificTargetsJSONBody struct {
+	// Model Name of the model to rebalance.
+	//
+	// Example: MODEL-API-DEMO
+	Model string `json:"model"`
+
+	// PositionTargets Position targets to override for the model. Only these instruments are adjusted; the rest of the model is preserved.
+	PositionTargets []struct {
+		// Conid Contract identifier for the instrument to target.
+		//
+		// Example: 268084
+		Conid *int64 `json:"conid,omitempty"`
+
+		// Locked Whether the target is locked and should not be adjusted by the rebalancer.
+		Locked *bool `json:"locked,omitempty"`
+
+		// Target Target allocation for the instrument, expressed as a fraction of the model.
+		//
+		// Example: 0
+		Target *float32 `json:"target,omitempty"`
+	} `json:"positionTargets"`
+
+	// ReqID Request identifier to uniquely track a request.
+	//
+	// Example: 398899
+	ReqID int64 `json:"reqID"`
+
+	// SubscriptionKey Subscription key. Send an empty string on the initial request.
+	SubscriptionKey *string `json:"subscriptionKey,omitempty"`
+}
+
 // SetModelTargetPositionsJSONBody defines parameters for SetModelTargetPositions.
 type SetModelTargetPositionsJSONBody struct {
 	// CashTargets Array target cash objects
@@ -24727,6 +25172,53 @@ type GetModelSummarySingleJSONBody struct {
 	//
 	// Example: 540609
 	ReqID *int64 `json:"reqID,omitempty"`
+}
+
+// TwsInvestDivestJSONBody defines parameters for TwsInvestDivest.
+type TwsInvestDivestJSONBody struct {
+	// Account Single U-account identifier submitting the invest/divest instructions. Mutually exclusive with `accountList` and `group`.
+	//
+	//
+	// Example: DU12349
+	Account *string `json:"account,omitempty"`
+
+	// AccountList Explicit list of U-account identifiers to invest/divest. Each `amtToInvest` value in `modelList` is divided equally across the listed accounts. Mutually exclusive with `account` and `group`.
+	//
+	//
+	// Example: ["DU12349","DU12350","DU12351"]
+	AccountList *[]string `json:"accountList,omitempty"`
+
+	// Group Name of an FA pre-trade allocation group whose member accounts should receive the invest/divest instructions. Use `"All"` to target every account under the advisor. When supplied, each `amtToInvest` value in `modelList` is divided equally across the resolved group members. Mutually exclusive with `account` and `accountList`.
+	//
+	//
+	// Example: Group1
+	Group *string `json:"group,omitempty"`
+
+	// ModelList List of invest/divest instructions, one per model destination.
+	ModelList []struct {
+		// AmtToInvest Amount of cash to invest into the model. Use a negative value to divest.
+		//
+		// Example: 1000
+		AmtToInvest *float32 `json:"amtToInvest,omitempty"`
+
+		// InvestCurrency Currency (ISO 4217) of the invest/divest amount.
+		//
+		// Example: USD
+		InvestCurrency *string `json:"investCurrency,omitempty"`
+
+		// Model Destination model for the invest/divest instruction.
+		//
+		// Example: MODEL-API-DEMO
+		Model *string `json:"model,omitempty"`
+	} `json:"modelList"`
+
+	// ReqID Request identifier to uniquely track a request.
+	//
+	// Example: 398889
+	ReqID int64 `json:"reqID"`
+
+	// SubscriptionKey Subscription key. Send an empty string on the initial request.
+	SubscriptionKey *string `json:"subscriptionKey,omitempty"`
 }
 
 // GetForecastContractParams defines parameters for GetForecastContract.
@@ -24924,6 +25416,131 @@ type ModifyOpenOrder200JSONResponseBody struct {
 type SubmitNewOrder200JSONResponseBody struct {
 	union json.RawMessage
 }
+
+// SubmitModelPortfolioOrderJSONBody defines parameters for SubmitModelPortfolioOrder.
+type SubmitModelPortfolioOrderJSONBody struct {
+	// Orders Collection of order instructions to submit against the model portfolio.
+	Orders []struct {
+		// AcctId Sub-account identifier the order applies to under the model.
+		//
+		// Example: DU12345
+		AcctId *string `json:"acctId,omitempty"`
+
+		// AllocationMethod FA allocation method used to distribute the order across the model's sub-accounts (e.g. `AvailableEquity`, `NetLiq`, `EqualQuantity`, `PctChange`).
+		//
+		//
+		// Example: AvailableEquity
+		AllocationMethod *string `json:"allocationMethod,omitempty"`
+
+		// AuxPrice Stop or trailing price. Required for `STP`, `STOP_LIMIT`, and trailing order types.
+		AuxPrice *float32 `json:"auxPrice,omitempty"`
+
+		// COID Client order identifier. Must be unique per order and can be used to correlate submissions with downstream events.
+		//
+		//
+		// Example: my-model-order-001
+		COID *string `json:"cOID,omitempty"`
+
+		// CashQty Cash-denominated quantity to trade. Mutually exclusive with `quantity`.
+		CashQty *float32 `json:"cashQty,omitempty"`
+
+		// Conid Contract identifier for the instrument to trade.
+		//
+		// Example: 265598
+		Conid *int64 `json:"conid,omitempty"`
+
+		// Conidex Combined contract identifier and routing destination in the form `<conid>@<exchange>`. Optional; if omitted, IBKR default routing is used.
+		//
+		//
+		// Example: 265598@SMART
+		Conidex *string `json:"conidex,omitempty"`
+
+		// FxQty FX quantity for currency conversion orders.
+		FxQty *float32 `json:"fxQty,omitempty"`
+
+		// IsCcyConv True if the order is a currency conversion order.
+		IsCcyConv *bool `json:"isCcyConv,omitempty"`
+
+		// IsSingleGroup True to submit the order set as a single OCA group.
+		IsSingleGroup *bool `json:"isSingleGroup,omitempty"`
+
+		// ListingExchange Preferred listing exchange for the instrument.
+		//
+		// Example: SMART
+		ListingExchange *string `json:"listingExchange,omitempty"`
+
+		// OrderType Order type.
+		//
+		// Example: MKT
+		OrderType *SubmitModelPortfolioOrderJSONBodyOrdersOrderType `json:"orderType,omitempty"`
+
+		// OutsideRTH True to allow the order to execute outside regular trading hours.
+		OutsideRTH *bool `json:"outsideRTH,omitempty"`
+
+		// ParentId `cOID` of the parent order when submitting child orders in a bracket or OCA group.
+		ParentId *string `json:"parentId,omitempty"`
+
+		// Price Limit price. Required for `LMT` and `STOP_LIMIT` order types.
+		Price *float32 `json:"price,omitempty"`
+
+		// Quantity Share quantity to trade. Mutually exclusive with `cashQty`.
+		//
+		// Example: 100
+		Quantity *float32 `json:"quantity,omitempty"`
+
+		// Referrer Optional referrer identifier used for internal tracking.
+		//
+		// Example: ModelPortfolio
+		Referrer *string `json:"referrer,omitempty"`
+
+		// SecType Security type (e.g. `STK`, `OPT`, `FUT`, `CASH`).
+		//
+		// Example: STK
+		SecType *string `json:"secType,omitempty"`
+
+		// Side Order side.
+		//
+		// Example: BUY
+		Side *SubmitModelPortfolioOrderJSONBodyOrdersSide `json:"side,omitempty"`
+
+		// Strategy Optional algorithmic execution strategy name.
+		Strategy *string `json:"strategy,omitempty"`
+
+		// StrategyParameters Parameters passed to the selected algorithmic strategy.
+		StrategyParameters *map[string]interface{} `json:"strategyParameters,omitempty"`
+
+		// Ticker Instrument ticker symbol.
+		//
+		// Example: AAPL
+		Ticker *string `json:"ticker,omitempty"`
+
+		// Tif Time in force for the order.
+		//
+		// Example: DAY
+		Tif *SubmitModelPortfolioOrderJSONBodyOrdersTif `json:"tif,omitempty"`
+
+		// TrailingAmt Trailing amount for `TRAIL` / `TRAILLMT` order types.
+		TrailingAmt *float32 `json:"trailingAmt,omitempty"`
+
+		// TrailingType Trailing amount type.
+		TrailingType *SubmitModelPortfolioOrderJSONBodyOrdersTrailingType `json:"trailingType,omitempty"`
+
+		// UseAdaptive True to route the order using the IB Adaptive algorithm.
+		UseAdaptive *bool `json:"useAdaptive,omitempty"`
+	} `json:"orders"`
+}
+
+// SubmitModelPortfolioOrderJSONBodyOrdersOrderType defines parameters for SubmitModelPortfolioOrder.
+type SubmitModelPortfolioOrderJSONBodyOrdersOrderType string
+
+// SubmitModelPortfolioOrderJSONBodyOrdersSide defines parameters for SubmitModelPortfolioOrder.
+type SubmitModelPortfolioOrderJSONBodyOrdersSide string
+
+// SubmitModelPortfolioOrderJSONBodyOrdersTif defines parameters for SubmitModelPortfolioOrder.
+type SubmitModelPortfolioOrderJSONBodyOrdersTif string
+
+// SubmitModelPortfolioOrderJSONBodyOrdersTrailingType defines parameters for SubmitModelPortfolioOrder.
+type SubmitModelPortfolioOrderJSONBodyOrdersTrailingType string
 
 // GetContractRulesJSONBody defines parameters for GetContractRules.
 type GetContractRulesJSONBody struct {
@@ -25279,7 +25896,9 @@ type GetTransactionsJSONBody struct {
 
 // GetManySubaccountsParams defines parameters for GetManySubaccounts.
 type GetManySubaccountsParams struct {
-	Nocache *bool `form:"nocache,omitempty" json:"nocache,omitempty"`
+	Nocache  *bool  `form:"nocache,omitempty" json:"nocache,omitempty"`
+	Page     *int64 `form:"page,omitempty" json:"page,omitempty"`
+	PageSize *int64 `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
 // GetAssetAllocationParams defines parameters for GetAssetAllocation.
@@ -25292,12 +25911,27 @@ type GetComboPositionsParams struct {
 	Nocache *bool `form:"nocache,omitempty" json:"nocache,omitempty"`
 }
 
+// GetPortfolioLedgerParams defines parameters for GetPortfolioLedger.
+type GetPortfolioLedgerParams struct {
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
+}
+
+// GetPositionByConidParams defines parameters for GetPositionByConid.
+type GetPositionByConidParams struct {
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
+}
+
 // GetPaginatedPositionsParams defines parameters for GetPaginatedPositions.
 type GetPaginatedPositionsParams struct {
 	Model         *string `form:"model,omitempty" json:"model,omitempty"`
 	Sort          *string `form:"sort,omitempty" json:"sort,omitempty"`
 	Direction     *string `form:"direction,omitempty" json:"direction,omitempty"`
 	WaitForSecDef *bool   `form:"waitForSecDef,omitempty" json:"waitForSecDef,omitempty"`
+}
+
+// GetPortfolioSummaryParams defines parameters for GetPortfolioSummary.
+type GetPortfolioSummaryParams struct {
+	Model *string `form:"model,omitempty" json:"model,omitempty"`
 }
 
 // GetUncachedPositionsParams defines parameters for GetUncachedPositions.
@@ -25443,8 +26077,14 @@ type GetModelPresetsJSONRequestBody GetModelPresetsJSONBody
 // SetModelPresetsJSONRequestBody defines body for SetModelPresets for application/json ContentType.
 type SetModelPresetsJSONRequestBody = ModelPresetsResponse
 
+// IsFullMasterJSONRequestBody defines body for IsFullMaster for application/json ContentType.
+type IsFullMasterJSONRequestBody IsFullMasterJSONBody
+
 // GetAccountsInModelJSONRequestBody defines body for GetAccountsInModel for application/json ContentType.
 type GetAccountsInModelJSONRequestBody GetAccountsInModelJSONBody
+
+// ModelCashAnalyzerJSONRequestBody defines body for ModelCashAnalyzer for application/json ContentType.
+type ModelCashAnalyzerJSONRequestBody ModelCashAnalyzerJSONBody
 
 // SetAccountinvestmentInModelJSONRequestBody defines body for SetAccountinvestmentInModel for application/json ContentType.
 type SetAccountinvestmentInModelJSONRequestBody SetAccountinvestmentInModelJSONBody
@@ -25458,6 +26098,15 @@ type GetAllmodelsJSONRequestBody GetAllmodelsJSONBody
 // GetAllModelPositionsJSONRequestBody defines body for GetAllModelPositions for application/json ContentType.
 type GetAllModelPositionsJSONRequestBody GetAllModelPositionsJSONBody
 
+// RebalanceToExistingTargetsJSONRequestBody defines body for RebalanceToExistingTargets for application/json ContentType.
+type RebalanceToExistingTargetsJSONRequestBody RebalanceToExistingTargetsJSONBody
+
+// RebalanceToNewTargetsJSONRequestBody defines body for RebalanceToNewTargets for application/json ContentType.
+type RebalanceToNewTargetsJSONRequestBody RebalanceToNewTargetsJSONBody
+
+// RebalanceToSpecificTargetsJSONRequestBody defines body for RebalanceToSpecificTargets for application/json ContentType.
+type RebalanceToSpecificTargetsJSONRequestBody RebalanceToSpecificTargetsJSONBody
+
 // SetModelTargetPositionsJSONRequestBody defines body for SetModelTargetPositions for application/json ContentType.
 type SetModelTargetPositionsJSONRequestBody SetModelTargetPositionsJSONBody
 
@@ -25466,6 +26115,9 @@ type SubmitModelOrdersJSONRequestBody SubmitModelOrdersJSONBody
 
 // GetModelSummarySingleJSONRequestBody defines body for GetModelSummarySingle for application/json ContentType.
 type GetModelSummarySingleJSONRequestBody GetModelSummarySingleJSONBody
+
+// TwsInvestDivestJSONRequestBody defines body for TwsInvestDivest for application/json ContentType.
+type TwsInvestDivestJSONRequestBody TwsInvestDivestJSONBody
 
 // ModifyFyiDeliveryJSONRequestBody defines body for ModifyFyiDelivery for application/json ContentType.
 type ModifyFyiDeliveryJSONRequestBody = FyiEnableDeviceOption
@@ -25508,6 +26160,9 @@ type SubmitNewOrderJSONRequestBody = OrdersSubmissionRequest
 
 // PreviewMarginImpactJSONRequestBody defines body for PreviewMarginImpact for application/json ContentType.
 type PreviewMarginImpactJSONRequestBody = OrdersSubmissionRequest
+
+// SubmitModelPortfolioOrderJSONRequestBody defines body for SubmitModelPortfolioOrder for application/json ContentType.
+type SubmitModelPortfolioOrderJSONRequestBody SubmitModelPortfolioOrderJSONBody
 
 // InitializeSessionJSONRequestBody defines body for InitializeSession for application/json ContentType.
 type InitializeSessionJSONRequestBody = BrokerageSessionInitRequest
@@ -30317,6 +30972,26 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/api/fa/fa-preset/save (the `SetModelPresets` operationId).
 	SetModelPresets(ctx context.Context, body SetModelPresetsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// IsFullMasterWithBody Is Full Master Account
+	//
+	// Determine whether the authenticated advisor account is a full master account (i.e. has full authority to create and manage models, invest sub-accounts, and submit transfers).
+	// NOTE - This endpoint does not accept a `model` parameter. Supplying one has been observed to return `400 Bad Request` on live traffic.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/api/fa/is-full-master (the `IsFullMaster` operationId).
+	IsFullMasterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// IsFullMaster Is Full Master Account
+	//
+	// Determine whether the authenticated advisor account is a full master account (i.e. has full authority to create and manage models, invest sub-accounts, and submit transfers).
+	// NOTE - This endpoint does not accept a `model` parameter. Supplying one has been observed to return `400 Bad Request` on live traffic.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/api/fa/is-full-master (the `IsFullMaster` operationId).
+	IsFullMaster(ctx context.Context, body IsFullMasterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetAccountsInModelWithBody Get Models Accounts
 	//
 	// Request all accounts held within a model.
@@ -30335,9 +31010,42 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/api/fa/model/accounts-details (the `GetAccountsInModel` operationId).
 	GetAccountsInModel(ctx context.Context, body GetAccountsInModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ModelCashAnalyzerWithBody Model Cash Analyzer
+	//
+	// Run the model cash analyzer to review pending cash transfers, FX conversion orders, and any margin warnings that would result from the currently pending model allocation plan.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/cash-analyzer (the `ModelCashAnalyzer` operationId).
+	ModelCashAnalyzerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ModelCashAnalyzer Model Cash Analyzer
+	//
+	// Run the model cash analyzer to review pending cash transfers, FX conversion orders, and any margin warnings that would result from the currently pending model allocation plan.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/cash-analyzer (the `ModelCashAnalyzer` operationId).
+	ModelCashAnalyzer(ctx context.Context, body ModelCashAnalyzerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SetAccountinvestmentInModelWithBody Invest Account Into Model
 	//
-	// Assign an account and the amount of cash to allocate into a model.
+	// Submit invest or divest instructions for one or more accounts into a **single** destination model, with a **per-account** cash amount. Each entry in `accountList` pairs an account identifier with the individual `amtToInvest` value applied to that account (positive to invest, negative to divest).
+	//
+	// Constraints and comparison to `/fa/model/tws-invest-divest`:
+	//  * Only a **single model** may be targeted per request (the top-level `model`
+	//    field). To invest into multiple models in one call, use
+	//    `/fa/model/tws-invest-divest` and its `modelList`.
+	//  * The model must be denominated in a **single currency**; multi-currency
+	//    models are not supported by this endpoint. Use `/fa/model/tws-invest-divest`
+	//    for models holding instruments across multiple currencies.
+	//  * FA pre-trade allocation **groups are not supported** here â€” each account
+	//    and its individual investment amount must be listed explicitly in
+	//    `accountList`.
+	//  * Because each account is listed individually, this endpoint allows a
+	//    **different investment amount per account**. `/fa/model/tws-invest-divest`,
+	//    by contrast, splits a single `amtToInvest` equally across accounts when a
+	//    `group` or `accountList` is used.
 	//
 	// Takes any type of body and a specified content type.
 	//
@@ -30346,7 +31054,22 @@ type ClientInterface interface {
 
 	// SetAccountinvestmentInModel Invest Account Into Model
 	//
-	// Assign an account and the amount of cash to allocate into a model.
+	// Submit invest or divest instructions for one or more accounts into a **single** destination model, with a **per-account** cash amount. Each entry in `accountList` pairs an account identifier with the individual `amtToInvest` value applied to that account (positive to invest, negative to divest).
+	//
+	// Constraints and comparison to `/fa/model/tws-invest-divest`:
+	//  * Only a **single model** may be targeted per request (the top-level `model`
+	//    field). To invest into multiple models in one call, use
+	//    `/fa/model/tws-invest-divest` and its `modelList`.
+	//  * The model must be denominated in a **single currency**; multi-currency
+	//    models are not supported by this endpoint. Use `/fa/model/tws-invest-divest`
+	//    for models holding instruments across multiple currencies.
+	//  * FA pre-trade allocation **groups are not supported** here â€” each account
+	//    and its individual investment amount must be listed explicitly in
+	//    `accountList`.
+	//  * Because each account is listed individually, this endpoint allows a
+	//    **different investment amount per account**. `/fa/model/tws-invest-divest`,
+	//    by contrast, splits a single `amtToInvest` equally across accounts when a
+	//    `group` or `accountList` is used.
 	//
 	// Takes a body of the `application/json` content type.
 	//
@@ -30407,6 +31130,60 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/api/fa/model/positions (the `GetAllModelPositions` operationId).
 	GetAllModelPositions(ctx context.Context, body GetAllModelPositionsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// RebalanceToExistingTargetsWithBody Rebalance To Existing Targets
+	//
+	// Rebalance the specified model back to its currently saved target allocations. The response returns a subscription key that is used to poll for the resulting allocation preview via the standard subscription workflow.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-existing-targets (the `RebalanceToExistingTargets` operationId).
+	RebalanceToExistingTargetsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RebalanceToExistingTargets Rebalance To Existing Targets
+	//
+	// Rebalance the specified model back to its currently saved target allocations. The response returns a subscription key that is used to poll for the resulting allocation preview via the standard subscription workflow.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-existing-targets (the `RebalanceToExistingTargets` operationId).
+	RebalanceToExistingTargets(ctx context.Context, body RebalanceToExistingTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RebalanceToNewTargetsWithBody Rebalance To New Targets
+	//
+	// Rebalance the specified model to a brand-new set of target position and cash allocations supplied on the request. The full replacement target set is submitted; the response returns a subscription key for polling the resulting allocation preview.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-new-targets (the `RebalanceToNewTargets` operationId).
+	RebalanceToNewTargetsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RebalanceToNewTargets Rebalance To New Targets
+	//
+	// Rebalance the specified model to a brand-new set of target position and cash allocations supplied on the request. The full replacement target set is submitted; the response returns a subscription key for polling the resulting allocation preview.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-new-targets (the `RebalanceToNewTargets` operationId).
+	RebalanceToNewTargets(ctx context.Context, body RebalanceToNewTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RebalanceToSpecificTargetsWithBody Rebalance To Specific Targets
+	//
+	// Rebalance the specified model by overriding only the supplied position targets, leaving all other model targets unchanged. Unlike `to-new-targets`, this endpoint returns the fully computed allocation preview inline (allocations, allocation totals, transfer plan, and warnings/errors) rather than a subscription key.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-specific-targets (the `RebalanceToSpecificTargets` operationId).
+	RebalanceToSpecificTargetsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RebalanceToSpecificTargets Rebalance To Specific Targets
+	//
+	// Rebalance the specified model by overriding only the supplied position targets, leaving all other model targets unchanged. Unlike `to-new-targets`, this endpoint returns the fully computed allocation preview inline (allocations, allocation totals, transfer plan, and warnings/errors) rather than a subscription key.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-specific-targets (the `RebalanceToSpecificTargets` operationId).
+	RebalanceToSpecificTargets(ctx context.Context, body RebalanceToSpecificTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SetModelTargetPositionsWithBody Set Model Allocations
 	//
 	// Create or Modify a model's target positions.
@@ -30460,6 +31237,68 @@ type ClientInterface interface {
 	//
 	// Corresponds with POST /v1/api/fa/model/summary (the `GetModelSummarySingle` operationId).
 	GetModelSummarySingle(ctx context.Context, body GetModelSummarySingleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// TwsInvestDivestWithBody TWS Invest / Divest
+	//
+	// Submit TWS-style invest or divest instructions across **one or more destination models** for a set of accounts. Positive `amtToInvest` values invest cash into the target model; negative values divest. The response returns the resulting allocation plan and cash transfers between the source cash pool and each destination model.
+	//
+	// The set of accounts to invest can be specified in one of three **mutually exclusive** ways:
+	//  * `account` - a single U-account identifier
+	//    (e.g. `"account": "DU12349"`).
+	//  * `accountList` - an explicit list of U-account identifiers
+	//    (e.g. `"accountList": ["DU12349", "DU12350", "DU12351"]`).
+	//  * `group` - the name of an FA pre-trade allocation group
+	//    (e.g. `"group": "Group1"`), or `"All"` to include every account under the
+	//    advisor. When `accountList` or `group` is used, each `amtToInvest` value is
+	//    **divided equally** across the resolved accounts.
+	//
+	//
+	// Feature comparison vs. `/fa/model/invest-divest`:
+	//  * `tws-invest-divest` supports models denominated in **multiple currencies**;
+	//    `invest-divest` supports only single-currency models.
+	//  * `tws-invest-divest` accepts **multiple destination models** per request
+	//    (via `modelList`); `invest-divest` targets a single model per request.
+	//  * `invest-divest` allows a **different investment amount per account**
+	//    because each account is listed individually with its own `amtToInvest`.
+	//    FA pre-trade allocation groups are not supported by `invest-divest`.
+	//  * When `tws-invest-divest` uses `group` or `accountList`, the single
+	//    `amtToInvest` is split **equally** across all resolved accounts.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/tws-invest-divest (the `TwsInvestDivest` operationId).
+	TwsInvestDivestWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// TwsInvestDivest TWS Invest / Divest
+	//
+	// Submit TWS-style invest or divest instructions across **one or more destination models** for a set of accounts. Positive `amtToInvest` values invest cash into the target model; negative values divest. The response returns the resulting allocation plan and cash transfers between the source cash pool and each destination model.
+	//
+	// The set of accounts to invest can be specified in one of three **mutually exclusive** ways:
+	//  * `account` - a single U-account identifier
+	//    (e.g. `"account": "DU12349"`).
+	//  * `accountList` - an explicit list of U-account identifiers
+	//    (e.g. `"accountList": ["DU12349", "DU12350", "DU12351"]`).
+	//  * `group` - the name of an FA pre-trade allocation group
+	//    (e.g. `"group": "Group1"`), or `"All"` to include every account under the
+	//    advisor. When `accountList` or `group` is used, each `amtToInvest` value is
+	//    **divided equally** across the resolved accounts.
+	//
+	//
+	// Feature comparison vs. `/fa/model/invest-divest`:
+	//  * `tws-invest-divest` supports models denominated in **multiple currencies**;
+	//    `invest-divest` supports only single-currency models.
+	//  * `tws-invest-divest` accepts **multiple destination models** per request
+	//    (via `modelList`); `invest-divest` targets a single model per request.
+	//  * `invest-divest` allows a **different investment amount per account**
+	//    because each account is listed individually with its own `amtToInvest`.
+	//    FA pre-trade allocation groups are not supported by `invest-divest`.
+	//  * When `tws-invest-divest` uses `group` or `accountList`, the single
+	//    `amtToInvest` is split **equally** across all resolved accounts.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/api/fa/model/tws-invest-divest (the `TwsInvestDivest` operationId).
+	TwsInvestDivest(ctx context.Context, body TwsInvestDivestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetForecastCategories Event Contract Categories
 	//
@@ -30706,6 +31545,15 @@ type ClientInterface interface {
 	// Corresponds with POST /v1/api/iserver/account/allocation/group/single (the `GetSingleAllocationGroup` operationId).
 	GetSingleAllocationGroup(ctx context.Context, body GetSingleAllocationGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// GetAllocationModels List Allocation Models
+	//
+	// Retrieve the list of allocation model portfolios available under the authenticated Financial Advisor account. Each response entry is keyed by the model name and its value is a delimited string containing the master account identifier, model name, and internal model designator/flag tokens separated by the `\x1d` (ASCII group separator) character.
+	//
+	// **IMPORTANT:** Ensure this endpoint is queried **first**, prior to accessing any other Model Portfolio resources in the Web API. The model list returned here primes the session's model context and is required before subsequent Model Portfolio endpoints (model summary, positions, invest/divest, rebalance, order submission, etc.) will return correct results.
+	//
+	// Corresponds with GET /v1/api/iserver/account/allocation/models (the `GetAllocationModels` operationId).
+	GetAllocationModels(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetAllocationPresets Retrieve Allocation Presets
 	//
 	// Retrieve the preset behavior for allocation groups for specific events. This endpoint is only supported for Financial Advisors and IBroker Accounts.
@@ -30929,6 +31777,28 @@ type ClientInterface interface {
 	//
 	// Corresponds with GET /v1/api/iserver/account/{accountId}/summary/market_value (the `GetAccountMarketSummary` operationId).
 	GetAccountMarketSummary(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SubmitModelPortfolioOrderWithBody Submit New Model Portfolio Order
+	//
+	// Create Model Portfolio invest or rebalancing order. Submits one or more order instructions against the Model Portfolio identified by `modelCode` in the URL path. Each order entry follows the standard IBKR order submission contract used by `/iserver/account/{accountId}/orders`, with `acctId` set to the target sub-account and orders routed under the model.
+	//
+	// This endpoint returns either a list of successfully submitted order confirmations or a list of reply objects that require follow-up confirmation via `/iserver/reply/{replyId}` before the orders are transmitted.
+	//
+	// Takes any type of body and a specified content type.
+	//
+	// Corresponds with POST /v1/api/iserver/account/{modelCode}/orders (the `SubmitModelPortfolioOrder` operationId).
+	SubmitModelPortfolioOrderWithBody(ctx context.Context, modelCode string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SubmitModelPortfolioOrder Submit New Model Portfolio Order
+	//
+	// Create Model Portfolio invest or rebalancing order. Submits one or more order instructions against the Model Portfolio identified by `modelCode` in the URL path. Each order entry follows the standard IBKR order submission contract used by `/iserver/account/{accountId}/orders`, with `acctId` set to the target sub-account and orders routed under the model.
+	//
+	// This endpoint returns either a list of successfully submitted order confirmations or a list of reply objects that require follow-up confirmation via `/iserver/reply/{replyId}` before the orders are transmitted.
+	//
+	// Takes a body of the `application/json` content type.
+	//
+	// Corresponds with POST /v1/api/iserver/account/{modelCode}/orders (the `SubmitModelPortfolioOrder` operationId).
+	SubmitModelPortfolioOrder(ctx context.Context, modelCode string, body SubmitModelPortfolioOrderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetBrokerageAccounts List All Tradable Accounts
 	//
@@ -31366,7 +32236,7 @@ type ClientInterface interface {
 
 	// GetManySubaccounts Portfolio Subaccounts (Large Account Structures)
 	//
-	// Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 20 accounts per page, for which the user can view position and account-related information.  This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts. If you have less than 100 sub-accounts use /portfolio/subaccounts.  To query a list of accounts the user can trade, see /iserver/accounts.
+	// Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 1000 accounts per page, for which the user can view position and account-related information.  This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts. If you have less than 100 sub-accounts use /portfolio/subaccounts.  To query a list of accounts the user can trade, see /iserver/accounts.
 	//
 	// Corresponds with GET /v1/api/portfolio/subaccounts2 (the `GetManySubaccounts` operationId).
 	GetManySubaccounts(ctx context.Context, params *GetManySubaccountsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -31390,7 +32260,7 @@ type ClientInterface interface {
 	// Get the given account's ledger data detailing its balances by currency.
 	//
 	// Corresponds with GET /v1/api/portfolio/{accountId}/ledger (the `GetPortfolioLedger` operationId).
-	GetPortfolioLedger(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetPortfolioLedger(ctx context.Context, accountId string, params *GetPortfolioLedgerParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPortfolioMetadata Account Attributes
 	//
@@ -31404,7 +32274,7 @@ type ClientInterface interface {
 	// Get position for a given instrument in a single account.
 	//
 	// Corresponds with GET /v1/api/portfolio/{accountId}/position/{conid} (the `GetPositionByConid` operationId).
-	GetPositionByConid(ctx context.Context, accountId string, conid int64, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetPositionByConid(ctx context.Context, accountId string, conid int64, params *GetPositionByConidParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// InvalidatePositionCache Refresh Position Cache
 	//
@@ -31425,7 +32295,7 @@ type ClientInterface interface {
 	// Returns detailed summary of account values, by segment where appropriate.
 	//
 	// Corresponds with GET /v1/api/portfolio/{accountId}/summary (the `GetPortfolioSummary` operationId).
-	GetPortfolioSummary(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetPortfolioSummary(ctx context.Context, accountId string, params *GetPortfolioSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetUncachedPositions Account Positions (NEW)
 	//
@@ -33356,6 +34226,46 @@ func (c *Client) SetModelPresets(ctx context.Context, body SetModelPresetsJSONRe
 	return c.Client.Do(req)
 }
 
+// IsFullMasterWithBody Is Full Master Account
+//
+// Determine whether the authenticated advisor account is a full master account (i.e. has full authority to create and manage models, invest sub-accounts, and submit transfers).
+// NOTE - This endpoint does not accept a `model` parameter. Supplying one has been observed to return `400 Bad Request` on live traffic.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/api/fa/is-full-master (the `IsFullMaster` operationId).
+func (c *Client) IsFullMasterWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewIsFullMasterRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// IsFullMaster Is Full Master Account
+//
+// Determine whether the authenticated advisor account is a full master account (i.e. has full authority to create and manage models, invest sub-accounts, and submit transfers).
+// NOTE - This endpoint does not accept a `model` parameter. Supplying one has been observed to return `400 Bad Request` on live traffic.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/api/fa/is-full-master (the `IsFullMaster` operationId).
+func (c *Client) IsFullMaster(ctx context.Context, body IsFullMasterJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewIsFullMasterRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetAccountsInModelWithBody Get Models Accounts
 //
 // Request all accounts held within a model.
@@ -33394,9 +34304,62 @@ func (c *Client) GetAccountsInModel(ctx context.Context, body GetAccountsInModel
 	return c.Client.Do(req)
 }
 
+// ModelCashAnalyzerWithBody Model Cash Analyzer
+//
+// Run the model cash analyzer to review pending cash transfers, FX conversion orders, and any margin warnings that would result from the currently pending model allocation plan.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/api/fa/model/cash-analyzer (the `ModelCashAnalyzer` operationId).
+func (c *Client) ModelCashAnalyzerWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewModelCashAnalyzerRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// ModelCashAnalyzer Model Cash Analyzer
+//
+// Run the model cash analyzer to review pending cash transfers, FX conversion orders, and any margin warnings that would result from the currently pending model allocation plan.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/api/fa/model/cash-analyzer (the `ModelCashAnalyzer` operationId).
+func (c *Client) ModelCashAnalyzer(ctx context.Context, body ModelCashAnalyzerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewModelCashAnalyzerRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // SetAccountinvestmentInModelWithBody Invest Account Into Model
 //
-// Assign an account and the amount of cash to allocate into a model.
+// Submit invest or divest instructions for one or more accounts into a **single** destination model, with a **per-account** cash amount. Each entry in `accountList` pairs an account identifier with the individual `amtToInvest` value applied to that account (positive to invest, negative to divest).
+//
+// Constraints and comparison to `/fa/model/tws-invest-divest`:
+//   - Only a **single model** may be targeted per request (the top-level `model`
+//     field). To invest into multiple models in one call, use
+//     `/fa/model/tws-invest-divest` and its `modelList`.
+//   - The model must be denominated in a **single currency**; multi-currency
+//     models are not supported by this endpoint. Use `/fa/model/tws-invest-divest`
+//     for models holding instruments across multiple currencies.
+//   - FA pre-trade allocation **groups are not supported** here â€” each account
+//     and its individual investment amount must be listed explicitly in
+//     `accountList`.
+//   - Because each account is listed individually, this endpoint allows a
+//     **different investment amount per account**. `/fa/model/tws-invest-divest`,
+//     by contrast, splits a single `amtToInvest` equally across accounts when a
+//     `group` or `accountList` is used.
 //
 // Takes any type of body and a specified content type.
 //
@@ -33415,7 +34378,22 @@ func (c *Client) SetAccountinvestmentInModelWithBody(ctx context.Context, conten
 
 // SetAccountinvestmentInModel Invest Account Into Model
 //
-// Assign an account and the amount of cash to allocate into a model.
+// Submit invest or divest instructions for one or more accounts into a **single** destination model, with a **per-account** cash amount. Each entry in `accountList` pairs an account identifier with the individual `amtToInvest` value applied to that account (positive to invest, negative to divest).
+//
+// Constraints and comparison to `/fa/model/tws-invest-divest`:
+//   - Only a **single model** may be targeted per request (the top-level `model`
+//     field). To invest into multiple models in one call, use
+//     `/fa/model/tws-invest-divest` and its `modelList`.
+//   - The model must be denominated in a **single currency**; multi-currency
+//     models are not supported by this endpoint. Use `/fa/model/tws-invest-divest`
+//     for models holding instruments across multiple currencies.
+//   - FA pre-trade allocation **groups are not supported** here â€” each account
+//     and its individual investment amount must be listed explicitly in
+//     `accountList`.
+//   - Because each account is listed individually, this endpoint allows a
+//     **different investment amount per account**. `/fa/model/tws-invest-divest`,
+//     by contrast, splits a single `amtToInvest` equally across accounts when a
+//     `group` or `accountList` is used.
 //
 // Takes a body of the `application/json` content type.
 //
@@ -33546,6 +34524,120 @@ func (c *Client) GetAllModelPositions(ctx context.Context, body GetAllModelPosit
 	return c.Client.Do(req)
 }
 
+// RebalanceToExistingTargetsWithBody Rebalance To Existing Targets
+//
+// Rebalance the specified model back to its currently saved target allocations. The response returns a subscription key that is used to poll for the resulting allocation preview via the standard subscription workflow.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-existing-targets (the `RebalanceToExistingTargets` operationId).
+func (c *Client) RebalanceToExistingTargetsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRebalanceToExistingTargetsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RebalanceToExistingTargets Rebalance To Existing Targets
+//
+// Rebalance the specified model back to its currently saved target allocations. The response returns a subscription key that is used to poll for the resulting allocation preview via the standard subscription workflow.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-existing-targets (the `RebalanceToExistingTargets` operationId).
+func (c *Client) RebalanceToExistingTargets(ctx context.Context, body RebalanceToExistingTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRebalanceToExistingTargetsRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RebalanceToNewTargetsWithBody Rebalance To New Targets
+//
+// Rebalance the specified model to a brand-new set of target position and cash allocations supplied on the request. The full replacement target set is submitted; the response returns a subscription key for polling the resulting allocation preview.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-new-targets (the `RebalanceToNewTargets` operationId).
+func (c *Client) RebalanceToNewTargetsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRebalanceToNewTargetsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RebalanceToNewTargets Rebalance To New Targets
+//
+// Rebalance the specified model to a brand-new set of target position and cash allocations supplied on the request. The full replacement target set is submitted; the response returns a subscription key for polling the resulting allocation preview.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-new-targets (the `RebalanceToNewTargets` operationId).
+func (c *Client) RebalanceToNewTargets(ctx context.Context, body RebalanceToNewTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRebalanceToNewTargetsRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RebalanceToSpecificTargetsWithBody Rebalance To Specific Targets
+//
+// Rebalance the specified model by overriding only the supplied position targets, leaving all other model targets unchanged. Unlike `to-new-targets`, this endpoint returns the fully computed allocation preview inline (allocations, allocation totals, transfer plan, and warnings/errors) rather than a subscription key.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-specific-targets (the `RebalanceToSpecificTargets` operationId).
+func (c *Client) RebalanceToSpecificTargetsWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRebalanceToSpecificTargetsRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// RebalanceToSpecificTargets Rebalance To Specific Targets
+//
+// Rebalance the specified model by overriding only the supplied position targets, leaving all other model targets unchanged. Unlike `to-new-targets`, this endpoint returns the fully computed allocation preview inline (allocations, allocation totals, transfer plan, and warnings/errors) rather than a subscription key.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-specific-targets (the `RebalanceToSpecificTargets` operationId).
+func (c *Client) RebalanceToSpecificTargets(ctx context.Context, body RebalanceToSpecificTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRebalanceToSpecificTargetsRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // SetModelTargetPositionsWithBody Set Model Allocations
 //
 // Create or Modify a model's target positions.
@@ -33650,6 +34742,86 @@ func (c *Client) GetModelSummarySingleWithBody(ctx context.Context, contentType 
 // Corresponds with POST /v1/api/fa/model/summary (the `GetModelSummarySingle` operationId).
 func (c *Client) GetModelSummarySingle(ctx context.Context, body GetModelSummarySingleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetModelSummarySingleRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// TwsInvestDivestWithBody TWS Invest / Divest
+//
+// Submit TWS-style invest or divest instructions across **one or more destination models** for a set of accounts. Positive `amtToInvest` values invest cash into the target model; negative values divest. The response returns the resulting allocation plan and cash transfers between the source cash pool and each destination model.
+//
+// The set of accounts to invest can be specified in one of three **mutually exclusive** ways:
+//   - `account` - a single U-account identifier
+//     (e.g. `"account": "DU12349"`).
+//   - `accountList` - an explicit list of U-account identifiers
+//     (e.g. `"accountList": ["DU12349", "DU12350", "DU12351"]`).
+//   - `group` - the name of an FA pre-trade allocation group
+//     (e.g. `"group": "Group1"`), or `"All"` to include every account under the
+//     advisor. When `accountList` or `group` is used, each `amtToInvest` value is
+//     **divided equally** across the resolved accounts.
+//
+// Feature comparison vs. `/fa/model/invest-divest`:
+//   - `tws-invest-divest` supports models denominated in **multiple currencies**;
+//     `invest-divest` supports only single-currency models.
+//   - `tws-invest-divest` accepts **multiple destination models** per request
+//     (via `modelList`); `invest-divest` targets a single model per request.
+//   - `invest-divest` allows a **different investment amount per account**
+//     because each account is listed individually with its own `amtToInvest`.
+//     FA pre-trade allocation groups are not supported by `invest-divest`.
+//   - When `tws-invest-divest` uses `group` or `accountList`, the single
+//     `amtToInvest` is split **equally** across all resolved accounts.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/api/fa/model/tws-invest-divest (the `TwsInvestDivest` operationId).
+func (c *Client) TwsInvestDivestWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewTwsInvestDivestRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// TwsInvestDivest TWS Invest / Divest
+//
+// Submit TWS-style invest or divest instructions across **one or more destination models** for a set of accounts. Positive `amtToInvest` values invest cash into the target model; negative values divest. The response returns the resulting allocation plan and cash transfers between the source cash pool and each destination model.
+//
+// The set of accounts to invest can be specified in one of three **mutually exclusive** ways:
+//   - `account` - a single U-account identifier
+//     (e.g. `"account": "DU12349"`).
+//   - `accountList` - an explicit list of U-account identifiers
+//     (e.g. `"accountList": ["DU12349", "DU12350", "DU12351"]`).
+//   - `group` - the name of an FA pre-trade allocation group
+//     (e.g. `"group": "Group1"`), or `"All"` to include every account under the
+//     advisor. When `accountList` or `group` is used, each `amtToInvest` value is
+//     **divided equally** across the resolved accounts.
+//
+// Feature comparison vs. `/fa/model/invest-divest`:
+//   - `tws-invest-divest` supports models denominated in **multiple currencies**;
+//     `invest-divest` supports only single-currency models.
+//   - `tws-invest-divest` accepts **multiple destination models** per request
+//     (via `modelList`); `invest-divest` targets a single model per request.
+//   - `invest-divest` allows a **different investment amount per account**
+//     because each account is listed individually with its own `amtToInvest`.
+//     FA pre-trade allocation groups are not supported by `invest-divest`.
+//   - When `tws-invest-divest` uses `group` or `accountList`, the single
+//     `amtToInvest` is split **equally** across all resolved accounts.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/api/fa/model/tws-invest-divest (the `TwsInvestDivest` operationId).
+func (c *Client) TwsInvestDivest(ctx context.Context, body TwsInvestDivestJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewTwsInvestDivestRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -34215,6 +35387,25 @@ func (c *Client) GetSingleAllocationGroup(ctx context.Context, body GetSingleAll
 	return c.Client.Do(req)
 }
 
+// GetAllocationModels List Allocation Models
+//
+// Retrieve the list of allocation model portfolios available under the authenticated Financial Advisor account. Each response entry is keyed by the model name and its value is a delimited string containing the master account identifier, model name, and internal model designator/flag tokens separated by the `\x1d` (ASCII group separator) character.
+//
+// **IMPORTANT:** Ensure this endpoint is queried **first**, prior to accessing any other Model Portfolio resources in the Web API. The model list returned here primes the session's model context and is required before subsequent Model Portfolio endpoints (model summary, positions, invest/divest, rebalance, order submission, etc.) will return correct results.
+//
+// Corresponds with GET /v1/api/iserver/account/allocation/models (the `GetAllocationModels` operationId).
+func (c *Client) GetAllocationModels(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAllocationModelsRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 // GetAllocationPresets Retrieve Allocation Presets
 //
 // Retrieve the preset behavior for allocation groups for specific events. This endpoint is only supported for Financial Advisors and IBroker Accounts.
@@ -34709,6 +35900,48 @@ func (c *Client) GetMarginSummary(ctx context.Context, accountId string, reqEdit
 // Corresponds with GET /v1/api/iserver/account/{accountId}/summary/market_value (the `GetAccountMarketSummary` operationId).
 func (c *Client) GetAccountMarketSummary(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetAccountMarketSummaryRequest(c.Server, accountId)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SubmitModelPortfolioOrderWithBody Submit New Model Portfolio Order
+//
+// Create Model Portfolio invest or rebalancing order. Submits one or more order instructions against the Model Portfolio identified by `modelCode` in the URL path. Each order entry follows the standard IBKR order submission contract used by `/iserver/account/{accountId}/orders`, with `acctId` set to the target sub-account and orders routed under the model.
+//
+// This endpoint returns either a list of successfully submitted order confirmations or a list of reply objects that require follow-up confirmation via `/iserver/reply/{replyId}` before the orders are transmitted.
+//
+// Takes any type of body and a specified content type.
+//
+// Corresponds with POST /v1/api/iserver/account/{modelCode}/orders (the `SubmitModelPortfolioOrder` operationId).
+func (c *Client) SubmitModelPortfolioOrderWithBody(ctx context.Context, modelCode string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSubmitModelPortfolioOrderRequestWithBody(c.Server, modelCode, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// SubmitModelPortfolioOrder Submit New Model Portfolio Order
+//
+// Create Model Portfolio invest or rebalancing order. Submits one or more order instructions against the Model Portfolio identified by `modelCode` in the URL path. Each order entry follows the standard IBKR order submission contract used by `/iserver/account/{accountId}/orders`, with `acctId` set to the target sub-account and orders routed under the model.
+//
+// This endpoint returns either a list of successfully submitted order confirmations or a list of reply objects that require follow-up confirmation via `/iserver/reply/{replyId}` before the orders are transmitted.
+//
+// Takes a body of the `application/json` content type.
+//
+// Corresponds with POST /v1/api/iserver/account/{modelCode}/orders (the `SubmitModelPortfolioOrder` operationId).
+func (c *Client) SubmitModelPortfolioOrder(ctx context.Context, modelCode string, body SubmitModelPortfolioOrderJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSubmitModelPortfolioOrderRequest(c.Server, modelCode, body)
 	if err != nil {
 		return nil, err
 	}
@@ -35695,7 +36928,7 @@ func (c *Client) GetAllSubaccounts(ctx context.Context, reqEditors ...RequestEdi
 
 // GetManySubaccounts Portfolio Subaccounts (Large Account Structures)
 //
-// Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 20 accounts per page, for which the user can view position and account-related information.  This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts. If you have less than 100 sub-accounts use /portfolio/subaccounts.  To query a list of accounts the user can trade, see /iserver/accounts.
+// Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 1000 accounts per page, for which the user can view position and account-related information.  This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts. If you have less than 100 sub-accounts use /portfolio/subaccounts.  To query a list of accounts the user can trade, see /iserver/accounts.
 //
 // Corresponds with GET /v1/api/portfolio/subaccounts2 (the `GetManySubaccounts` operationId).
 func (c *Client) GetManySubaccounts(ctx context.Context, params *GetManySubaccountsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -35749,8 +36982,8 @@ func (c *Client) GetComboPositions(ctx context.Context, accountId string, params
 // Get the given account's ledger data detailing its balances by currency.
 //
 // Corresponds with GET /v1/api/portfolio/{accountId}/ledger (the `GetPortfolioLedger` operationId).
-func (c *Client) GetPortfolioLedger(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetPortfolioLedgerRequest(c.Server, accountId)
+func (c *Client) GetPortfolioLedger(ctx context.Context, accountId string, params *GetPortfolioLedgerParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPortfolioLedgerRequest(c.Server, accountId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -35783,8 +37016,8 @@ func (c *Client) GetPortfolioMetadata(ctx context.Context, accountId string, req
 // Get position for a given instrument in a single account.
 //
 // Corresponds with GET /v1/api/portfolio/{accountId}/position/{conid} (the `GetPositionByConid` operationId).
-func (c *Client) GetPositionByConid(ctx context.Context, accountId string, conid int64, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetPositionByConidRequest(c.Server, accountId, conid)
+func (c *Client) GetPositionByConid(ctx context.Context, accountId string, conid int64, params *GetPositionByConidParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPositionByConidRequest(c.Server, accountId, conid, params)
 	if err != nil {
 		return nil, err
 	}
@@ -35834,8 +37067,8 @@ func (c *Client) GetPaginatedPositions(ctx context.Context, accountId string, pa
 // Returns detailed summary of account values, by segment where appropriate.
 //
 // Corresponds with GET /v1/api/portfolio/{accountId}/summary (the `GetPortfolioSummary` operationId).
-func (c *Client) GetPortfolioSummary(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetPortfolioSummaryRequest(c.Server, accountId)
+func (c *Client) GetPortfolioSummary(ctx context.Context, accountId string, params *GetPortfolioSummaryParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetPortfolioSummaryRequest(c.Server, accountId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -39705,6 +40938,46 @@ func NewSetModelPresetsRequestWithBody(server string, contentType string, body i
 	return req, nil
 }
 
+// NewIsFullMasterRequest calls the generic IsFullMaster builder with application/json body
+func NewIsFullMasterRequest(server string, body IsFullMasterJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewIsFullMasterRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewIsFullMasterRequestWithBody constructs an http.Request for the IsFullMaster method, with any body, and a specified content type
+func NewIsFullMasterRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/api/fa/is-full-master")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetAccountsInModelRequest calls the generic GetAccountsInModel builder with application/json body
 func NewGetAccountsInModelRequest(server string, body GetAccountsInModelJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -39726,6 +40999,46 @@ func NewGetAccountsInModelRequestWithBody(server string, contentType string, bod
 	}
 
 	operationPath := fmt.Sprintf("/v1/api/fa/model/accounts-details")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewModelCashAnalyzerRequest calls the generic ModelCashAnalyzer builder with application/json body
+func NewModelCashAnalyzerRequest(server string, body ModelCashAnalyzerJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewModelCashAnalyzerRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewModelCashAnalyzerRequestWithBody constructs an http.Request for the ModelCashAnalyzer method, with any body, and a specified content type
+func NewModelCashAnalyzerRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/api/fa/model/cash-analyzer")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -39905,6 +41218,126 @@ func NewGetAllModelPositionsRequestWithBody(server string, contentType string, b
 	return req, nil
 }
 
+// NewRebalanceToExistingTargetsRequest calls the generic RebalanceToExistingTargets builder with application/json body
+func NewRebalanceToExistingTargetsRequest(server string, body RebalanceToExistingTargetsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRebalanceToExistingTargetsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewRebalanceToExistingTargetsRequestWithBody constructs an http.Request for the RebalanceToExistingTargets method, with any body, and a specified content type
+func NewRebalanceToExistingTargetsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/api/fa/model/rebalance/to-existing-targets")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRebalanceToNewTargetsRequest calls the generic RebalanceToNewTargets builder with application/json body
+func NewRebalanceToNewTargetsRequest(server string, body RebalanceToNewTargetsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRebalanceToNewTargetsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewRebalanceToNewTargetsRequestWithBody constructs an http.Request for the RebalanceToNewTargets method, with any body, and a specified content type
+func NewRebalanceToNewTargetsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/api/fa/model/rebalance/to-new-targets")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewRebalanceToSpecificTargetsRequest calls the generic RebalanceToSpecificTargets builder with application/json body
+func NewRebalanceToSpecificTargetsRequest(server string, body RebalanceToSpecificTargetsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRebalanceToSpecificTargetsRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewRebalanceToSpecificTargetsRequestWithBody constructs an http.Request for the RebalanceToSpecificTargets method, with any body, and a specified content type
+func NewRebalanceToSpecificTargetsRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/api/fa/model/rebalance/to-specific-targets")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewSetModelTargetPositionsRequest calls the generic SetModelTargetPositions builder with application/json body
 func NewSetModelTargetPositionsRequest(server string, body SetModelTargetPositionsJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -40006,6 +41439,46 @@ func NewGetModelSummarySingleRequestWithBody(server string, contentType string, 
 	}
 
 	operationPath := fmt.Sprintf("/v1/api/fa/model/summary")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewTwsInvestDivestRequest calls the generic TwsInvestDivest builder with application/json body
+func NewTwsInvestDivestRequest(server string, body TwsInvestDivestJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewTwsInvestDivestRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewTwsInvestDivestRequestWithBody constructs an http.Request for the TwsInvestDivest method, with any body, and a specified content type
+func NewTwsInvestDivestRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/api/fa/model/tws-invest-divest")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -41015,6 +42488,33 @@ func NewGetSingleAllocationGroupRequestWithBody(server string, contentType strin
 	return req, nil
 }
 
+// NewGetAllocationModelsRequest constructs an http.Request for the GetAllocationModels method
+func NewGetAllocationModelsRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/api/iserver/account/allocation/models")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetAllocationPresetsRequest constructs an http.Request for the GetAllocationPresets method
 func NewGetAllocationPresetsRequest(server string) (*http.Request, error) {
 	var err error
@@ -41912,6 +43412,53 @@ func NewGetAccountMarketSummaryRequest(server string, accountId string) (*http.R
 	if err != nil {
 		return nil, err
 	}
+
+	return req, nil
+}
+
+// NewSubmitModelPortfolioOrderRequest calls the generic SubmitModelPortfolioOrder builder with application/json body
+func NewSubmitModelPortfolioOrderRequest(server string, modelCode string, body SubmitModelPortfolioOrderJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSubmitModelPortfolioOrderRequestWithBody(server, modelCode, "application/json", bodyReader)
+}
+
+// NewSubmitModelPortfolioOrderRequestWithBody constructs an http.Request for the SubmitModelPortfolioOrder method, with any body, and a specified content type
+func NewSubmitModelPortfolioOrderRequestWithBody(server string, modelCode string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "modelCode", modelCode, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/v1/api/iserver/account/%s/orders", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -43941,6 +45488,30 @@ func NewGetManySubaccountsRequest(server string, params *GetManySubaccountsParam
 
 		}
 
+		if params.Page != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "page", *params.Page, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int64"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if params.PageSize != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "pageSize", *params.PageSize, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int64"}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
 		if encoded := queryValues.Encode(); encoded != "" {
 			rawQueryFragments = append(rawQueryFragments, encoded)
 		}
@@ -44078,7 +45649,7 @@ func NewGetComboPositionsRequest(server string, accountId string, params *GetCom
 }
 
 // NewGetPortfolioLedgerRequest constructs an http.Request for the GetPortfolioLedger method
-func NewGetPortfolioLedgerRequest(server string, accountId string) (*http.Request, error) {
+func NewGetPortfolioLedgerRequest(server string, accountId string, params *GetPortfolioLedgerParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -44101,6 +45672,33 @@ func NewGetPortfolioLedgerRequest(server string, accountId string) (*http.Reques
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Model != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "model", *params.Model, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -44146,7 +45744,7 @@ func NewGetPortfolioMetadataRequest(server string, accountId string) (*http.Requ
 }
 
 // NewGetPositionByConidRequest constructs an http.Request for the GetPositionByConid method
-func NewGetPositionByConidRequest(server string, accountId string, conid int64) (*http.Request, error) {
+func NewGetPositionByConidRequest(server string, accountId string, conid int64, params *GetPositionByConidParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -44176,6 +45774,33 @@ func NewGetPositionByConidRequest(server string, accountId string, conid int64) 
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Model != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "model", *params.Model, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -44325,7 +45950,7 @@ func NewGetPaginatedPositionsRequest(server string, accountId string, pageId int
 }
 
 // NewGetPortfolioSummaryRequest constructs an http.Request for the GetPortfolioSummary method
-func NewGetPortfolioSummaryRequest(server string, accountId string) (*http.Request, error) {
+func NewGetPortfolioSummaryRequest(server string, accountId string, params *GetPortfolioSummaryParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -44348,6 +45973,33 @@ func NewGetPortfolioSummaryRequest(server string, accountId string) (*http.Reque
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		// queryValues collects non-styled parameters (passthrough, JSON)
+		// that are safe to round-trip through url.Values.Encode().
+		queryValues := queryURL.Query()
+		// rawQueryFragments collects pre-encoded query fragments from
+		// styled parameters, preserving literal commas as delimiters
+		// per the OpenAPI spec (e.g. "color=blue,black,brown").
+		var rawQueryFragments []string
+
+		if params.Model != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "model", *params.Model, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
+			}
+
+		}
+
+		if encoded := queryValues.Encode(); encoded != "" {
+			rawQueryFragments = append(rawQueryFragments, encoded)
+		}
+		queryURL.RawQuery = strings.Join(rawQueryFragments, "&")
 	}
 
 	req, err := http.NewRequest(http.MethodGet, queryURL.String(), nil)
@@ -45868,6 +47520,26 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/api/fa/fa-preset/save (the `SetModelPresets` operationId).
 	SetModelPresetsWithResponse(ctx context.Context, body SetModelPresetsJSONRequestBody, reqEditors ...RequestEditorFn) (*SetModelPresetsResponse, error)
 
+	// IsFullMasterWithBodyWithResponse Is Full Master Account
+	//
+	// Determine whether the authenticated advisor account is a full master account (i.e. has full authority to create and manage models, invest sub-accounts, and submit transfers).
+	// NOTE - This endpoint does not accept a `model` parameter. Supplying one has been observed to return `400 Bad Request` on live traffic.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/is-full-master (the `IsFullMaster` operationId).
+	IsFullMasterWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*IsFullMasterResponse, error)
+
+	// IsFullMasterWithResponse Is Full Master Account
+	//
+	// Determine whether the authenticated advisor account is a full master account (i.e. has full authority to create and manage models, invest sub-accounts, and submit transfers).
+	// NOTE - This endpoint does not accept a `model` parameter. Supplying one has been observed to return `400 Bad Request` on live traffic.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/is-full-master (the `IsFullMaster` operationId).
+	IsFullMasterWithResponse(ctx context.Context, body IsFullMasterJSONRequestBody, reqEditors ...RequestEditorFn) (*IsFullMasterResponse, error)
+
 	// GetAccountsInModelWithBodyWithResponse Get Models Accounts
 	//
 	// Request all accounts held within a model.
@@ -45886,9 +47558,42 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/api/fa/model/accounts-details (the `GetAccountsInModel` operationId).
 	GetAccountsInModelWithResponse(ctx context.Context, body GetAccountsInModelJSONRequestBody, reqEditors ...RequestEditorFn) (*GetAccountsInModelResponse, error)
 
+	// ModelCashAnalyzerWithBodyWithResponse Model Cash Analyzer
+	//
+	// Run the model cash analyzer to review pending cash transfers, FX conversion orders, and any margin warnings that would result from the currently pending model allocation plan.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/cash-analyzer (the `ModelCashAnalyzer` operationId).
+	ModelCashAnalyzerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ModelCashAnalyzerResponse, error)
+
+	// ModelCashAnalyzerWithResponse Model Cash Analyzer
+	//
+	// Run the model cash analyzer to review pending cash transfers, FX conversion orders, and any margin warnings that would result from the currently pending model allocation plan.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/cash-analyzer (the `ModelCashAnalyzer` operationId).
+	ModelCashAnalyzerWithResponse(ctx context.Context, body ModelCashAnalyzerJSONRequestBody, reqEditors ...RequestEditorFn) (*ModelCashAnalyzerResponse, error)
+
 	// SetAccountinvestmentInModelWithBodyWithResponse Invest Account Into Model
 	//
-	// Assign an account and the amount of cash to allocate into a model.
+	// Submit invest or divest instructions for one or more accounts into a **single** destination model, with a **per-account** cash amount. Each entry in `accountList` pairs an account identifier with the individual `amtToInvest` value applied to that account (positive to invest, negative to divest).
+	//
+	// Constraints and comparison to `/fa/model/tws-invest-divest`:
+	//  * Only a **single model** may be targeted per request (the top-level `model`
+	//    field). To invest into multiple models in one call, use
+	//    `/fa/model/tws-invest-divest` and its `modelList`.
+	//  * The model must be denominated in a **single currency**; multi-currency
+	//    models are not supported by this endpoint. Use `/fa/model/tws-invest-divest`
+	//    for models holding instruments across multiple currencies.
+	//  * FA pre-trade allocation **groups are not supported** here â€” each account
+	//    and its individual investment amount must be listed explicitly in
+	//    `accountList`.
+	//  * Because each account is listed individually, this endpoint allows a
+	//    **different investment amount per account**. `/fa/model/tws-invest-divest`,
+	//    by contrast, splits a single `amtToInvest` equally across accounts when a
+	//    `group` or `accountList` is used.
 	//
 	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -45897,7 +47602,22 @@ type ClientWithResponsesInterface interface {
 
 	// SetAccountinvestmentInModelWithResponse Invest Account Into Model
 	//
-	// Assign an account and the amount of cash to allocate into a model.
+	// Submit invest or divest instructions for one or more accounts into a **single** destination model, with a **per-account** cash amount. Each entry in `accountList` pairs an account identifier with the individual `amtToInvest` value applied to that account (positive to invest, negative to divest).
+	//
+	// Constraints and comparison to `/fa/model/tws-invest-divest`:
+	//  * Only a **single model** may be targeted per request (the top-level `model`
+	//    field). To invest into multiple models in one call, use
+	//    `/fa/model/tws-invest-divest` and its `modelList`.
+	//  * The model must be denominated in a **single currency**; multi-currency
+	//    models are not supported by this endpoint. Use `/fa/model/tws-invest-divest`
+	//    for models holding instruments across multiple currencies.
+	//  * FA pre-trade allocation **groups are not supported** here â€” each account
+	//    and its individual investment amount must be listed explicitly in
+	//    `accountList`.
+	//  * Because each account is listed individually, this endpoint allows a
+	//    **different investment amount per account**. `/fa/model/tws-invest-divest`,
+	//    by contrast, splits a single `amtToInvest` equally across accounts when a
+	//    `group` or `accountList` is used.
 	//
 	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 	//
@@ -45958,6 +47678,60 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/api/fa/model/positions (the `GetAllModelPositions` operationId).
 	GetAllModelPositionsWithResponse(ctx context.Context, body GetAllModelPositionsJSONRequestBody, reqEditors ...RequestEditorFn) (*GetAllModelPositionsResponse, error)
 
+	// RebalanceToExistingTargetsWithBodyWithResponse Rebalance To Existing Targets
+	//
+	// Rebalance the specified model back to its currently saved target allocations. The response returns a subscription key that is used to poll for the resulting allocation preview via the standard subscription workflow.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-existing-targets (the `RebalanceToExistingTargets` operationId).
+	RebalanceToExistingTargetsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RebalanceToExistingTargetsResponse, error)
+
+	// RebalanceToExistingTargetsWithResponse Rebalance To Existing Targets
+	//
+	// Rebalance the specified model back to its currently saved target allocations. The response returns a subscription key that is used to poll for the resulting allocation preview via the standard subscription workflow.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-existing-targets (the `RebalanceToExistingTargets` operationId).
+	RebalanceToExistingTargetsWithResponse(ctx context.Context, body RebalanceToExistingTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*RebalanceToExistingTargetsResponse, error)
+
+	// RebalanceToNewTargetsWithBodyWithResponse Rebalance To New Targets
+	//
+	// Rebalance the specified model to a brand-new set of target position and cash allocations supplied on the request. The full replacement target set is submitted; the response returns a subscription key for polling the resulting allocation preview.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-new-targets (the `RebalanceToNewTargets` operationId).
+	RebalanceToNewTargetsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RebalanceToNewTargetsResponse, error)
+
+	// RebalanceToNewTargetsWithResponse Rebalance To New Targets
+	//
+	// Rebalance the specified model to a brand-new set of target position and cash allocations supplied on the request. The full replacement target set is submitted; the response returns a subscription key for polling the resulting allocation preview.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-new-targets (the `RebalanceToNewTargets` operationId).
+	RebalanceToNewTargetsWithResponse(ctx context.Context, body RebalanceToNewTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*RebalanceToNewTargetsResponse, error)
+
+	// RebalanceToSpecificTargetsWithBodyWithResponse Rebalance To Specific Targets
+	//
+	// Rebalance the specified model by overriding only the supplied position targets, leaving all other model targets unchanged. Unlike `to-new-targets`, this endpoint returns the fully computed allocation preview inline (allocations, allocation totals, transfer plan, and warnings/errors) rather than a subscription key.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-specific-targets (the `RebalanceToSpecificTargets` operationId).
+	RebalanceToSpecificTargetsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RebalanceToSpecificTargetsResponse, error)
+
+	// RebalanceToSpecificTargetsWithResponse Rebalance To Specific Targets
+	//
+	// Rebalance the specified model by overriding only the supplied position targets, leaving all other model targets unchanged. Unlike `to-new-targets`, this endpoint returns the fully computed allocation preview inline (allocations, allocation totals, transfer plan, and warnings/errors) rather than a subscription key.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/rebalance/to-specific-targets (the `RebalanceToSpecificTargets` operationId).
+	RebalanceToSpecificTargetsWithResponse(ctx context.Context, body RebalanceToSpecificTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*RebalanceToSpecificTargetsResponse, error)
+
 	// SetModelTargetPositionsWithBodyWithResponse Set Model Allocations
 	//
 	// Create or Modify a model's target positions.
@@ -46011,6 +47785,68 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with POST /v1/api/fa/model/summary (the `GetModelSummarySingle` operationId).
 	GetModelSummarySingleWithResponse(ctx context.Context, body GetModelSummarySingleJSONRequestBody, reqEditors ...RequestEditorFn) (*GetModelSummarySingleResponse, error)
+
+	// TwsInvestDivestWithBodyWithResponse TWS Invest / Divest
+	//
+	// Submit TWS-style invest or divest instructions across **one or more destination models** for a set of accounts. Positive `amtToInvest` values invest cash into the target model; negative values divest. The response returns the resulting allocation plan and cash transfers between the source cash pool and each destination model.
+	//
+	// The set of accounts to invest can be specified in one of three **mutually exclusive** ways:
+	//  * `account` - a single U-account identifier
+	//    (e.g. `"account": "DU12349"`).
+	//  * `accountList` - an explicit list of U-account identifiers
+	//    (e.g. `"accountList": ["DU12349", "DU12350", "DU12351"]`).
+	//  * `group` - the name of an FA pre-trade allocation group
+	//    (e.g. `"group": "Group1"`), or `"All"` to include every account under the
+	//    advisor. When `accountList` or `group` is used, each `amtToInvest` value is
+	//    **divided equally** across the resolved accounts.
+	//
+	//
+	// Feature comparison vs. `/fa/model/invest-divest`:
+	//  * `tws-invest-divest` supports models denominated in **multiple currencies**;
+	//    `invest-divest` supports only single-currency models.
+	//  * `tws-invest-divest` accepts **multiple destination models** per request
+	//    (via `modelList`); `invest-divest` targets a single model per request.
+	//  * `invest-divest` allows a **different investment amount per account**
+	//    because each account is listed individually with its own `amtToInvest`.
+	//    FA pre-trade allocation groups are not supported by `invest-divest`.
+	//  * When `tws-invest-divest` uses `group` or `accountList`, the single
+	//    `amtToInvest` is split **equally** across all resolved accounts.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/tws-invest-divest (the `TwsInvestDivest` operationId).
+	TwsInvestDivestWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TwsInvestDivestResponse, error)
+
+	// TwsInvestDivestWithResponse TWS Invest / Divest
+	//
+	// Submit TWS-style invest or divest instructions across **one or more destination models** for a set of accounts. Positive `amtToInvest` values invest cash into the target model; negative values divest. The response returns the resulting allocation plan and cash transfers between the source cash pool and each destination model.
+	//
+	// The set of accounts to invest can be specified in one of three **mutually exclusive** ways:
+	//  * `account` - a single U-account identifier
+	//    (e.g. `"account": "DU12349"`).
+	//  * `accountList` - an explicit list of U-account identifiers
+	//    (e.g. `"accountList": ["DU12349", "DU12350", "DU12351"]`).
+	//  * `group` - the name of an FA pre-trade allocation group
+	//    (e.g. `"group": "Group1"`), or `"All"` to include every account under the
+	//    advisor. When `accountList` or `group` is used, each `amtToInvest` value is
+	//    **divided equally** across the resolved accounts.
+	//
+	//
+	// Feature comparison vs. `/fa/model/invest-divest`:
+	//  * `tws-invest-divest` supports models denominated in **multiple currencies**;
+	//    `invest-divest` supports only single-currency models.
+	//  * `tws-invest-divest` accepts **multiple destination models** per request
+	//    (via `modelList`); `invest-divest` targets a single model per request.
+	//  * `invest-divest` allows a **different investment amount per account**
+	//    because each account is listed individually with its own `amtToInvest`.
+	//    FA pre-trade allocation groups are not supported by `invest-divest`.
+	//  * When `tws-invest-divest` uses `group` or `accountList`, the single
+	//    `amtToInvest` is split **equally** across all resolved accounts.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/fa/model/tws-invest-divest (the `TwsInvestDivest` operationId).
+	TwsInvestDivestWithResponse(ctx context.Context, body TwsInvestDivestJSONRequestBody, reqEditors ...RequestEditorFn) (*TwsInvestDivestResponse, error)
 
 	// GetForecastCategoriesWithResponse Event Contract Categories
 	//
@@ -46291,6 +48127,17 @@ type ClientWithResponsesInterface interface {
 	// Corresponds with POST /v1/api/iserver/account/allocation/group/single (the `GetSingleAllocationGroup` operationId).
 	GetSingleAllocationGroupWithResponse(ctx context.Context, body GetSingleAllocationGroupJSONRequestBody, reqEditors ...RequestEditorFn) (*GetSingleAllocationGroupResponse, error)
 
+	// GetAllocationModelsWithResponse List Allocation Models
+	//
+	// Retrieve the list of allocation model portfolios available under the authenticated Financial Advisor account. Each response entry is keyed by the model name and its value is a delimited string containing the master account identifier, model name, and internal model designator/flag tokens separated by the `\x1d` (ASCII group separator) character.
+	//
+	// **IMPORTANT:** Ensure this endpoint is queried **first**, prior to accessing any other Model Portfolio resources in the Web API. The model list returned here primes the session's model context and is required before subsequent Model Portfolio endpoints (model summary, positions, invest/divest, rebalance, order submission, etc.) will return correct results.
+	//
+	// Returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with GET /v1/api/iserver/account/allocation/models (the `GetAllocationModels` operationId).
+	GetAllocationModelsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAllocationModelsResponse, error)
+
 	// GetAllocationPresetsWithResponse Retrieve Allocation Presets
 	//
 	// Retrieve the preset behavior for allocation groups for specific events. This endpoint is only supported for Financial Advisors and IBroker Accounts.
@@ -46542,6 +48389,28 @@ type ClientWithResponsesInterface interface {
 	//
 	// Corresponds with GET /v1/api/iserver/account/{accountId}/summary/market_value (the `GetAccountMarketSummary` operationId).
 	GetAccountMarketSummaryWithResponse(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*GetAccountMarketSummaryResponse, error)
+
+	// SubmitModelPortfolioOrderWithBodyWithResponse Submit New Model Portfolio Order
+	//
+	// Create Model Portfolio invest or rebalancing order. Submits one or more order instructions against the Model Portfolio identified by `modelCode` in the URL path. Each order entry follows the standard IBKR order submission contract used by `/iserver/account/{accountId}/orders`, with `acctId` set to the target sub-account and orders routed under the model.
+	//
+	// This endpoint returns either a list of successfully submitted order confirmations or a list of reply objects that require follow-up confirmation via `/iserver/reply/{replyId}` before the orders are transmitted.
+	//
+	// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/iserver/account/{modelCode}/orders (the `SubmitModelPortfolioOrder` operationId).
+	SubmitModelPortfolioOrderWithBodyWithResponse(ctx context.Context, modelCode string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SubmitModelPortfolioOrderResponse, error)
+
+	// SubmitModelPortfolioOrderWithResponse Submit New Model Portfolio Order
+	//
+	// Create Model Portfolio invest or rebalancing order. Submits one or more order instructions against the Model Portfolio identified by `modelCode` in the URL path. Each order entry follows the standard IBKR order submission contract used by `/iserver/account/{accountId}/orders`, with `acctId` set to the target sub-account and orders routed under the model.
+	//
+	// This endpoint returns either a list of successfully submitted order confirmations or a list of reply objects that require follow-up confirmation via `/iserver/reply/{replyId}` before the orders are transmitted.
+	//
+	// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+	//
+	// Corresponds with POST /v1/api/iserver/account/{modelCode}/orders (the `SubmitModelPortfolioOrder` operationId).
+	SubmitModelPortfolioOrderWithResponse(ctx context.Context, modelCode string, body SubmitModelPortfolioOrderJSONRequestBody, reqEditors ...RequestEditorFn) (*SubmitModelPortfolioOrderResponse, error)
 
 	// GetBrokerageAccountsWithResponse List All Tradable Accounts
 	//
@@ -47031,7 +48900,7 @@ type ClientWithResponsesInterface interface {
 
 	// GetManySubaccountsWithResponse Portfolio Subaccounts (Large Account Structures)
 	//
-	// Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 20 accounts per page, for which the user can view position and account-related information.  This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts. If you have less than 100 sub-accounts use /portfolio/subaccounts.  To query a list of accounts the user can trade, see /iserver/accounts.
+	// Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 1000 accounts per page, for which the user can view position and account-related information.  This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts. If you have less than 100 sub-accounts use /portfolio/subaccounts.  To query a list of accounts the user can trade, see /iserver/accounts.
 	//
 	// Returns a wrapper object for the known response body format(s).
 	//
@@ -47063,7 +48932,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/api/portfolio/{accountId}/ledger (the `GetPortfolioLedger` operationId).
-	GetPortfolioLedgerWithResponse(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*GetPortfolioLedgerResponse, error)
+	GetPortfolioLedgerWithResponse(ctx context.Context, accountId string, params *GetPortfolioLedgerParams, reqEditors ...RequestEditorFn) (*GetPortfolioLedgerResponse, error)
 
 	// GetPortfolioMetadataWithResponse Account Attributes
 	//
@@ -47081,7 +48950,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/api/portfolio/{accountId}/position/{conid} (the `GetPositionByConid` operationId).
-	GetPositionByConidWithResponse(ctx context.Context, accountId string, conid int64, reqEditors ...RequestEditorFn) (*GetPositionByConidResponse, error)
+	GetPositionByConidWithResponse(ctx context.Context, accountId string, conid int64, params *GetPositionByConidParams, reqEditors ...RequestEditorFn) (*GetPositionByConidResponse, error)
 
 	// InvalidatePositionCacheWithResponse Refresh Position Cache
 	//
@@ -47108,7 +48977,7 @@ type ClientWithResponsesInterface interface {
 	// Returns a wrapper object for the known response body format(s).
 	//
 	// Corresponds with GET /v1/api/portfolio/{accountId}/summary (the `GetPortfolioSummary` operationId).
-	GetPortfolioSummaryWithResponse(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*GetPortfolioSummaryResponse, error)
+	GetPortfolioSummaryWithResponse(ctx context.Context, accountId string, params *GetPortfolioSummaryParams, reqEditors ...RequestEditorFn) (*GetPortfolioSummaryResponse, error)
 
 	// GetUncachedPositionsWithResponse Account Positions (NEW)
 	//
@@ -52105,6 +53974,94 @@ func (r SetModelPresetsResponse) ContentType() string {
 	return ""
 }
 
+type IsFullMasterResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *struct {
+		// IsFullMaster True if the authenticated advisor is a full master account.
+		IsFullMaster *bool `json:"isFullMaster,omitempty"`
+
+		// ReqID Request identifier to uniquely track a request.
+		//
+		// Example: 398899
+		ReqID *int64 `json:"reqID,omitempty"`
+
+		// SubscriptionStatus Describes if the model is in polling mode.
+		//
+		// Example: 1
+		SubscriptionStatus *int64 `json:"subscriptionStatus,omitempty"`
+	}
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// ApplicationjsonCharsetUtf8503 the response for an HTTP 503 `application/json; charset=utf-8` response
+	ApplicationjsonCharsetUtf8503 *ServiceUnavailable
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r IsFullMasterResponse) GetJSON200() *struct {
+	// IsFullMaster True if the authenticated advisor is a full master account.
+	IsFullMaster *bool `json:"isFullMaster,omitempty"`
+
+	// ReqID Request identifier to uniquely track a request.
+	//
+	// Example: 398899
+	ReqID *int64 `json:"reqID,omitempty"`
+
+	// SubscriptionStatus Describes if the model is in polling mode.
+	//
+	// Example: 1
+	SubscriptionStatus *int64 `json:"subscriptionStatus,omitempty"`
+} {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r IsFullMasterResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r IsFullMasterResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetApplicationjsonCharsetUtf8503 returns the response for an HTTP 503 `application/json; charset=utf-8` response
+func (r IsFullMasterResponse) GetApplicationjsonCharsetUtf8503() *ServiceUnavailable {
+	return r.ApplicationjsonCharsetUtf8503
+}
+
+// GetBody returns the raw response body bytes
+func (r IsFullMasterResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r IsFullMasterResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r IsFullMasterResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r IsFullMasterResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetAccountsInModelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -52239,6 +54196,68 @@ func (r GetAccountsInModelResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetAccountsInModelResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type ModelCashAnalyzerResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *CashAnalyzerResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// ApplicationjsonCharsetUtf8503 the response for an HTTP 503 `application/json; charset=utf-8` response
+	ApplicationjsonCharsetUtf8503 *ServiceUnavailable
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r ModelCashAnalyzerResponse) GetJSON200() *CashAnalyzerResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r ModelCashAnalyzerResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r ModelCashAnalyzerResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetApplicationjsonCharsetUtf8503 returns the response for an HTTP 503 `application/json; charset=utf-8` response
+func (r ModelCashAnalyzerResponse) GetApplicationjsonCharsetUtf8503() *ServiceUnavailable {
+	return r.ApplicationjsonCharsetUtf8503
+}
+
+// GetBody returns the raw response body bytes
+func (r ModelCashAnalyzerResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r ModelCashAnalyzerResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ModelCashAnalyzerResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r ModelCashAnalyzerResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -52509,6 +54528,192 @@ func (r GetAllModelPositionsResponse) ContentType() string {
 	return ""
 }
 
+type RebalanceToExistingTargetsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *RebalanceSubscriptionResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// ApplicationjsonCharsetUtf8503 the response for an HTTP 503 `application/json; charset=utf-8` response
+	ApplicationjsonCharsetUtf8503 *ServiceUnavailable
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RebalanceToExistingTargetsResponse) GetJSON200() *RebalanceSubscriptionResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RebalanceToExistingTargetsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RebalanceToExistingTargetsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetApplicationjsonCharsetUtf8503 returns the response for an HTTP 503 `application/json; charset=utf-8` response
+func (r RebalanceToExistingTargetsResponse) GetApplicationjsonCharsetUtf8503() *ServiceUnavailable {
+	return r.ApplicationjsonCharsetUtf8503
+}
+
+// GetBody returns the raw response body bytes
+func (r RebalanceToExistingTargetsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RebalanceToExistingTargetsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RebalanceToExistingTargetsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RebalanceToExistingTargetsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RebalanceToNewTargetsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *RebalanceSubscriptionResponse
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// ApplicationjsonCharsetUtf8503 the response for an HTTP 503 `application/json; charset=utf-8` response
+	ApplicationjsonCharsetUtf8503 *ServiceUnavailable
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RebalanceToNewTargetsResponse) GetJSON200() *RebalanceSubscriptionResponse {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RebalanceToNewTargetsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RebalanceToNewTargetsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetApplicationjsonCharsetUtf8503 returns the response for an HTTP 503 `application/json; charset=utf-8` response
+func (r RebalanceToNewTargetsResponse) GetApplicationjsonCharsetUtf8503() *ServiceUnavailable {
+	return r.ApplicationjsonCharsetUtf8503
+}
+
+// GetBody returns the raw response body bytes
+func (r RebalanceToNewTargetsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RebalanceToNewTargetsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RebalanceToNewTargetsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RebalanceToNewTargetsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type RebalanceToSpecificTargetsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *RebalanceAllocationPreview
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// ApplicationjsonCharsetUtf8503 the response for an HTTP 503 `application/json; charset=utf-8` response
+	ApplicationjsonCharsetUtf8503 *ServiceUnavailable
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r RebalanceToSpecificTargetsResponse) GetJSON200() *RebalanceAllocationPreview {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r RebalanceToSpecificTargetsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r RebalanceToSpecificTargetsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetApplicationjsonCharsetUtf8503 returns the response for an HTTP 503 `application/json; charset=utf-8` response
+func (r RebalanceToSpecificTargetsResponse) GetApplicationjsonCharsetUtf8503() *ServiceUnavailable {
+	return r.ApplicationjsonCharsetUtf8503
+}
+
+// GetBody returns the raw response body bytes
+func (r RebalanceToSpecificTargetsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r RebalanceToSpecificTargetsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RebalanceToSpecificTargetsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r RebalanceToSpecificTargetsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type SetModelTargetPositionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -52721,6 +54926,68 @@ func (r GetModelSummarySingleResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetModelSummarySingleResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type TwsInvestDivestResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *TwsInvestDivestResponseData
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// ApplicationjsonCharsetUtf8503 the response for an HTTP 503 `application/json; charset=utf-8` response
+	ApplicationjsonCharsetUtf8503 *ServiceUnavailable
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r TwsInvestDivestResponse) GetJSON200() *TwsInvestDivestResponseData {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r TwsInvestDivestResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r TwsInvestDivestResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetApplicationjsonCharsetUtf8503 returns the response for an HTTP 503 `application/json; charset=utf-8` response
+func (r TwsInvestDivestResponse) GetApplicationjsonCharsetUtf8503() *ServiceUnavailable {
+	return r.ApplicationjsonCharsetUtf8503
+}
+
+// GetBody returns the raw response body bytes
+func (r TwsInvestDivestResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r TwsInvestDivestResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r TwsInvestDivestResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r TwsInvestDivestResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -54251,6 +56518,68 @@ func (r GetSingleAllocationGroupResponse) ContentType() string {
 	return ""
 }
 
+type GetAllocationModelsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *map[string]string
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// ApplicationjsonCharsetUtf8503 the response for an HTTP 503 `application/json; charset=utf-8` response
+	ApplicationjsonCharsetUtf8503 *ServiceUnavailable
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r GetAllocationModelsResponse) GetJSON200() *map[string]string {
+	return r.JSON200
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r GetAllocationModelsResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r GetAllocationModelsResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetApplicationjsonCharsetUtf8503 returns the response for an HTTP 503 `application/json; charset=utf-8` response
+func (r GetAllocationModelsResponse) GetApplicationjsonCharsetUtf8503() *ServiceUnavailable {
+	return r.ApplicationjsonCharsetUtf8503
+}
+
+// GetBody returns the raw response body bytes
+func (r GetAllocationModelsResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r GetAllocationModelsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetAllocationModelsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r GetAllocationModelsResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
 type GetAllocationPresetsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -55539,6 +57868,111 @@ func (r GetAccountMarketSummaryResponse) StatusCode() int {
 
 // ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
 func (r GetAccountMarketSummaryResponse) ContentType() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Header.Get("Content-Type")
+	}
+	return ""
+}
+
+type SubmitModelPortfolioOrderResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	// JSON200 the response for an HTTP 200 `application/json` response
+	JSON200 *[]struct {
+		// EncryptMessage Internal encrypted acknowledgement of the submission.
+		EncryptMessage *string `json:"encrypt_message,omitempty"`
+
+		// Id Reply identifier returned when the order requires additional confirmation. Supply this value to `/iserver/reply/{replyId}` to continue submission.
+		Id *string `json:"id,omitempty"`
+
+		// IsSuspended True if the order is suspended pending reply confirmation.
+		IsSuspended *bool `json:"isSuspended,omitempty"`
+
+		// Message Confirmation prompts that must be acknowledged before the order is transmitted.
+		Message *[]string `json:"message,omitempty"`
+
+		// OrderId Identifier of the submitted model portfolio order.
+		OrderId *string `json:"order_id,omitempty"`
+
+		// OrderStatus Current status of the submitted order (e.g. `PreSubmitted`, `Submitted`, `Filled`).
+		OrderStatus *string `json:"order_status,omitempty"`
+	}
+	// JSON400 the response for an HTTP 400 `application/json` response
+	JSON400 *BadRequest
+	// JSON401 the response for an HTTP 401 `application/json` response
+	JSON401 *Unauthorized
+	// JSON500 the response for an HTTP 500 `application/json` response
+	JSON500 *InternalServerError
+	// ApplicationjsonCharsetUtf8503 the response for an HTTP 503 `application/json; charset=utf-8` response
+	ApplicationjsonCharsetUtf8503 *ServiceUnavailable
+}
+
+// GetJSON200 returns the response for an HTTP 200 `application/json` response
+func (r SubmitModelPortfolioOrderResponse) GetJSON200() *[]struct {
+	// EncryptMessage Internal encrypted acknowledgement of the submission.
+	EncryptMessage *string `json:"encrypt_message,omitempty"`
+
+	// Id Reply identifier returned when the order requires additional confirmation. Supply this value to `/iserver/reply/{replyId}` to continue submission.
+	Id *string `json:"id,omitempty"`
+
+	// IsSuspended True if the order is suspended pending reply confirmation.
+	IsSuspended *bool `json:"isSuspended,omitempty"`
+
+	// Message Confirmation prompts that must be acknowledged before the order is transmitted.
+	Message *[]string `json:"message,omitempty"`
+
+	// OrderId Identifier of the submitted model portfolio order.
+	OrderId *string `json:"order_id,omitempty"`
+
+	// OrderStatus Current status of the submitted order (e.g. `PreSubmitted`, `Submitted`, `Filled`).
+	OrderStatus *string `json:"order_status,omitempty"`
+} {
+	return r.JSON200
+}
+
+// GetJSON400 returns the response for an HTTP 400 `application/json` response
+func (r SubmitModelPortfolioOrderResponse) GetJSON400() *BadRequest {
+	return r.JSON400
+}
+
+// GetJSON401 returns the response for an HTTP 401 `application/json` response
+func (r SubmitModelPortfolioOrderResponse) GetJSON401() *Unauthorized {
+	return r.JSON401
+}
+
+// GetJSON500 returns the response for an HTTP 500 `application/json` response
+func (r SubmitModelPortfolioOrderResponse) GetJSON500() *InternalServerError {
+	return r.JSON500
+}
+
+// GetApplicationjsonCharsetUtf8503 returns the response for an HTTP 503 `application/json; charset=utf-8` response
+func (r SubmitModelPortfolioOrderResponse) GetApplicationjsonCharsetUtf8503() *ServiceUnavailable {
+	return r.ApplicationjsonCharsetUtf8503
+}
+
+// GetBody returns the raw response body bytes
+func (r SubmitModelPortfolioOrderResponse) GetBody() []byte {
+	return r.Body
+}
+
+// Status returns HTTPResponse.Status
+func (r SubmitModelPortfolioOrderResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SubmitModelPortfolioOrderResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ContentType is a convenience method to retrieve the Content-Type value from the HTTP response headers
+func (r SubmitModelPortfolioOrderResponse) ContentType() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Header.Get("Content-Type")
 	}
@@ -61024,6 +63458,38 @@ func (c *ClientWithResponses) SetModelPresetsWithResponse(ctx context.Context, b
 	return ParseSetModelPresetsResponse(rsp)
 }
 
+// IsFullMasterWithBodyWithResponse Is Full Master Account
+//
+// Determine whether the authenticated advisor account is a full master account (i.e. has full authority to create and manage models, invest sub-accounts, and submit transfers).
+// NOTE - This endpoint does not accept a `model` parameter. Supplying one has been observed to return `400 Bad Request` on live traffic.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/is-full-master (the `IsFullMaster` operationId).
+func (c *ClientWithResponses) IsFullMasterWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*IsFullMasterResponse, error) {
+	rsp, err := c.IsFullMasterWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseIsFullMasterResponse(rsp)
+}
+
+// IsFullMasterWithResponse Is Full Master Account
+//
+// Determine whether the authenticated advisor account is a full master account (i.e. has full authority to create and manage models, invest sub-accounts, and submit transfers).
+// NOTE - This endpoint does not accept a `model` parameter. Supplying one has been observed to return `400 Bad Request` on live traffic.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/is-full-master (the `IsFullMaster` operationId).
+func (c *ClientWithResponses) IsFullMasterWithResponse(ctx context.Context, body IsFullMasterJSONRequestBody, reqEditors ...RequestEditorFn) (*IsFullMasterResponse, error) {
+	rsp, err := c.IsFullMaster(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseIsFullMasterResponse(rsp)
+}
+
 // GetAccountsInModelWithBodyWithResponse Get Models Accounts
 //
 // Request all accounts held within a model.
@@ -61054,9 +63520,54 @@ func (c *ClientWithResponses) GetAccountsInModelWithResponse(ctx context.Context
 	return ParseGetAccountsInModelResponse(rsp)
 }
 
+// ModelCashAnalyzerWithBodyWithResponse Model Cash Analyzer
+//
+// Run the model cash analyzer to review pending cash transfers, FX conversion orders, and any margin warnings that would result from the currently pending model allocation plan.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/cash-analyzer (the `ModelCashAnalyzer` operationId).
+func (c *ClientWithResponses) ModelCashAnalyzerWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ModelCashAnalyzerResponse, error) {
+	rsp, err := c.ModelCashAnalyzerWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseModelCashAnalyzerResponse(rsp)
+}
+
+// ModelCashAnalyzerWithResponse Model Cash Analyzer
+//
+// Run the model cash analyzer to review pending cash transfers, FX conversion orders, and any margin warnings that would result from the currently pending model allocation plan.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/cash-analyzer (the `ModelCashAnalyzer` operationId).
+func (c *ClientWithResponses) ModelCashAnalyzerWithResponse(ctx context.Context, body ModelCashAnalyzerJSONRequestBody, reqEditors ...RequestEditorFn) (*ModelCashAnalyzerResponse, error) {
+	rsp, err := c.ModelCashAnalyzer(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseModelCashAnalyzerResponse(rsp)
+}
+
 // SetAccountinvestmentInModelWithBodyWithResponse Invest Account Into Model
 //
-// Assign an account and the amount of cash to allocate into a model.
+// Submit invest or divest instructions for one or more accounts into a **single** destination model, with a **per-account** cash amount. Each entry in `accountList` pairs an account identifier with the individual `amtToInvest` value applied to that account (positive to invest, negative to divest).
+//
+// Constraints and comparison to `/fa/model/tws-invest-divest`:
+//   - Only a **single model** may be targeted per request (the top-level `model`
+//     field). To invest into multiple models in one call, use
+//     `/fa/model/tws-invest-divest` and its `modelList`.
+//   - The model must be denominated in a **single currency**; multi-currency
+//     models are not supported by this endpoint. Use `/fa/model/tws-invest-divest`
+//     for models holding instruments across multiple currencies.
+//   - FA pre-trade allocation **groups are not supported** here â€” each account
+//     and its individual investment amount must be listed explicitly in
+//     `accountList`.
+//   - Because each account is listed individually, this endpoint allows a
+//     **different investment amount per account**. `/fa/model/tws-invest-divest`,
+//     by contrast, splits a single `amtToInvest` equally across accounts when a
+//     `group` or `accountList` is used.
 //
 // Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
 //
@@ -61071,7 +63582,22 @@ func (c *ClientWithResponses) SetAccountinvestmentInModelWithBodyWithResponse(ct
 
 // SetAccountinvestmentInModelWithResponse Invest Account Into Model
 //
-// Assign an account and the amount of cash to allocate into a model.
+// Submit invest or divest instructions for one or more accounts into a **single** destination model, with a **per-account** cash amount. Each entry in `accountList` pairs an account identifier with the individual `amtToInvest` value applied to that account (positive to invest, negative to divest).
+//
+// Constraints and comparison to `/fa/model/tws-invest-divest`:
+//   - Only a **single model** may be targeted per request (the top-level `model`
+//     field). To invest into multiple models in one call, use
+//     `/fa/model/tws-invest-divest` and its `modelList`.
+//   - The model must be denominated in a **single currency**; multi-currency
+//     models are not supported by this endpoint. Use `/fa/model/tws-invest-divest`
+//     for models holding instruments across multiple currencies.
+//   - FA pre-trade allocation **groups are not supported** here â€” each account
+//     and its individual investment amount must be listed explicitly in
+//     `accountList`.
+//   - Because each account is listed individually, this endpoint allows a
+//     **different investment amount per account**. `/fa/model/tws-invest-divest`,
+//     by contrast, splits a single `amtToInvest` equally across accounts when a
+//     `group` or `accountList` is used.
 //
 // Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
 //
@@ -61174,6 +63700,96 @@ func (c *ClientWithResponses) GetAllModelPositionsWithResponse(ctx context.Conte
 	return ParseGetAllModelPositionsResponse(rsp)
 }
 
+// RebalanceToExistingTargetsWithBodyWithResponse Rebalance To Existing Targets
+//
+// Rebalance the specified model back to its currently saved target allocations. The response returns a subscription key that is used to poll for the resulting allocation preview via the standard subscription workflow.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-existing-targets (the `RebalanceToExistingTargets` operationId).
+func (c *ClientWithResponses) RebalanceToExistingTargetsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RebalanceToExistingTargetsResponse, error) {
+	rsp, err := c.RebalanceToExistingTargetsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRebalanceToExistingTargetsResponse(rsp)
+}
+
+// RebalanceToExistingTargetsWithResponse Rebalance To Existing Targets
+//
+// Rebalance the specified model back to its currently saved target allocations. The response returns a subscription key that is used to poll for the resulting allocation preview via the standard subscription workflow.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-existing-targets (the `RebalanceToExistingTargets` operationId).
+func (c *ClientWithResponses) RebalanceToExistingTargetsWithResponse(ctx context.Context, body RebalanceToExistingTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*RebalanceToExistingTargetsResponse, error) {
+	rsp, err := c.RebalanceToExistingTargets(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRebalanceToExistingTargetsResponse(rsp)
+}
+
+// RebalanceToNewTargetsWithBodyWithResponse Rebalance To New Targets
+//
+// Rebalance the specified model to a brand-new set of target position and cash allocations supplied on the request. The full replacement target set is submitted; the response returns a subscription key for polling the resulting allocation preview.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-new-targets (the `RebalanceToNewTargets` operationId).
+func (c *ClientWithResponses) RebalanceToNewTargetsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RebalanceToNewTargetsResponse, error) {
+	rsp, err := c.RebalanceToNewTargetsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRebalanceToNewTargetsResponse(rsp)
+}
+
+// RebalanceToNewTargetsWithResponse Rebalance To New Targets
+//
+// Rebalance the specified model to a brand-new set of target position and cash allocations supplied on the request. The full replacement target set is submitted; the response returns a subscription key for polling the resulting allocation preview.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-new-targets (the `RebalanceToNewTargets` operationId).
+func (c *ClientWithResponses) RebalanceToNewTargetsWithResponse(ctx context.Context, body RebalanceToNewTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*RebalanceToNewTargetsResponse, error) {
+	rsp, err := c.RebalanceToNewTargets(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRebalanceToNewTargetsResponse(rsp)
+}
+
+// RebalanceToSpecificTargetsWithBodyWithResponse Rebalance To Specific Targets
+//
+// Rebalance the specified model by overriding only the supplied position targets, leaving all other model targets unchanged. Unlike `to-new-targets`, this endpoint returns the fully computed allocation preview inline (allocations, allocation totals, transfer plan, and warnings/errors) rather than a subscription key.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-specific-targets (the `RebalanceToSpecificTargets` operationId).
+func (c *ClientWithResponses) RebalanceToSpecificTargetsWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RebalanceToSpecificTargetsResponse, error) {
+	rsp, err := c.RebalanceToSpecificTargetsWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRebalanceToSpecificTargetsResponse(rsp)
+}
+
+// RebalanceToSpecificTargetsWithResponse Rebalance To Specific Targets
+//
+// Rebalance the specified model by overriding only the supplied position targets, leaving all other model targets unchanged. Unlike `to-new-targets`, this endpoint returns the fully computed allocation preview inline (allocations, allocation totals, transfer plan, and warnings/errors) rather than a subscription key.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/rebalance/to-specific-targets (the `RebalanceToSpecificTargets` operationId).
+func (c *ClientWithResponses) RebalanceToSpecificTargetsWithResponse(ctx context.Context, body RebalanceToSpecificTargetsJSONRequestBody, reqEditors ...RequestEditorFn) (*RebalanceToSpecificTargetsResponse, error) {
+	rsp, err := c.RebalanceToSpecificTargets(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRebalanceToSpecificTargetsResponse(rsp)
+}
+
 // SetModelTargetPositionsWithBodyWithResponse Set Model Allocations
 //
 // Create or Modify a model's target positions.
@@ -61262,6 +63878,78 @@ func (c *ClientWithResponses) GetModelSummarySingleWithResponse(ctx context.Cont
 		return nil, err
 	}
 	return ParseGetModelSummarySingleResponse(rsp)
+}
+
+// TwsInvestDivestWithBodyWithResponse TWS Invest / Divest
+//
+// Submit TWS-style invest or divest instructions across **one or more destination models** for a set of accounts. Positive `amtToInvest` values invest cash into the target model; negative values divest. The response returns the resulting allocation plan and cash transfers between the source cash pool and each destination model.
+//
+// The set of accounts to invest can be specified in one of three **mutually exclusive** ways:
+//   - `account` - a single U-account identifier
+//     (e.g. `"account": "DU12349"`).
+//   - `accountList` - an explicit list of U-account identifiers
+//     (e.g. `"accountList": ["DU12349", "DU12350", "DU12351"]`).
+//   - `group` - the name of an FA pre-trade allocation group
+//     (e.g. `"group": "Group1"`), or `"All"` to include every account under the
+//     advisor. When `accountList` or `group` is used, each `amtToInvest` value is
+//     **divided equally** across the resolved accounts.
+//
+// Feature comparison vs. `/fa/model/invest-divest`:
+//   - `tws-invest-divest` supports models denominated in **multiple currencies**;
+//     `invest-divest` supports only single-currency models.
+//   - `tws-invest-divest` accepts **multiple destination models** per request
+//     (via `modelList`); `invest-divest` targets a single model per request.
+//   - `invest-divest` allows a **different investment amount per account**
+//     because each account is listed individually with its own `amtToInvest`.
+//     FA pre-trade allocation groups are not supported by `invest-divest`.
+//   - When `tws-invest-divest` uses `group` or `accountList`, the single
+//     `amtToInvest` is split **equally** across all resolved accounts.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/tws-invest-divest (the `TwsInvestDivest` operationId).
+func (c *ClientWithResponses) TwsInvestDivestWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*TwsInvestDivestResponse, error) {
+	rsp, err := c.TwsInvestDivestWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseTwsInvestDivestResponse(rsp)
+}
+
+// TwsInvestDivestWithResponse TWS Invest / Divest
+//
+// Submit TWS-style invest or divest instructions across **one or more destination models** for a set of accounts. Positive `amtToInvest` values invest cash into the target model; negative values divest. The response returns the resulting allocation plan and cash transfers between the source cash pool and each destination model.
+//
+// The set of accounts to invest can be specified in one of three **mutually exclusive** ways:
+//   - `account` - a single U-account identifier
+//     (e.g. `"account": "DU12349"`).
+//   - `accountList` - an explicit list of U-account identifiers
+//     (e.g. `"accountList": ["DU12349", "DU12350", "DU12351"]`).
+//   - `group` - the name of an FA pre-trade allocation group
+//     (e.g. `"group": "Group1"`), or `"All"` to include every account under the
+//     advisor. When `accountList` or `group` is used, each `amtToInvest` value is
+//     **divided equally** across the resolved accounts.
+//
+// Feature comparison vs. `/fa/model/invest-divest`:
+//   - `tws-invest-divest` supports models denominated in **multiple currencies**;
+//     `invest-divest` supports only single-currency models.
+//   - `tws-invest-divest` accepts **multiple destination models** per request
+//     (via `modelList`); `invest-divest` targets a single model per request.
+//   - `invest-divest` allows a **different investment amount per account**
+//     because each account is listed individually with its own `amtToInvest`.
+//     FA pre-trade allocation groups are not supported by `invest-divest`.
+//   - When `tws-invest-divest` uses `group` or `accountList`, the single
+//     `amtToInvest` is split **equally** across all resolved accounts.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/fa/model/tws-invest-divest (the `TwsInvestDivest` operationId).
+func (c *ClientWithResponses) TwsInvestDivestWithResponse(ctx context.Context, body TwsInvestDivestJSONRequestBody, reqEditors ...RequestEditorFn) (*TwsInvestDivestResponse, error) {
+	rsp, err := c.TwsInvestDivest(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseTwsInvestDivestResponse(rsp)
 }
 
 // GetForecastCategoriesWithResponse Event Contract Categories
@@ -61729,6 +64417,23 @@ func (c *ClientWithResponses) GetSingleAllocationGroupWithResponse(ctx context.C
 	return ParseGetSingleAllocationGroupResponse(rsp)
 }
 
+// GetAllocationModelsWithResponse List Allocation Models
+//
+// Retrieve the list of allocation model portfolios available under the authenticated Financial Advisor account. Each response entry is keyed by the model name and its value is a delimited string containing the master account identifier, model name, and internal model designator/flag tokens separated by the `\x1d` (ASCII group separator) character.
+//
+// **IMPORTANT:** Ensure this endpoint is queried **first**, prior to accessing any other Model Portfolio resources in the Web API. The model list returned here primes the session's model context and is required before subsequent Model Portfolio endpoints (model summary, positions, invest/divest, rebalance, order submission, etc.) will return correct results.
+//
+// Returns a wrapper object for the known response body format(s).
+//
+// Corresponds with GET /v1/api/iserver/account/allocation/models (the `GetAllocationModels` operationId).
+func (c *ClientWithResponses) GetAllocationModelsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetAllocationModelsResponse, error) {
+	rsp, err := c.GetAllocationModels(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetAllocationModelsResponse(rsp)
+}
+
 // GetAllocationPresetsWithResponse Retrieve Allocation Presets
 //
 // Retrieve the preset behavior for allocation groups for specific events. This endpoint is only supported for Financial Advisors and IBroker Accounts.
@@ -62147,6 +64852,40 @@ func (c *ClientWithResponses) GetAccountMarketSummaryWithResponse(ctx context.Co
 		return nil, err
 	}
 	return ParseGetAccountMarketSummaryResponse(rsp)
+}
+
+// SubmitModelPortfolioOrderWithBodyWithResponse Submit New Model Portfolio Order
+//
+// Create Model Portfolio invest or rebalancing order. Submits one or more order instructions against the Model Portfolio identified by `modelCode` in the URL path. Each order entry follows the standard IBKR order submission contract used by `/iserver/account/{accountId}/orders`, with `acctId` set to the target sub-account and orders routed under the model.
+//
+// This endpoint returns either a list of successfully submitted order confirmations or a list of reply objects that require follow-up confirmation via `/iserver/reply/{replyId}` before the orders are transmitted.
+//
+// Takes any type of body and a specified content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/iserver/account/{modelCode}/orders (the `SubmitModelPortfolioOrder` operationId).
+func (c *ClientWithResponses) SubmitModelPortfolioOrderWithBodyWithResponse(ctx context.Context, modelCode string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SubmitModelPortfolioOrderResponse, error) {
+	rsp, err := c.SubmitModelPortfolioOrderWithBody(ctx, modelCode, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSubmitModelPortfolioOrderResponse(rsp)
+}
+
+// SubmitModelPortfolioOrderWithResponse Submit New Model Portfolio Order
+//
+// Create Model Portfolio invest or rebalancing order. Submits one or more order instructions against the Model Portfolio identified by `modelCode` in the URL path. Each order entry follows the standard IBKR order submission contract used by `/iserver/account/{accountId}/orders`, with `acctId` set to the target sub-account and orders routed under the model.
+//
+// This endpoint returns either a list of successfully submitted order confirmations or a list of reply objects that require follow-up confirmation via `/iserver/reply/{replyId}` before the orders are transmitted.
+//
+// Takes a body of the `application/json` content type, and returns a wrapper object for the known response body format(s).
+//
+// Corresponds with POST /v1/api/iserver/account/{modelCode}/orders (the `SubmitModelPortfolioOrder` operationId).
+func (c *ClientWithResponses) SubmitModelPortfolioOrderWithResponse(ctx context.Context, modelCode string, body SubmitModelPortfolioOrderJSONRequestBody, reqEditors ...RequestEditorFn) (*SubmitModelPortfolioOrderResponse, error) {
+	rsp, err := c.SubmitModelPortfolioOrder(ctx, modelCode, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSubmitModelPortfolioOrderResponse(rsp)
 }
 
 // GetBrokerageAccountsWithResponse List All Tradable Accounts
@@ -62961,7 +65700,7 @@ func (c *ClientWithResponses) GetAllSubaccountsWithResponse(ctx context.Context,
 
 // GetManySubaccountsWithResponse Portfolio Subaccounts (Large Account Structures)
 //
-// Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 20 accounts per page, for which the user can view position and account-related information.  This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts. If you have less than 100 sub-accounts use /portfolio/subaccounts.  To query a list of accounts the user can trade, see /iserver/accounts.
+// Used in tiered account structures (such as Financial Advisor and IBroker Accounts) to return a list of sub-accounts, paginated up to 1000 accounts per page, for which the user can view position and account-related information.  This endpoint must be called prior to calling other /portfolio endpoints for those sub-accounts. If you have less than 100 sub-accounts use /portfolio/subaccounts.  To query a list of accounts the user can trade, see /iserver/accounts.
 //
 // Returns a wrapper object for the known response body format(s).
 //
@@ -63011,8 +65750,8 @@ func (c *ClientWithResponses) GetComboPositionsWithResponse(ctx context.Context,
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /v1/api/portfolio/{accountId}/ledger (the `GetPortfolioLedger` operationId).
-func (c *ClientWithResponses) GetPortfolioLedgerWithResponse(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*GetPortfolioLedgerResponse, error) {
-	rsp, err := c.GetPortfolioLedger(ctx, accountId, reqEditors...)
+func (c *ClientWithResponses) GetPortfolioLedgerWithResponse(ctx context.Context, accountId string, params *GetPortfolioLedgerParams, reqEditors ...RequestEditorFn) (*GetPortfolioLedgerResponse, error) {
+	rsp, err := c.GetPortfolioLedger(ctx, accountId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -63041,8 +65780,8 @@ func (c *ClientWithResponses) GetPortfolioMetadataWithResponse(ctx context.Conte
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /v1/api/portfolio/{accountId}/position/{conid} (the `GetPositionByConid` operationId).
-func (c *ClientWithResponses) GetPositionByConidWithResponse(ctx context.Context, accountId string, conid int64, reqEditors ...RequestEditorFn) (*GetPositionByConidResponse, error) {
-	rsp, err := c.GetPositionByConid(ctx, accountId, conid, reqEditors...)
+func (c *ClientWithResponses) GetPositionByConidWithResponse(ctx context.Context, accountId string, conid int64, params *GetPositionByConidParams, reqEditors ...RequestEditorFn) (*GetPositionByConidResponse, error) {
+	rsp, err := c.GetPositionByConid(ctx, accountId, conid, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -63086,8 +65825,8 @@ func (c *ClientWithResponses) GetPaginatedPositionsWithResponse(ctx context.Cont
 // Returns a wrapper object for the known response body format(s).
 //
 // Corresponds with GET /v1/api/portfolio/{accountId}/summary (the `GetPortfolioSummary` operationId).
-func (c *ClientWithResponses) GetPortfolioSummaryWithResponse(ctx context.Context, accountId string, reqEditors ...RequestEditorFn) (*GetPortfolioSummaryResponse, error) {
-	rsp, err := c.GetPortfolioSummary(ctx, accountId, reqEditors...)
+func (c *ClientWithResponses) GetPortfolioSummaryWithResponse(ctx context.Context, accountId string, params *GetPortfolioSummaryParams, reqEditors ...RequestEditorFn) (*GetPortfolioSummaryResponse, error) {
+	rsp, err := c.GetPortfolioSummary(ctx, accountId, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -67029,6 +69768,69 @@ func ParseSetModelPresetsResponse(rsp *http.Response) (*SetModelPresetsResponse,
 	return response, nil
 }
 
+// ParseIsFullMasterResponse parses an HTTP response from a IsFullMasterWithResponse call
+func ParseIsFullMasterResponse(rsp *http.Response) (*IsFullMasterResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &IsFullMasterResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest struct {
+			// IsFullMaster True if the authenticated advisor is a full master account.
+			IsFullMaster *bool `json:"isFullMaster,omitempty"`
+
+			// ReqID Request identifier to uniquely track a request.
+			//
+			// Example: 398899
+			ReqID *int64 `json:"reqID,omitempty"`
+
+			// SubscriptionStatus Describes if the model is in polling mode.
+			//
+			// Example: 1
+			SubscriptionStatus *int64 `json:"subscriptionStatus,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case rsp.StatusCode == 400:
+		break // No content-type
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationjsonCharsetUtf8503 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetAccountsInModelResponse parses an HTTP response from a GetAccountsInModelWithResponse call
 func ParseGetAccountsInModelResponse(rsp *http.Response) (*GetAccountsInModelResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -67084,6 +69886,53 @@ func ParseGetAccountsInModelResponse(rsp *http.Response) (*GetAccountsInModelRes
 			// ReqID Unique identifier for the request.
 			ReqID *int64 `json:"reqID,omitempty"`
 		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationjsonCharsetUtf8503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseModelCashAnalyzerResponse parses an HTTP response from a ModelCashAnalyzerWithResponse call
+func ParseModelCashAnalyzerResponse(rsp *http.Response) (*ModelCashAnalyzerResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ModelCashAnalyzerResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest CashAnalyzerResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -67311,6 +70160,147 @@ func ParseGetAllModelPositionsResponse(rsp *http.Response) (*GetAllModelPosition
 	return response, nil
 }
 
+// ParseRebalanceToExistingTargetsResponse parses an HTTP response from a RebalanceToExistingTargetsWithResponse call
+func ParseRebalanceToExistingTargetsResponse(rsp *http.Response) (*RebalanceToExistingTargetsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RebalanceToExistingTargetsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest RebalanceSubscriptionResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationjsonCharsetUtf8503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRebalanceToNewTargetsResponse parses an HTTP response from a RebalanceToNewTargetsWithResponse call
+func ParseRebalanceToNewTargetsResponse(rsp *http.Response) (*RebalanceToNewTargetsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RebalanceToNewTargetsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest RebalanceSubscriptionResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationjsonCharsetUtf8503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRebalanceToSpecificTargetsResponse parses an HTTP response from a RebalanceToSpecificTargetsWithResponse call
+func ParseRebalanceToSpecificTargetsResponse(rsp *http.Response) (*RebalanceToSpecificTargetsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RebalanceToSpecificTargetsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest RebalanceAllocationPreview
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationjsonCharsetUtf8503 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseSetModelTargetPositionsResponse parses an HTTP response from a SetModelTargetPositionsWithResponse call
 func ParseSetModelTargetPositionsResponse(rsp *http.Response) (*SetModelTargetPositionsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -67437,6 +70427,53 @@ func ParseGetModelSummarySingleResponse(rsp *http.Response) (*GetModelSummarySin
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest ModelSummaryResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationjsonCharsetUtf8503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseTwsInvestDivestResponse parses an HTTP response from a TwsInvestDivestWithResponse call
+func ParseTwsInvestDivestResponse(rsp *http.Response) (*TwsInvestDivestResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &TwsInvestDivestResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest TwsInvestDivestResponseData
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -68618,6 +71655,53 @@ func ParseGetSingleAllocationGroupResponse(rsp *http.Response) (*GetSingleAlloca
 	return response, nil
 }
 
+// ParseGetAllocationModelsResponse parses an HTTP response from a GetAllocationModelsWithResponse call
+func ParseGetAllocationModelsResponse(rsp *http.Response) (*GetAllocationModelsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetAllocationModelsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest map[string]string
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationjsonCharsetUtf8503 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetAllocationPresetsResponse parses an HTTP response from a GetAllocationPresetsWithResponse call
 func ParseGetAllocationPresetsResponse(rsp *http.Response) (*GetAllocationPresetsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -69581,6 +72665,78 @@ func ParseGetAccountMarketSummaryResponse(rsp *http.Response) (*GetAccountMarket
 			return nil, err
 		}
 		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
+		var dest ServiceUnavailable
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.ApplicationjsonCharsetUtf8503 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSubmitModelPortfolioOrderResponse parses an HTTP response from a SubmitModelPortfolioOrderWithResponse call
+func ParseSubmitModelPortfolioOrderResponse(rsp *http.Response) (*SubmitModelPortfolioOrderResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SubmitModelPortfolioOrderResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest []struct {
+			// EncryptMessage Internal encrypted acknowledgement of the submission.
+			EncryptMessage *string `json:"encrypt_message,omitempty"`
+
+			// Id Reply identifier returned when the order requires additional confirmation. Supply this value to `/iserver/reply/{replyId}` to continue submission.
+			Id *string `json:"id,omitempty"`
+
+			// IsSuspended True if the order is suspended pending reply confirmation.
+			IsSuspended *bool `json:"isSuspended,omitempty"`
+
+			// Message Confirmation prompts that must be acknowledged before the order is transmitted.
+			Message *[]string `json:"message,omitempty"`
+
+			// OrderId Identifier of the submitted model portfolio order.
+			OrderId *string `json:"order_id,omitempty"`
+
+			// OrderStatus Current status of the submitted order (e.g. `PreSubmitted`, `Submitted`, `Filled`).
+			OrderStatus *string `json:"order_status,omitempty"`
+		}
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest BadRequest
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest InternalServerError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 503:
 		var dest ServiceUnavailable
