@@ -5,7 +5,103 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-09-21
+
+This release marks the first stable API surface. All public symbols in `pkg/ibkr`
+are now covered by a stability contract (ADR 0015). The API is production-ready
+for Go 1.26+.
+
+### Breaking changes from v0.x
+
+This release is not fully API-compatible with v0.x. A migration guide and
+automated codemod are provided.
+
+- **57 methods** renamed: the `Get` prefix is removed per Go naming conventions.
+  Run `scripts/codemod.sh` to automate the mechanical renames. See
+  `docs/MIGRATION.md` for the full table and manual steps.
+- **`float32` → `int64`** for banking IDs (`ClientInstructionID`,
+  `InstructionID`, `IbReferenceID`).
+- **14 initialism casing fixes** (e.g. `EchoHTTPSResponse` → `EchoHTTPSResponse`,
+  `RealizedPnL` → `RealizedPnL`). Automated via `scripts/codemod.sh`.
+- **`ErrStreamDisconnected` / `ErrStreamReconnected`** removed; use
+  `ErrWSDisconnected` / `ErrWSReconnected`.
+
+### Stability Hardening
+
+- **Goroutine safety (S1):** All 6 async goroutine paths now recover from panics.
+  `TestGoleak` integration covers every goroutine-creating function. ` goleak`
+  is a test-only dependency; no runtime cost.
+- **Backpressure (S2):** Context deadline propagation through all WS/tickle/token
+  paths. New `WithRequestTimeout` option sets a hard timeout per operation.
+- **Production resilience (S3):** `WithEndpointTimeout` and
+  `WithCircuitBreakerBudget` options. Error budget tracking in `internal/breaker.go`
+  with `BreakerMetrics` export.
+- **Fault injection (S4):** 36 fault-injection tests across `internal/` and
+  `pkg/ibkr/` covering transport errors, timeout, circuit breaker, and order
+  submission paths.
+- **Performance baseline (S5):** HTTP/2 connection pooling in `internal/transport.go`.
+  Allocation benchmarks in `pkg/ibkr/alloc_test.go`. Baseline stored in
+  `benchmark.baseline`; CI compares every run.
+
+### Ecosystem
+
+- **CLI tool (E1):** `cmd/ibkr/` binary with `accounts`, `positions`, `orders`,
+  `stream`, `portfolio`, `config`, and `completion` subcommands.
+- **Migration guide (E2):** `docs/MIGRATION.md` (173 lines) and `scripts/codemod.sh`
+  (74 rename rules) covering all v0.x → v1.0 breaking changes.
+- **API reference site (E3):** `docs/api.html`, `docs/architecture.html`,
+  `docs/decisions.html` with CSS/JS assets.
+- **Release automation (E4):** `.github/workflows/release-automation.yml` with
+  semver enforcement, `.github/workflows/supply-chain.yml` with govulncheck and
+  SBOM generation. Gitee auto-push on release.
+- **Supply-chain security (E5):** `go mod verify`, `govulncheck`, secret scanning,
+  SLSA-level provenance generation.
+
+### Architectural
+
+- **Interface segregation (A1):** Five interfaces in `internal/interfaces.go`:
+  `TokenProvider`, `RoundTripper`, `SessionMachine`, `WSClient`, `RateLimiter`.
+  `internal/fake/` package with five fake implementations for testing.
+- **Typed builders (A2):** `OrderBuilder`, `ContractBuilder`,
+  `TransferInstructionBuilder` in `pkg/ibkr/builders.go`.
+- **Middleware plugin (A3):** `WithTransportMiddleware` option in
+  `pkg/ibkr/middleware.go`. Example in `examples/middleware/`.
+- **Unified pagers (A4):** Generic `*Pager[T]` in `pkg/ibkr/pager.go`. Four
+  concrete pagers: `ModelsPager`, `FYIsPager`, `TransactionsPager`,
+  `SubaccountsPager`. Four old slice-returning methods deprecated.
+- **Multi-client transport (A5):** `TransportPool` in `pkg/ibkr/transport_pool.go`
+  with shared `*http.Client`, session, and rate limiter across clients.
+
+### OpenTelemetry Support
+
+- **OTel metrics bridge (P2):** `contrib/otel/` module ships a first-class
+  `OTelMetrics` implementation of `ibkr.Metrics` bridging to OpenTelemetry
+  counters, histograms, and gauges. Instrument creation is lazy and cached.
+  Import `github.com/shing1211/ibkrapi4go/contrib/otel` only when needed;
+  the core SDK carries no OTel dependency (ADR 0004).
+
+### Examples
+
+- **3 new live examples** in `examples/` require paper trading credentials
+  (`IBKR_GATEWAY`, `IBKR_USERNAME`, `IBKR_PASSWORD`). All operations are
+  read-only.
+  - `live-portfolio/`: Session.Initialize, Account.List, Portfolio
+    Positions/Ledger/Summary
+  - `options-chain/`: symbol search + options strike lookup for a given month
+  - `screener/`: ScannerParameters discovery + live market scanner
+- **Mock examples** (`mock/`, `portfolio/`, `orders/`, `marketdata-streaming/`,
+  `models/`, `middleware/`) target the in-repo mock gateway and need no
+  credentials.
+
+### Deprecated
+
+- `ScannerManager.ScannerResults` — use `Scanner().ScannerResults` via the
+  `ScannerManager` returned by `Client.Scanner()`
+- `PortfolioManager.Subaccounts` — use `SubaccountsPager` instead
+- `FYIManager.FYIs` — use `FYIsPager` instead
+- `PerformanceManager.Transactions` — use `TransactionsPager` instead
+- `ModelManager.Models` — use `ModelsPager` instead
+- `DefaultServerURL` — use `DefaultGatewayURL` instead
 
 ## [0.3.0] - 2026-09-18
 
