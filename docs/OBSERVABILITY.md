@@ -72,96 +72,27 @@ does not change a series' identity. Histogram snapshots expose `Count`, `Sum`,
 
 ## OpenTelemetry bridge
 
-Implement `ibkr.Metrics` over any backend. The snippet below is documentation
-only — the SDK itself never imports OpenTelemetry. Counters are cached by name;
-histograms and gauges follow the same pattern.
+The core SDK never imports OpenTelemetry ([ADR 0004](./adr/0004-minimal-dependencies.md)).
+A first-class bridge lives in the `contrib/otel` module:
 
 ```go
 import (
-    "context"
-    "sync"
-
-    "go.opentelemetry.io/otel/attribute"
-    "go.opentelemetry.io/otel/metric"
-
-    "github.com/shing1211/ibkrapi4go/pkg/ibkr"
+    "go.opentelemetry.io/otel"
+    otelbridge "github.com/shing1211/ibkrapi4go/contrib/otel"
 )
 
-// OTelMetrics bridges ibkr.Metrics onto OpenTelemetry instruments.
-type OTelMetrics struct {
-    meter      metric.Meter
-    mu         sync.Mutex
-    counters   map[string]metric.Int64Counter
-    histograms map[string]metric.Float64Histogram
-    gauges     map[string]metric.Float64Gauge
-}
+meter := otel.Meter("ibkrapi4go")
+metrics := otelbridge.New(meter)
 
-func NewOTelMetrics(meter metric.Meter) *OTelMetrics {
-    return &OTelMetrics{
-        meter:      meter,
-        counters:   map[string]metric.Int64Counter{},
-        histograms: map[string]metric.Float64Histogram{},
-        gauges:     map[string]metric.Float64Gauge{},
-    }
-}
-
-func otelAttrs(attrs []ibkr.Attr) []attribute.KeyValue {
-    out := make([]attribute.KeyValue, 0, len(attrs))
-    for _, a := range attrs {
-        out = append(out, attribute.String(a.Key, a.Value))
-    }
-    return out
-}
-
-func (m *OTelMetrics) Counter(ctx context.Context, name string, delta int64, attrs ...ibkr.Attr) {
-    m.mu.Lock()
-    c, ok := m.counters[name]
-    if !ok {
-        var err error
-        if c, err = m.meter.Int64Counter(name); err != nil {
-            m.mu.Unlock()
-            return
-        }
-        m.counters[name] = c
-    }
-    m.mu.Unlock()
-    c.Add(ctx, delta, metric.WithAttributes(otelAttrs(attrs)...))
-}
-
-func (m *OTelMetrics) Histogram(ctx context.Context, name string, value float64, attrs ...ibkr.Attr) {
-    m.mu.Lock()
-    h, ok := m.histograms[name]
-    if !ok {
-        var err error
-        if h, err = m.meter.Float64Histogram(name, metric.WithUnit("ms")); err != nil {
-            m.mu.Unlock()
-            return
-        }
-        m.histograms[name] = h
-    }
-    m.mu.Unlock()
-    h.Record(ctx, value, metric.WithAttributes(otelAttrs(attrs)...))
-}
-
-func (m *OTelMetrics) Gauge(ctx context.Context, name string, value float64, attrs ...ibkr.Attr) {
-    m.mu.Lock()
-    g, ok := m.gauges[name]
-    if !ok {
-        var err error
-        if g, err = m.meter.Float64Gauge(name); err != nil {
-            m.mu.Unlock()
-            return
-        }
-        m.gauges[name] = g
-    }
-    m.mu.Unlock()
-    g.Record(ctx, value, metric.WithAttributes(otelAttrs(attrs)...))
-}
-
-// Wire it in:
-//   metricMeter := otel.Meter("ibkrapi4go")
-//   cli, _ := ibkr.NewClient(ibkr.WithGatewayURL(url), ibkr.WithMetrics(NewOTelMetrics(metricMeter)))
+cli, _ := ibkr.NewClient(
+    ibkr.WithGatewayURL(url),
+    ibkr.WithMetrics(metrics),
+)
 ```
+
+The `contrib/otel` package implements `ibkr.Metrics` by forwarding observations
+to OTel counters, histograms, and gauges. Instruments are lazily created and
+cached by name. See `contrib/otel/examples/otel` for a complete working example.
 
 ## Benchmarks
 
