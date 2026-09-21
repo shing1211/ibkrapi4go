@@ -1,45 +1,45 @@
-# Next Phase — Post-Reconciliation
+# Next Phase — Post-Codegen P7
 
 ## What Was Done
 
-This run added WS system-frame routing (R1), fixed decodeJSON consistency in rest_accounts.go (R4), added defect 5 to patch_spec.py for float32→int64 ConID fields (R2-fix), and updated SPEC.md (R6). All changes verified and pushed.
+This run completed the reconciliation (WS system frames, decodeJSON consistency) and the full codegen P7 cycle — defects 5/6/7 applied, spec refreshed to v2.40.0, `client/client.gen.go` regenerated and verified.
 
 ## Gaps & Deferred
 
-1. **Codegen not regenerated**: defect 5 is in patch_spec.py but `client/client.gen.go` still has `float32` for ID fields. `make codegen` + `make codegen-verify` needed.
-2. **float64 money in generated AccountSummary**: `SMA`, `AccruedInterest`, etc. in `AccountSummaryResponse` use `float64` in generated code — ADR 0008 violation, but wrapped at SDK boundary.
-3. **float32 InstructionIDs**: `clientInstructionId`, `instructionId` etc. still `float32` — defect 5 handles them in spec, but codegen not yet run.
-4. **json.RawMessage for union types**: ~38 responses use `json.RawMessage` — bypasses compile-time type safety. Requires a different approach (custom decoder or union type generation).
+1. **json.RawMessage for union types**: ~38 responses use `json.RawMessage` — bypasses compile-time type safety for `oneOf`/`anyOf` schemas. Requires oapi-codegen `generate` options for `allOf`/`oneOf` or a custom decoder.
+2. **OTel histogram units**: OTel histogram calls lack explicit unit strings (USD, shares). Easy fix, low priority.
+3. **MultiClient docs**: `examples/multi-account/main.go` exists but no written documentation.
+4. **Mock gateway `sor` frames**: After R1 (WS system frame routing), the mock gateway should emit `sor` frames when orders are submitted — not yet implemented.
+5. **Benchmark baseline**: `benchmark.baseline` needs updating after significant changes.
+6. **float64 in other schemas**: 17 money fields fixed in defects 5/6/7, but the spec may have more. Full audit of all schemas could yield additional fixes.
 
 ## Candidate Next Phases
 
 | # | Title | Objective | Why Now | Effort | Dependencies |
 |---|-------|-----------|---------|--------|--------------|
-| 1 | **Codegen regeneration** | Run `make codegen` to apply defect 5 and regenerate `client/gen.go` | Defect 5 is committed but not active | S | patch_spec.py defect 5 |
-| 2 | **Money-field ADR 0008 audit** | Audit all generated float64 money fields, patch spec to use string, regenerate | ADR 0008 violations in 15+ fields | M | Codegen (phase 1) |
-| 3 | **Union type codegen** | Investigate oapi-codegen `generate` option for `allOf`/`oneOf` to replace json.RawMessage | 38 union responses lack type safety | L | Codegen (phase 1) |
-| 4 | **OTel histogram units** | Add explicit unit strings (USD, shares) to OTel histogram calls | Consistency and better observability | S | — |
-| 5 | **MultiClient docs** | Document MultiClient usage with examples | Added in P6, no example yet | S | — |
-| 6 | **Mock gateway order fills** | Mock WS `sor` frame emission when order submitted | R1 exposed this gap | M | R1 WS routing |
-| 7 | **Benchmarks** | Add `scripts/bench_compare.go` benchmarks for key operations | No performance baseline | M | — |
+| 1 | **Union type codegen** | Replace `json.RawMessage` unions with typeddiscriminated unions using oapi-codegen `generate` options | 38 responses lack type safety; high correctness impact | L | None |
+| 2 | **OTel unit strings** | Add explicit unit parameters to OTel histogram calls | Better observability; consistent metric labels | S | None |
+| 3 | **Mock `sor` frames** | Mock gateway emits order status frames when orders submitted | R1 exposed this gap; better e2e testing | M | R1 WS routing |
+| 4 | **MultiClient written docs** | Document MultiClient usage pattern in docs | Added in P6, no written guide yet | S | MultiClient |
+| 5 | **Full money-field re-audit** | Re-audit all schemas for additional float64 money fields after v2.40.0 refresh | spec changed; may have new violations | M | None |
+| 6 | **Benchmark refresh** | Update `benchmark.baseline` after codegen + refactor changes | No current baseline | S | None |
 
 ## Recommended Next Phase
 
-**Phase P7: Codegen regeneration + ADR 0008 money audit**
+**Phase P8: Union type codegen + OTel units**
 
-Apply the committed defect 5 fix, then audit and patch all `float64` money fields in the spec.
+Both are small, independent, and high-value. Spawn two sequential sub-agents.
 
 **Proposed task breakdown:**
 
 | ID | Task | Role |
 |----|------|------|
-| P7-1 | Run `make codegen` and resolve any diff | backend |
-| P7-2 | Audit generated float64 money fields, add defect 6 to patch_spec.py | backend |
-| P7-3 | Run `make codegen-verify` | tester |
-| P7-4 | Update CHANGELOG | docs |
-| P7-5 | Commit + push | release |
+| P8-1 | Investigate oapi-codegen options for `allOf`/`oneOf` union types | backend |
+| P8-2 | Add unit strings to all OTel histogram calls | backend |
+| P8-3 | Update `contrib/otel/README.md` if OTel API changed | docs |
+| P8-4 | Commit + push | release |
 
 ## Open Questions
 
-1. Should `make codegen` be run now (it's a destructive regeneration step)?
-2. Should the float64 money fields be patched at spec level, or is the current SDK-level wrapping sufficient?
+1. Is union type codegen a priority vs. other items?
+2. Should the mock `sor` frame implementation be part of P8 or deferred?
