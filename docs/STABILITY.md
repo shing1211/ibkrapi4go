@@ -69,13 +69,16 @@ To remove or rename a stable symbol:
 3. Announce the deprecation in the CHANGELOG entry for that release.
 4. Remove in the next minor release.
 
-## Pre-1.0 rules
+## Pre-1.0 rules (applies to v0.x releases, historical)
 
-While `MAJOR == 0` (current: v0.x):
+v1.0.0 is the first stable release. The rules below applied to the v0.x
+development period and are retained for historical reference.
+
+While `MAJOR == 0` (v0.x):
 
 - The API may change in any **minor** release (x.1.0, x.2.0, …)
 - Breaking changes are called out explicitly in the CHANGELOG
 - Tags may be deleted and rewritten if needed
 
-After v1.0.0, breaking changes require a **major** bump and a new import
+As of v1.0.0, breaking changes require a **major** bump and a new import
 path (`/v2`, etc.).
