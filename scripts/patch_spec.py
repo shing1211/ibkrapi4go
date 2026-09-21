@@ -5,7 +5,7 @@
 patch_spec.py — fix known defects in the IBKR OpenAPI spec before codegen.
 
 The published spec (v2.39.0) does not generate cleanly with oapi-codegen.
-This script applies four deterministic, idempotent fixes:
+This script applies five deterministic, idempotent fixes:
 
   1. Reconcile path parameters with the path template. Some operations declare
      a path parameter that is absent from the path (or whose name differs), and
@@ -19,13 +19,19 @@ This script applies four deterministic, idempotent fixes:
      (e.g. ErrorResponse/errorResponse, User/user).
      Fix: assign x-go-name to later occurrences.
 
-  4. Replace bare `type: null` in inline query parameter schemas with
-     `type: string`.  OpenAPI allows a schema to omit `type`, but oapi-codegen
-     maps that to a bare `interface{}` in the generated params struct.  When
-     such a field is nil, `runtime.StyleParamWithOptions` panics.  These params
-     are plain strings in practice, so setting `type: string` makes
-     oapi-codegen emit a concrete `string` (or a named string enum), which is
-     nil-safe.  See docs/CODEGEN.md defect 4.
+   4. Replace bare `type: null` in inline query parameter schemas with
+      `type: string`.  OpenAPI allows a schema to omit `type`, but oapi-codegen
+      maps that to a bare `interface{}` in the generated params struct.  When
+      such a field is nil, `runtime.StyleParamWithOptions` panics.  These params
+      are plain strings in practice, so setting `type: string` makes
+      oapi-codegen emit a concrete `string` (or a named string enum), which is
+      nil-safe.  See docs/CODEGEN.md defect 4.
+
+   5. Replace `type: float` with `type: integer` for ID-named fields.
+      oapi-codegen maps `type: float` → Go `float32`.  ConIDs can exceed 2^24
+      (16,777,216) causing silent precision loss in float32.  The affected
+      fields are: conid, clientInstructionId, instructionId, instructionSetId,
+      ibReferenceId.
 
 Usage:
     python3 scripts/patch_spec.py specs/ibkr_spec.json > specs/ibkr_patched.json
@@ -139,6 +145,40 @@ def patch(spec: dict) -> collections.Counter:
                 if schema.get("type") is None:
                     schema["type"] = "string"
                     report["null_type_patched"] += 1
+
+    # 5. Replace `type: float` with `type: integer` for ID-named fields.
+    # ConIDs exceed 2^24 causing precision loss in float32.  The fields are:
+    # conid, clientInstructionId, instructionId, instructionSetId, ibReferenceId.
+    ID_NAMES = frozenset([
+        "conid",
+        "clientInstructionId",
+        "instructionId",
+        "instructionSetId",
+        "ibReferenceId",
+    ])
+
+    def patch_schema(schema: dict) -> None:
+        if not isinstance(schema, dict):
+            return
+        if "$ref" in schema:
+            ref = schema["$ref"].split("/")[-1]
+            if ref in schemas:
+                patch_schema(schemas[ref])
+            return
+        props = schema.get("properties")
+        if isinstance(props, dict):
+            for name, prop in props.items():
+                if name in ID_NAMES and prop.get("type") == "float":
+                    prop["type"] = "integer"
+                    report["float_id_patched"] += 1
+        for key in ("allOf", "anyOf", "oneOf"):
+            for sub in schema.get(key, []):
+                patch_schema(sub)
+        if schema.get("type") == "array":
+            patch_schema(schema.get("items"))
+
+    for schema in schemas.values():
+        patch_schema(schema)
 
     return report
 

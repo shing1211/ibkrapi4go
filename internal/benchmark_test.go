@@ -264,11 +264,11 @@ type wsSink struct {
 	msgs int
 }
 
-func (s *wsSink) Wants(conid int) bool { return true }
-func (s *wsSink) Deliver(u internal.WSUpdate) {
-	s.msgs++
-}
-func (s *wsSink) Fail(err error) {}
+func (s *wsSink) Wants(conid int) bool                     { return true }
+func (s *wsSink) Deliver(u internal.WSUpdate)             { s.msgs++ }
+func (s *wsSink) Fail(err error)                          {}
+func (s *wsSink) WantsSystem() bool                       { return false }
+func (s *wsSink) DeliverSystem(frame internal.WSSystemFrame) {}
 
 func BenchmarkWSSubscribeUnsubscribe(b *testing.B) {
 	b.Run("SubscribeUnsubscribe", func(b *testing.B) {
@@ -298,7 +298,7 @@ func BenchmarkWSSubscribeUnsubscribe(b *testing.B) {
 
 			sink := &wsSink{}
 			conids := []int{265598, 8314, 756733, 12345, 67890, 11111, 22222, 33333, 44444, 55555}
-			handle, err := conn.Subscribe(context.Background(), sink, conids, []string{"31"})
+			handle, err := conn.Subscribe(context.Background(), sink, sink, conids, []string{"31"})
 			if err != nil {
 				b.Fatalf("Subscribe: %v", err)
 			}
@@ -335,7 +335,7 @@ func BenchmarkWSSubscribeUnsubscribe(b *testing.B) {
 
 			sink := &wsSink{}
 			conids := []int{265598}
-			handle, err := conn.Subscribe(context.Background(), sink, conids, []string{"31"})
+			handle, err := conn.Subscribe(context.Background(), sink, sink, conids, []string{"31"})
 			if err != nil {
 				b.Fatalf("Subscribe: %v", err)
 			}

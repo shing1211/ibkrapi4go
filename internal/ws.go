@@ -34,6 +34,14 @@ type WSUpdate struct {
 	Value string
 }
 
+// WSSystemFrame is a non-market-data (system) frame received from the gateway.
+type WSSystemFrame struct {
+	Type    string
+	Status  string
+	Topic   string
+	Payload []byte
+}
+
 // WSSink receives routed market-data updates for a subscription. Implementations
 // must not block: Deliver is called from the connection's reader goroutine.
 type WSSink interface {
@@ -41,6 +49,16 @@ type WSSink interface {
 	Wants(conid int) bool
 	// Deliver receives a scalar field update.
 	Deliver(WSUpdate)
+	// Fail receives connection-level events (drops, errors, reconnects).
+	Fail(error)
+}
+
+// WSSystemSink receives non-market-data frames (sts, ntf, sor, usr).
+type WSSystemSink interface {
+	// WantsSystem reports whether the sink wants system updates.
+	WantsSystem() bool
+	// DeliverSystem receives a system frame.
+	DeliverSystem(WSSystemFrame)
 	// Fail receives connection-level events (drops, errors, reconnects).
 	Fail(error)
 }
@@ -65,9 +83,10 @@ type WSHandle struct {
 }
 
 type wsSub struct {
-	sink   WSSink
-	conids []int
-	fields []string
+	sink       WSSink
+	systemSink WSSystemSink
+	conids     []int
+	fields     []string
 }
 
 // WSConn is a single multiplexed WebSocket connection to the gateway.
@@ -142,11 +161,11 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 
 // Subscribe registers a subscription for conids/fields and sends the subscribe
 // frame. Deliveries begin once frames arrive.
-func (c *WSConn) Subscribe(ctx context.Context, sink WSSink, conids []int, fields []string) (*WSHandle, error) {
+func (c *WSConn) Subscribe(ctx context.Context, sink WSSink, systemSink WSSystemSink, conids []int, fields []string) (*WSHandle, error) {
 	if c.closed.Load() {
 		return nil, ErrClosed
 	}
-	s := &wsSub{sink: sink, conids: conids, fields: fields}
+	s := &wsSub{sink: sink, systemSink: systemSink, conids: conids, fields: fields}
 	c.mu.Lock()
 	c.subs[s] = struct{}{}
 	c.mu.Unlock()
@@ -388,6 +407,11 @@ func (c *WSConn) dispatch(data []byte) {
 			return
 		}
 	}
+
+	if frame := parseSystemFrame(m); frame != nil {
+		c.deliverSystem(frame)
+	}
+
 	rawConid, ok := m["conid"]
 	if !ok {
 		return
@@ -417,6 +441,61 @@ func (c *WSConn) dispatch(data []byte) {
 		}
 		for _, u := range updates {
 			s.sink.Deliver(u)
+		}
+	}
+}
+
+func parseSystemFrame(m map[string]json.RawMessage) *WSSystemFrame {
+	if len(m) == 0 {
+		return nil
+	}
+	hasConid := false
+	for k := range m {
+		if k == "conid" {
+			hasConid = true
+			break
+		}
+	}
+	if hasConid {
+		return nil
+	}
+
+	var frame WSSystemFrame
+	switch {
+	case m["sts"] != nil:
+		frame.Type = "sts"
+		var status string
+		if json.Unmarshal(m["sts"], &status) == nil {
+			frame.Status = status
+		}
+		if t, ok := m["topic"]; ok {
+			json.Unmarshal(t, &frame.Topic)
+		}
+		return &frame
+	case m["ntf"] != nil:
+		frame.Type = "ntf"
+		if t, ok := m["topic"]; ok {
+			json.Unmarshal(t, &frame.Topic)
+		}
+		frame.Payload = m["ntf"]
+		return &frame
+	case m["sor"] != nil:
+		frame.Type = "sor"
+		frame.Payload = m["sor"]
+		return &frame
+	case m["usr"] != nil:
+		frame.Type = "usr"
+		frame.Payload = m["usr"]
+		return &frame
+	default:
+		return nil
+	}
+}
+
+func (c *WSConn) deliverSystem(frame *WSSystemFrame) {
+	for _, s := range c.snapshotSubs() {
+		if s.systemSink != nil && s.systemSink.WantsSystem() {
+			s.systemSink.DeliverSystem(*frame)
 		}
 	}
 }

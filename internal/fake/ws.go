@@ -14,7 +14,7 @@ import (
 // Close is safe to call.
 type WSClient struct {
 	// SubscribeFn, when set, overrides the default Subscribe behaviour.
-	SubscribeFn func(ctx context.Context, sink internal.WSSink, conids []int, fields []string) (*internal.WSHandle, error)
+	SubscribeFn func(ctx context.Context, sink internal.WSSink, systemSink internal.WSSystemSink, conids []int, fields []string) (*internal.WSHandle, error)
 	// ActiveSubscriptionsResult is the value returned by ActiveSubscriptions.
 	ActiveSubscriptionsResult int
 	// CloseErr is the error returned by Close.
@@ -27,10 +27,10 @@ type WSClient struct {
 }
 
 // Subscribe satisfies internal.WSClient.
-func (c *WSClient) Subscribe(ctx context.Context, sink internal.WSSink, conids []int, fields []string) (*internal.WSHandle, error) {
+func (c *WSClient) Subscribe(ctx context.Context, sink internal.WSSink, systemSink internal.WSSystemSink, conids []int, fields []string) (*internal.WSHandle, error) {
 	c.SubscribeCalls++
 	if c.SubscribeFn != nil {
-		return c.SubscribeFn(ctx, sink, conids, fields)
+		return c.SubscribeFn(ctx, sink, systemSink, conids, fields)
 	}
 	return internal.NewTestWSHandle(), nil
 }

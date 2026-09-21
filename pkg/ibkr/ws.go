@@ -26,6 +26,32 @@ type Update struct {
 	Received time.Time
 }
 
+// SystemUpdateType classifies a system (non-market-data) frame.
+type SystemUpdateType string
+
+const (
+	SystemUpdateStatus        SystemUpdateType = "sts"
+	SystemUpdateNotification SystemUpdateType = "ntf"
+	SystemUpdateOrder        SystemUpdateType = "sor"
+	SystemUpdateUser         SystemUpdateType = "usr"
+)
+
+// SystemUpdate is a non-market-data frame delivered on a Subscription.
+// It is a discriminated union: check the Type field to determine which
+// payload is populated.
+type SystemUpdate struct {
+	// Type is the frame type: "sts", "ntf", "sor", or "usr".
+	Type SystemUpdateType
+	// Status is populated for "sts" frames (connection status message).
+	Status string
+	// Topic is populated for "ntf" frames (notification topic).
+	Topic string
+	// Payload is the raw JSON payload for "ntf", "sor", or "usr" frames.
+	Payload []byte
+	// Received is when the client received the update.
+	Received time.Time
+}
+
 // StreamingLimits bounds streaming subscriptions and buffering. Zero fields are
 // replaced with defaults by WithStreamingLimits.
 type StreamingLimits struct {
@@ -86,6 +112,8 @@ type Subscription struct {
 	errs    chan error
 	dropped atomic.Int64
 
+	systemUpdates chan SystemUpdate
+
 	closedCh chan struct{}
 
 	mu        sync.RWMutex
@@ -103,10 +131,11 @@ func newSubscription(conids []ConID, buffer int) *Subscription {
 		wants[int(c)] = struct{}{}
 	}
 	return &Subscription{
-		wants:    wants,
-		updates:  make(chan Update, buffer),
-		errs:     make(chan error, buffer),
-		closedCh: make(chan struct{}),
+		wants:         wants,
+		updates:       make(chan Update, buffer),
+		errs:          make(chan error, buffer),
+		systemUpdates: make(chan SystemUpdate, buffer),
+		closedCh:      make(chan struct{}),
 	}
 }
 
@@ -116,6 +145,10 @@ func (s *Subscription) Updates() <-chan Update { return s.updates }
 // Errors returns the stream of connection-level events (errors and reconnect
 // notices). The channel is closed by Close.
 func (s *Subscription) Errors() <-chan error { return s.errs }
+
+// SystemUpdates returns the stream of non-market-data frames (connection status,
+// notifications, order updates, user messages). The channel is closed by Close.
+func (s *Subscription) SystemUpdates() <-chan SystemUpdate { return s.systemUpdates }
 
 // Dropped returns the number of updates dropped due to a full buffer.
 func (s *Subscription) Dropped() int64 { return s.dropped.Load() }
@@ -134,6 +167,7 @@ func (s *Subscription) Close() error {
 		s.isClosed = true
 		close(s.updates)
 		close(s.errs)
+		close(s.systemUpdates)
 		s.mu.Unlock()
 	})
 	return nil
@@ -185,6 +219,32 @@ func (s *Subscription) Wants(conid int) bool {
 	return ok
 }
 
+// WantsSystem implements internal.WSSystemSink. It always returns true since
+// every subscription is eligible to receive system updates.
+func (s *Subscription) WantsSystem() bool {
+	return true
+}
+
+// DeliverSystem implements internal.WSSystemSink.
+func (s *Subscription) DeliverSystem(frame internal.WSSystemFrame) {
+	up := SystemUpdate{
+		Type:     SystemUpdateType(frame.Type),
+		Status:   frame.Status,
+		Topic:    frame.Topic,
+		Payload:  frame.Payload,
+		Received: time.Now(),
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.isClosed {
+		return
+	}
+	select {
+	case s.systemUpdates <- up:
+	default:
+	}
+}
+
 // Subscribe opens a real-time market-data subscription. The returned
 // Subscription delivers updates until Close or context cancellation.
 func (m *MarketDataManager) Subscribe(ctx context.Context, conids []ConID, fields []Field) (*Subscription, error) {
@@ -227,7 +287,7 @@ func (m *MarketDataManager) Subscribe(ctx context.Context, conids []ConID, field
 		strFields[i] = string(f)
 	}
 
-	handle, err := conn.Subscribe(subCtx, sub, intConids, strFields)
+	handle, err := conn.Subscribe(subCtx, sub, sub, intConids, strFields)
 	if err != nil {
 		cancel()
 		_ = sub.Close()

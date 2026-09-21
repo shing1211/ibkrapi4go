@@ -214,3 +214,54 @@ func TestWS_Limits(t *testing.T) {
 		t.Errorf("subscriptions over limit err = %v; want ErrStreamingLimit", err)
 	}
 }
+
+func TestWS_SystemUpdates(t *testing.T) {
+	srv := newWSServer(t, &mockgateway.StreamScript{Hello: true})
+	cli, err := NewClient(WithGatewayURL(srv.URL))
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	defer cli.Close()
+
+	sub, err := cli.MarketData().Subscribe(context.Background(), []ConID{265598}, []Field{FieldLastPrice})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	defer sub.Close()
+
+	gotStatus := false
+	gotNotification := false
+	deadline := time.After(5 * time.Second)
+	for !gotStatus || !gotNotification {
+		select {
+		case u, ok := <-sub.Updates():
+			if !ok {
+				t.Fatal("Updates channel closed unexpectedly")
+			}
+			if u.ConID == 265598 && u.Field == FieldLastPrice {
+			}
+		case su, ok := <-sub.SystemUpdates():
+			if !ok {
+				t.Fatal("SystemUpdates channel closed unexpectedly")
+			}
+			switch su.Type {
+			case SystemUpdateStatus:
+				if su.Status != "connected" {
+					t.Errorf("Status = %q; want \"connected\"", su.Status)
+				}
+				gotStatus = true
+			case SystemUpdateNotification:
+				gotNotification = true
+			}
+		case <-deadline:
+			t.Fatalf("timeout: gotStatus=%v gotNotification=%v", gotStatus, gotNotification)
+		}
+	}
+
+	if err := sub.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if _, ok := <-sub.SystemUpdates(); ok {
+		t.Error("SystemUpdates channel not closed after Close")
+	}
+}

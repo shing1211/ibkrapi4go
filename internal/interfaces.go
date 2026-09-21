@@ -34,7 +34,7 @@ type (
 
 	// WSClient abstracts a single multiplexed WebSocket connection to the gateway.
 	WSClient interface {
-		Subscribe(ctx context.Context, sink WSSink, conids []int, fields []string) (*WSHandle, error)
+		Subscribe(ctx context.Context, sink WSSink, systemSink WSSystemSink, conids []int, fields []string) (*WSHandle, error)
 		ActiveSubscriptions() int
 		Close() error
 	}

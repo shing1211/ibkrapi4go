@@ -34,7 +34,7 @@ func (m *RESTAccounts) List(ctx context.Context) ([]RESTAccountSummary, error) {
 		return nil, e
 	}
 	var raw []RESTAccountSummary
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -60,7 +60,7 @@ func (m *RESTAccounts) LoginMessages(ctx context.Context) ([]LoginMessage, error
 		return nil, e
 	}
 	var raw loginMessagesWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -92,7 +92,7 @@ func (m *RESTAccounts) BulkStatus(ctx context.Context) ([]RESTAccountStatus, err
 		return nil, e
 	}
 	var raw accountStatusBulkWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -124,7 +124,7 @@ func (m *RESTAccounts) KycURL(ctx context.Context, accountID AccountID) (string,
 		return "", e
 	}
 	var raw au10tixWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
@@ -150,7 +150,7 @@ func (m *RESTAccounts) LoginMessagesForAccount(ctx context.Context, accountID Ac
 		return nil, e
 	}
 	var raw loginMessagesWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -182,7 +182,7 @@ func (m *RESTAccounts) Status(ctx context.Context, accountID AccountID) (*RESTAc
 		return nil, e
 	}
 	var raw RESTAccountStatus
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -213,7 +213,7 @@ func (m *RESTAccounts) Tasks(ctx context.Context, accountID AccountID, taskType 
 		return nil, e
 	}
 	var raw registrationTasksWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
