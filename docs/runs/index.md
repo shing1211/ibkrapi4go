@@ -20,4 +20,5 @@
 | 2026-09-21 | [v1.0.0-final](./2026-09-21-v1.0.0-final/) | BUILD | complete | `86c2e2f` | `afaf68b` | `plan.md`, `todos.md` |
 | 2026-09-21 | [multi-gateway](./2026-09-21-multi-gateway/) | BUILD | complete | `e7c114f` | `e7c114f` | `plan.md`, `todos.md` |
 | 2026-09-21 | [ibkr-reconciliation](./2026-09-21-ibkr-reconciliation/) | BUILD | complete | `f51ae41` | `f6c0422` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
-| 2026-09-21 | [docs-reconciliation](./2026-09-21-docs-reconciliation/) | BUILD | complete | `81df4c0` | `8af8404` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
+| 2026-09-21 | [docs-reconciliation](./2026-09-21-docs-reconciliation/) | BUILD | complete | `81df4c0` | `8d3fcb0` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
+| 2026-09-21 | [spec-drift-watch](./2026-09-21-spec-drift-watch/) | BUILD | complete | `6e2be91` | `d8454ce` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
