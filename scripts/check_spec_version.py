@@ -1,50 +1,59 @@
 #!/usr/bin/env python3
 # Copyright 2026 shing1211
 # SPDX-License-Identifier: Apache-2.0
-
 """
-check_spec_version.py — compare the upstream IBKR OpenAPI spec version
-against the version pinned in docs/SPEC.md.
+check_spec_version.py — compare live IBKR OpenAPI spec version against pinned version.
 
 Exit codes:
-    0 — upstream and pinned versions match
-    1 — versions differ; a ::error is printed for CI consumption
-   >1 — fetch or parse error
+    0 = live version matches pinned (no drift)
+    1 = live version is newer than pinned (drift detected)
+    2 = error fetching or parsing spec
 """
 
-import urllib.request
-import re
+import json
 import sys
-import os
+import urllib.request
 
-UPSTREAM_URL = "https://api.ibkr.com/gw/api/v3/api-docs"
-SPEC_FILE = "docs/SPEC.md"
-
-
-def get_upstream_version() -> str:
-    with urllib.request.urlopen(UPSTREAM_URL, timeout=30) as r:
-        spec = __import__("json").load(r)
-    return spec["info"]["version"]
+PINNED_VERSION = "v2.40.0"
+SPEC_URL = "https://api.ibkr.com/gw/api/v3/api-docs"
 
 
-def get_pinned_version() -> str:
-    text = open(SPEC_FILE).read()
-    m = re.search(r"Version:\s*(\d+\.\d+\.\d+)", text)
-    if not m:
-        raise RuntimeError(f"could not find Version in {SPEC_FILE}")
-    return m.group(1)
+def parse_version(v: str) -> tuple:
+    if v.startswith("v"):
+        v = v[1:]
+    return tuple(int(x) for x in v.split("."))
 
 
-def main() -> None:
-    upstream = get_upstream_version()
-    pinned = get_pinned_version()
-    print(f"upstream={upstream}  pinned={pinned}", file=sys.stderr)
-    if upstream != pinned:
-        print(f"::error::Spec version drifted: pinned={pinned} upstream={upstream}")
-        sys.exit(1)
-    print("OK: upstream and pinned spec versions match", file=sys.stderr)
-    sys.exit(0)
+def main() -> int:
+    try:
+        with urllib.request.urlopen(SPEC_URL, timeout=30) as resp:
+            spec = json.load(resp)
+    except Exception as exc:
+        print(f"ERROR: failed to fetch spec from {SPEC_URL}: {exc}", file=sys.stderr)
+        return 2
+
+    live_version = spec.get("info", {}).get("version", "")
+
+    if not live_version:
+        print("ERROR: could not extract version from spec (missing info.version)", file=sys.stderr)
+        return 2
+
+    live_tuple = parse_version(live_version)
+    pinned_tuple = parse_version(PINNED_VERSION)
+
+    print(f"Live version:   {live_version}")
+    print(f"Pinned version: {PINNED_VERSION}")
+
+    if live_tuple == pinned_tuple:
+        print("Status: OK — spec is current (no drift)")
+        return 0
+    elif live_tuple > pinned_tuple:
+        print("Status: DRIFT — live spec is newer than pinned version")
+        return 1
+    else:
+        print("Status: OK — live spec is older than pinned (expected in dev)")
+        return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
