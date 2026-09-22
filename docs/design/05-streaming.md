@@ -13,10 +13,15 @@ wsConn (internal/)
  └─ reconnect loop     : backoff, re-subscribe
 
 Subscription (public)
- ├─ Updates() <-chan Update
- ├─ Errors()  <-chan error
+ ├─ Updates()      <-chan Update       // market data field updates
+ ├─ SystemUpdates() <-chan SystemUpdate // sts/ntf/sor/usr/system frames
+ ├─ Errors()       <-chan error        // reconnect notices, connection errors
  └─ Close()
 ```
+
+> **Note**: `SystemUpdates()` was added in v1.0.1 and delivers non-market-data
+> frames (`sts`, `ntf`, `sor`, `usr`) that were previously mixed into `Updates()`.
+> The `Updates()` behavior is unchanged for market data.
 
 ## Multiplexing
 

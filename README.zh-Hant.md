@@ -6,12 +6,12 @@
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
 
-> **⚠️ 非官方 & 早期預覽版。** ibkrapi4go 是社群維護的 Interactive Brokers
+> **⚠️ 非官方。** ibkrapi4go 是社群維護的 Interactive Brokers
 > Web API Go SDK，**與 Interactive Brokers 無任何隸屬關係**。全部 185 個 API
 > 操作已實作（115 CPAPI + 70 IB REST）。請閱讀 [DISCLAIMER.md](./DISCLAIMER.md) 與
 > [docs/ROADMAP.md](./docs/ROADMAP.md)。

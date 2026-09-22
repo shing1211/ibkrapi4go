@@ -7,16 +7,17 @@ The transport is the single path through which every HTTP request flows. It is a
 
 ```
 request
-  └─ requestID → userAgent → auth → logging/telemetry → circuitBreaker
-       → retry (safe methods only) → rateLimit → timeout → errorDecode
-       → http.Transport.Do
+  └─ requestID → userAgent → auth → logging/telemetry → Instrument
+       → circuitBreaker → retry (safe methods only) → rateLimit
+       → timeout → errorDecode → UserMiddleware → http.Transport.Do
 response / *ibkr.Error
 ```
 
 Order matters: auth runs before retry so every attempt reuses the same
 credential; retry runs before rate limiting so each attempt is paced; error
-decoding is innermost so it sees the final status (and preserves 101 upgrades).
-Assembled by `internal.NewClientTransport`, configured via `TransportConfig`.
+decoding runs before `UserMiddleware` (innermost custom layer); `Instrument`
+(metrics) sits between logging and the circuit breaker. Assembled by
+`internal.NewClientTransport`, configured via `TransportConfig`.
 
 ## Interfaces
 
@@ -32,7 +33,7 @@ type Middleware func(next RoundTripper) RoundTripper
 
 | Layer | Does |
 |-------|------|
-| requestID | attaches `X-Request-ID` (UUID) and stores it in context for error correlation |
+| requestID | attaches `X-request-id` (lowercase, UUID) and stores it in context for error correlation |
 | userAgent | sets `User-Agent` (`ibkrapi4go/<version>`) if unset |
 | auth | injects `Authorization: Bearer <token>` from the credential provider |
 | rateLimit (per-endpoint) | token bucket keyed by `METHOD templatedPath` |

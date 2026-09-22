@@ -10,6 +10,35 @@
 //
 // Monetary and quantity values are decimal strings, never float64, to preserve
 // precision (ADR 0008).
+//
+// # Quick start
+//
+// The Client Portal Gateway must already be authenticated in a browser before
+// the SDK can connect. The SDK does not perform login.
+//
+//	ctx := context.Background()
+//	cli, err := ibkr.NewClient(ibkr.WithGatewayURL("https://localhost:5000"))
+//	if err != nil {
+//	    return err
+//	}
+//	defer cli.Close()
+//
+//	if err := cli.Session().Initialize(ctx); err != nil {
+//	    return err
+//	}
+//
+//	accounts, err := cli.Account().List(ctx)
+//	if err != nil {
+//	    return err
+//	}
+//
+//	for _, acc := range accounts {
+//	    fmt.Println(acc.AccountID)
+//	}
+//
+// # Full documentation
+//
+// https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr
 package ibkr
 
 import "runtime"

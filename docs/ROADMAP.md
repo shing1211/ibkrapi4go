@@ -258,15 +258,15 @@ releases are published on GitHub and mirrored to Gitee. Latest release:
 All known correctness defects are closed, including the generated-client
 nil-`interface{}` panic class, which is now fixed at the spec level
 (`scripts/patch_spec.py` defect 4) and shipped in `v0.1.1`; see
-[docs/runs/2026-09-17-d1-root-cause](./runs/2026-09-17-d1-root-cause/).
+[docs/runs/2026-09-17-d1-root-cause](./archive/runs/2026-09-17-d1-root-cause/).
 
 ## Backlog (not scheduled)
 
 No feature items are pending. Candidate forward-looking work (v1.0.0 readiness
 and API stabilization, upstream spec drift watch, real-world examples, community
 sustainment) is proposed in the latest
-[`next-phase.md`](./runs/2026-09-17-d1-root-cause/next-phase.md). See individual
-run reports in [docs/runs/](./runs/index.md).
+[`next-phase.md`](./archive/runs/2026-09-17-d1-root-cause/next-phase.md). See individual
+run reports in [docs/runs/](./archive/runs/index.md).
 
 ---
 

@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>

@@ -57,9 +57,10 @@ codegen-verify: ## Fail if generated code drifts from committed output
 docs-spec: ## Regenerate docs/SPEC.md from the spec
 	python3 scripts/gen_spec_index.py specs/ibkr_spec.json > docs/SPEC.md
 
-docs-check: ## Check markdown links and README translations
+docs-check: ## Check markdown links, README translations, and design doc accuracy
 	python3 scripts/check_links.py
 	python3 scripts/check_i18n.py
+	go run ./scripts/check_design
 
 mock-gateway: ## Run the standalone mock IBKR gateway
 	$(GO) run ./cmd/ibkr-mock-gateway

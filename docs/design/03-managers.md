@@ -8,13 +8,16 @@ client and returns stable public types.
 | Manager | Scope | Methods (implemented) |
 |---------|-------|-----------------------|
 | `AccountManager` | accounts & summaries | `List`, `Summary`, `PnL` |
-| `PortfolioManager` | positions & ledger | `Accounts`, `Subaccounts`, `Positions`, `PositionsPaginated`, `Position`, `Ledger`, `Allocation`, `Summary`, `Meta`, `Invalidate`, `GetAllAccountsForConid`, `GetManySubaccounts`, `GetComboPositions`, `GetUncachedPositions` |
-| `TradeManager` | orders & contracts | `Submit`, `Confirm`, `WhatIf`, `Modify`, `Cancel`, `OpenOrders`, `OrderStatus`, `Trades`, `SearchContracts`, `ContractInfo`, `ContractRules`, `Strikes`, plus extended contract ops (`GetInfoAndRules`, `GetTradingSchedule`, `GetCurrencyPairs`, `GetExchangeRates`, `GetBondFilters`, `GetAlgosByInstrument`, `GetStockBySymbol`, ...) |
+| `PortfolioManager` | positions & ledger | `Accounts`, `Subaccounts`, `Positions`, `PositionsPaginated`, `Position`, `Ledger`, `Allocation`, `Summary`, `Meta`, `Invalidate`, `AllAccountsForConid`, `ManySubaccounts`, `ComboPositions`, `UncachedPositions` |
+| `TradeManager` | orders & contracts | `Submit`, `Confirm`, `WhatIf`, `Modify`, `Cancel`, `OpenOrders`, `OrderStatus`, `Trades`, `SuppressOrderReplies`, `ResetOrderSuppression`, plus contract search/info ops (`SearchContracts`, `ContractInfo`, `ContractRules`, `Strikes`, `InfoAndRules`, `TradingSchedule`, `CurrencyPairs`, `ExchangeRates`, `BondFilters`, `AlgosByInstrument`, `SecDefInfos`, `ContractSymbolsFromBody`, `ConidsByExchange`, `FutureBySymbol`, `InstrumentDefinition`, `TradingScheduleBySymbol`, `StockBySymbol`) |
 | `MarketDataManager` | quotes, history & streaming | `Snapshot`, `History`, `Unsubscribe`, `UnsubscribeAll`, `Subscribe` |
 | `TradingAccountManager` | trading-account ops | 9 ops (owners, active/dynamic accounts, fund/balance/margin/market summaries) |
-| `AlertManager`, `ForecastManager`, `ScannerManager` | alerts, event contracts, scanner | 6, 5, and 2 ops respectively |
-| `AllocationManager`, `ModelManager` | FA allocation, model portfolios | 8 and 10 ops |
-| `FYIManager`, `OAuthManager`, `WatchlistManager`, `PerformanceManager` | FYIs/notifications, OAuth1, watchlists, PortfolioAnalyst | 11, 3, 4, and 4 ops |
+| `AlertManager`, `ForecastManager`, `ScannerManager` | alerts, event contracts, scanner | 7, 5, and 2 ops respectively |
+| `AllocationManager`, `ModelManager` | FA allocation, model portfolios | 8 and 11 ops |
+| `FYIManager`, `OAuthManager`, `WatchlistManager`, `PerformanceManager` | FYIs/notifications, OAuth1, watchlists, PortfolioAnalyst | 12, 3, 4, and 5 ops |
+
+> **Method counts verified against source as of v1.0.0.** Counts may drift if methods
+> are added. The authoritative list is the [godoc reference](https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr).
 
 The IB REST (`oauth2Bearer`) surface is exposed separately via `Client.REST()`
 (`RESTSurface` and its `REST*` sub-managers); see

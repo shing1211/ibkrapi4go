@@ -18,19 +18,28 @@ func NewClient(opts ...Option) (*Client, error)
 
 ```go
 type Client struct {
-    cfg        Config
-    http       *http.Client      // transport chain
-    session    *Session          // state machine + tickle
+    cfg        config
+    httpClient *http.Client      // transport chain
+    session    *internal.Session // state machine + tickle
     generated  *client.ClientWithResponses
+    closed     atomic.Bool        // closed flag
+
     // CPAPI managers
     sessionManager, accountManager, portfolioManager, tradeManager,
     marketDataManager, tradingAccountManager, alertManager, forecastManager,
     scannerManager, allocationManager, modelManager, fyiManager,
     oauthManager, watchlistManager, performanceManager
-    rest       *RESTSurface      // lazily dialed (oauth2Bearer)
-    ws         *wsConn           // lazily dialed
+
+    rest   *RESTSurface  // lazily dialed (oauth2Bearer)
+    restMu sync.Mutex
+    ws     *internal.WSConn  // lazily dialed
+    wsMu   sync.Mutex
 }
 ```
+
+> **Note**: The struct diagram shows all significant fields. Internal
+> synchronization fields (`wsMu`, `restMu`) and the pool `release` callback
+> are omitted for clarity.
 
 ## Accessors
 
@@ -77,16 +86,35 @@ func (c *Client) Close() error
 `Client` and all managers are safe for concurrent use. See
 [08-concurrency.md](./08-concurrency.md).
 
-## Options (initial set)
+## Options
 
 ```go
+// Core
 WithGatewayURL(string)
 WithInsecureSkipVerify(bool)
 WithRequestTimeout(time.Duration)
 WithTickleInterval(time.Duration)
+WithHTTPClient(*http.Client)
+WithUserAgent(string)
+WithLogger(*slog.Logger)
+WithTelemetry(Telemetry)
+WithMetrics(Metrics)
+
+// Resilience
 WithRateLimit(rps float64, burst int)
 WithGlobalRateLimit(rps float64)
-WithHTTPClient(*http.Client)
-WithLogger(*slog.Logger)
-WithUserAgent(string)
+WithRetryPolicy(RetryPolicy)
+WithCircuitBreaker(threshold int, cooldown time.Duration)
+WithCircuitBreakerBudget(budget, size int)
+
+// Streaming
+WithStreamingLimits(StreamingLimits)
+
+// IB REST (oauth2Bearer) surface
+WithRESTGateway(url string)
+WithOAuth2ClientCredentials(clientID, clientSecret string)
+WithOAuth2RefreshToken(token string)
+WithOAuth2JWTKey(key []byte)
+WithOAuth2JWTKeyPath(path string)
+WithOAuth2JWTKeyFile(path string)
 ```

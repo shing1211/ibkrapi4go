@@ -25,7 +25,7 @@ into `float64` can alter it. For order prices and quantities that is unacceptabl
 ## Helpers (not yet provided)
 
 Money and quantities are currently carried as raw `string` values and compared by
-the caller; the SDK does not ship arithmetic helpers yet. If/when they are added,
+the caller; the SDK does not ship arithmetic helpers. If/when they are added,
 the intended shape is:
 
 ```go
@@ -49,13 +49,20 @@ If arbitrary-precision decimal math is needed, it is implemented over
 decimal library may be evaluated via ADR if the standard library proves
 insufficient.
 
+> Arithmetic helpers are not yet implemented. For now, callers should use
+> `strconv.ParseDecimal` from the standard library or a decimal package for
+> calculations.
+
 ## Codegen enforcement
 
 - Where the spec would generate `float64` for a monetary field, add an
   `x-go-type` override to `string` (recorded in `scripts/patch_spec.py` or
   `oapi-codegen.yaml`).
-- A review checklist item: any `float64` on a money/price/quantity field is a bug.
-- `scripts/check_money.py` (run by `make check`) enforces this on `pkg/ibkr`.
+- `scripts/check_money.py` (run by `make check`) enforces this on `pkg/ibkr`:
+  it fails the build if any exported struct field under `pkg/ibkr` is `float32`/`float64`
+  and its name matches money patterns (`Price`, `Amount`, `Qty`, `Quantity`,
+  `Balance`, `Cash`, `NetLiq`). A review checklist item: any `float64` on a
+  money/price/quantity field is a bug.
 
 ## Formatting vs. value
 

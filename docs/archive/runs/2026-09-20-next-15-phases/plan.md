@@ -225,10 +225,10 @@ E2    (no deps — can run in parallel with S1)
 
 ## References
 
-- [ROADMAP.md](../ROADMAP.md) — phases 0–8 complete
-- [STABILITY.md](../STABILITY.md) — public API definition and stability levels
-- [RELEASING.md](../RELEASING.md) — versioning and release process
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — current layering and "future" items
-- [ADR 0015](../adr/0015-stability.md) — stability contract
-- [ADR 0008](../adr/0008-numeric-precision.md) — money/quantities as string
-- [ADR 0009](../adr/0009-no-auto-retry-orders.md) — no auto-retry orders
+- [ROADMAP.md](../../../ROADMAP.md) — phases 0–8 complete
+- [STABILITY.md](../../../STABILITY.md) — public API definition and stability levels
+- [RELEASING.md](../../../RELEASING.md) — versioning and release process
+- [ARCHITECTURE.md](../../../ARCHITECTURE.md) — current layering and "future" items
+- [ADR 0015](../../../adr/0015-stability.md) — stability contract
+- [ADR 0008](../../../adr/0008-numeric-precision.md) — money/quantities as string
+- [ADR 0009](../../../adr/0009-no-auto-retry-orders.md) — no auto-retry orders
