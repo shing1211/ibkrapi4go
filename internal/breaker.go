@@ -51,10 +51,10 @@ func NewBreaker(threshold int, cooldown time.Duration) *Breaker {
 // errorBudget tracks failures in a sliding window. When the budget is
 // exhausted (failures >= threshold within the window), the breaker should trip.
 type errorBudget struct {
-	mu       sync.Mutex
-	window   []time.Time
-	size     int
-	budget   int
+	mu     sync.Mutex
+	window []time.Time
+	size   int
+	budget int
 }
 
 // newErrorBudget returns a sliding-window error budget, or nil when budget<=0

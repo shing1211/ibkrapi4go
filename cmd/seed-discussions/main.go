@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	owner  = "shing1211"
+	owner   = "shing1211"
 	repo    = "ibkrapi4go"
 	gateway = "https://api.github.com/graphql"
 )
@@ -65,18 +65,18 @@ func main() {
 	type discussion struct{ title, body, categoryName string }
 	seeds := []discussion{
 		{
-			title:       "Welcome to ibkrapi4go Discussions!",
-			body:        "Hello! This is the official discussion forum for the ibkrapi4go Go SDK for Interactive Brokers.\n\nFeel free to ask questions about using the SDK, share what you're building, or discuss feature requests. Please keep discussions respectful and on-topic.\n\n**Getting started:**\n- Read the [README](https://github.com/shing1211/ibkrapi4go#readme)\n- Check the [API reference](https://github.com/shing1211/ibkrapi4go/tree/main/docs)\n- Report bugs via [GitHub Issues](https://github.com/shing1211/ibkrapi4go/issues)\n\nThis forum is maintained on a best-effort basis by volunteers.",
+			title:        "Welcome to ibkrapi4go Discussions!",
+			body:         "Hello! This is the official discussion forum for the ibkrapi4go Go SDK for Interactive Brokers.\n\nFeel free to ask questions about using the SDK, share what you're building, or discuss feature requests. Please keep discussions respectful and on-topic.\n\n**Getting started:**\n- Read the [README](https://github.com/shing1211/ibkrapi4go#readme)\n- Check the [API reference](https://github.com/shing1211/ibkrapi4go/tree/main/docs)\n- Report bugs via [GitHub Issues](https://github.com/shing1211/ibkrapi4go/issues)\n\nThis forum is maintained on a best-effort basis by volunteers.",
 			categoryName: "General",
 		},
 		{
-			title:       "How do I get started with paper trading?",
-			body:        "This is a placeholder for a frequently-asked question about getting started with paper trading credentials.\n\n**Answer:** To use paper trading with ibkrapi4go, you need:\n1. An IBKR paper trading account (create one at ibkr.com)\n2. The Client Portal Gateway running locally\n3. Set environment variables: IBKR_GATEWAY, IBKR_USERNAME, IBKR_PASSWORD\n\nSee the [live examples](https://github.com/shing1211/ibkrapi4go/tree/main/examples/live-portfolio) for a working reference.",
+			title:        "How do I get started with paper trading?",
+			body:         "This is a placeholder for a frequently-asked question about getting started with paper trading credentials.\n\n**Answer:** To use paper trading with ibkrapi4go, you need:\n1. An IBKR paper trading account (create one at ibkr.com)\n2. The Client Portal Gateway running locally\n3. Set environment variables: IBKR_GATEWAY, IBKR_USERNAME, IBKR_PASSWORD\n\nSee the [live examples](https://github.com/shing1211/ibkrapi4go/tree/main/examples/live-portfolio) for a working reference.",
 			categoryName: "Q&A",
 		},
 		{
-			title:       "Feature requests and roadmap suggestions",
-			body:        "This is a placeholder for collecting feature requests and roadmap suggestions for the v1.0 release.\n\nKnown items being considered:\n- **P3**: Real-world example suite (examples against live paper trading) — in progress\n- **P5**: v1.0.0 final stabilization and changelog sweep\n- **P6**: Multi-gateway / session pool for aggregate multi-account views\n\nPlease comment below with any features you'd like to see!",
+			title:        "Feature requests and roadmap suggestions",
+			body:         "This is a placeholder for collecting feature requests and roadmap suggestions for the v1.0 release.\n\nKnown items being considered:\n- **P3**: Real-world example suite (examples against live paper trading) — in progress\n- **P5**: v1.0.0 final stabilization and changelog sweep\n- **P6**: Multi-gateway / session pool for aggregate multi-account views\n\nPlease comment below with any features you'd like to see!",
 			categoryName: "Ideas",
 		},
 	}
@@ -183,10 +183,10 @@ func createDiscussion(ctx context.Context, c *http.Client, token, repoID, catego
 		}
 	}`
 	vars := map[string]any{
-		"repo":   repoID,
-		"cat":    categoryID,
-		"title":  title,
-		"body":   body,
+		"repo":  repoID,
+		"cat":   categoryID,
+		"title": title,
+		"body":  body,
 	}
 	data, err := doGraphQL(ctx, c, token, mutation, vars)
 	if err != nil {

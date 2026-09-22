@@ -122,8 +122,8 @@ func main() {
 
 	scanReq := map[string]interface{}{
 		"instrument": defaultInstrument,
-		"location":  defaultLocation,
-		"type":      defaultScanType,
+		"location":   defaultLocation,
+		"type":       defaultScanType,
 	}
 
 	results, err := cli.Scanner().ScannerResults(ctx, scanReq)

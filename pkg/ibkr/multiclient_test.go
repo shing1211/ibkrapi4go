@@ -135,12 +135,12 @@ func TestMultiClient_Positions(t *testing.T) {
 		switch r.URL.Path {
 		case "/v1/api/iserver/accounts":
 			w.Write([]byte(`{"accounts":["A1"],"aliases":{"A1":"Acct A1"}}`))
-	case "/v1/api/portfolio2/A1/positions":
-		w.Write([]byte(`[{"conId":8314,"contractDesc":"AAPL","quantity":"100","avgCost":"150.00","mktValue":"16000","unrealizedPnL":"1000","realizedPnL":"0"}]`))
-	default:
-		http.Error(w, "not found", http.StatusNotFound)
-	}
-}))
+		case "/v1/api/portfolio2/A1/positions":
+			w.Write([]byte(`[{"conId":8314,"contractDesc":"AAPL","quantity":"100","avgCost":"150.00","mktValue":"16000","unrealizedPnL":"1000","realizedPnL":"0"}]`))
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	}))
 	defer srv.Close()
 
 	cli, _ := NewClient(WithGatewayURL(srv.URL), WithTickleInterval(time.Hour))

@@ -11,6 +11,9 @@ Checks:
   4. Every translation has the same number of Markdown headings as English
      (catches dropped/merged sections), ignoring fenced code blocks.
   5. README.zh-CN.md exists as a redirect stub to README.zh-Hans.md.
+  6. All README files have identical badge URLs (Status, Go version, Endpoints,
+     License, etc.). Badge text labels may be translated but shield.io URLs
+     must match across all files to catch version/status drift.
 
 Exits non-zero on any failure. See TRANSLATING.md.
 """
@@ -37,6 +40,7 @@ STUB_TARGET = "README.zh-Hans.md"
 SWITCHER_RE = re.compile(r"^\[[^\]]+\]\(\./README[^)]*\)( · \[[^\]]+\]\(\./README[^)]*\))+$", re.M)
 HEADING_RE = re.compile(r"^(#{1,6})\s")
 BANNER_RE = re.compile(r"Last synced:\s*\S+")
+BADGE_IMG_RE = re.compile(r'<img[^>]+src="(https://img\.shields\.io[^"]+)"[^>]*/?>')
 
 
 def switcher_line() -> str:
@@ -60,18 +64,26 @@ def heading_count(text: str) -> int:
     return count
 
 
+def extract_badges(text: str) -> set[str]:
+    """Return the set of shield.io badge URLs from a README."""
+    return set(BADGE_IMG_RE.findall(text))
+
+
 def main() -> int:
     failures = []
     expected_switcher = switcher_line()
 
     # 1 + 2 + 3
     base_headings = None
+    all_badges: dict[str, set[str]] = {}  # filename -> badge URLs
+
     for locale, _label, filename in LANGUAGES:
         path = os.path.join(ROOT, filename)
         if not os.path.exists(path):
             failures.append(f"missing file: {filename}")
             continue
         text = read(filename)
+        all_badges[filename] = extract_badges(text)
 
         if expected_switcher not in text:
             failures.append(f"{filename}: canonical language switcher not found")
@@ -93,6 +105,20 @@ def main() -> int:
             failures.append(f"{STUB}: does not redirect to {STUB_TARGET}")
     else:
         failures.append(f"missing redirect stub: {STUB}")
+
+    # 6: badge URL consistency
+    if all_badges:
+        canonical = all_badges.get(CANONICAL, set())
+        for filename, badges in all_badges.items():
+            if filename == CANONICAL:
+                continue
+            diff = badges ^ canonical  # symmetric difference
+            if diff:
+                # Group by the label portion of the badge URL for readable output
+                differing = sorted(diff)
+                failures.append(
+                    f"{filename}: badge URLs differ from {CANONICAL}: {differing}"
+                )
 
     if failures:
         print("i18n check failed:", file=sys.stderr)

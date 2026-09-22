@@ -264,10 +264,10 @@ type wsSink struct {
 	msgs int
 }
 
-func (s *wsSink) Wants(conid int) bool                     { return true }
-func (s *wsSink) Deliver(u internal.WSUpdate)             { s.msgs++ }
-func (s *wsSink) Fail(err error)                          {}
-func (s *wsSink) WantsSystem() bool                       { return false }
+func (s *wsSink) Wants(conid int) bool                       { return true }
+func (s *wsSink) Deliver(u internal.WSUpdate)                { s.msgs++ }
+func (s *wsSink) Fail(err error)                             {}
+func (s *wsSink) WantsSystem() bool                          { return false }
 func (s *wsSink) DeliverSystem(frame internal.WSSystemFrame) {}
 
 func BenchmarkWSSubscribeUnsubscribe(b *testing.B) {

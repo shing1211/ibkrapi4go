@@ -24,8 +24,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 
-	ibkr "github.com/shing1211/ibkrapi4go/pkg/ibkr"
 	otelbridge "github.com/shing1211/ibkrapi4go/contrib/otel"
+	ibkr "github.com/shing1211/ibkrapi4go/pkg/ibkr"
 )
 
 const defaultGatewayURL = "http://localhost:5001"

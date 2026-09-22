@@ -30,7 +30,7 @@ type Update struct {
 type SystemUpdateType string
 
 const (
-	SystemUpdateStatus        SystemUpdateType = "sts"
+	SystemUpdateStatus       SystemUpdateType = "sts"
 	SystemUpdateNotification SystemUpdateType = "ntf"
 	SystemUpdateOrder        SystemUpdateType = "sor"
 	SystemUpdateUser         SystemUpdateType = "usr"
