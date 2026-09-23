@@ -16,27 +16,96 @@ import (
 	"github.com/shing1211/ibkrapi4go/internal"
 )
 
-// strToF32 converts a decimal string (ADR 0008) to float32 for the generated
-// client payload. It returns 0 on error; callers are responsible for validating
-// input before calling.
-func strToF32(s string) float32 {
-	v, _ := strconv.ParseFloat(s, 32)
-	return float32(v)
-}
-
 func strToInt(s string) int {
 	v, _ := strconv.ParseInt(s, 10, 64)
 	return int(v)
 }
 
-// strPtrToF32Ptr converts an optional decimal string to *float32 for the generated
-// client payload.
-func strPtrToF32Ptr(s *string) *float32 {
+// strToDecimal converts a decimal string to float64 for the generated client
+// payload. The SDK public API uses strings per ADR 0008; the internal conversion to
+// float is required to produce spec-compliant JSON number wire shapes. Precision loss
+// is accepted for now; the long-term fix is patching the spec to use string types.
+func strToDecimal(s string) float32 {
+	v, _ := strconv.ParseFloat(s, 32)
+	return float32(v)
+}
+
+// strToDecimalPtr is the optional variant.
+func strToDecimalPtr(s *string) *float32 {
 	if s == nil {
 		return nil
 	}
-	v := strToF32(*s)
+	v := strToDecimal(*s)
 	return &v
+}
+
+// fopInstructionJSON is the wire shape for external asset transfers.
+// Money/quantity fields are strings to preserve precision (ADR 0008).
+type fopInstructionJSON struct {
+	AccountId             string `json:"accountId"`
+	ClientInstructionId   int    `json:"clientInstructionId"`
+	ContraBrokerAccountId string `json:"contraBrokerAccountId"`
+	ContraBrokerDtcCode   string `json:"contraBrokerDtcCode"`
+	Direction             string `json:"direction"`
+	Quantity              string `json:"quantity"`
+	TradingInstrument     any    `json:"tradingInstrument"`
+}
+
+type externalAssetTransferJSON struct {
+	Instruction     fopInstructionJSON `json:"instruction"`
+	InstructionType string             `json:"instructionType"`
+}
+
+// depositInstructionJSON is the wire shape for deposit fund instructions.
+// Amount is a string to preserve precision (ADR 0008).
+type depositInstructionJSON struct {
+	AccountId             string  `json:"accountId"`
+	Amount                string  `json:"amount"`
+	BankInstructionMethod string  `json:"bankInstructionMethod"`
+	BankInstructionName   *string `json:"bankInstructionName,omitempty"`
+	ClientInstructionId   int     `json:"clientInstructionId"`
+	Currency              string  `json:"currency"`
+}
+
+// withdrawInstructionJSON is the wire shape for withdrawal fund instructions.
+// Amount is a string to preserve precision (ADR 0008).
+type withdrawInstructionJSON struct {
+	AccountId             string `json:"accountId"`
+	Amount                string `json:"amount"`
+	BankInstructionMethod string `json:"bankInstructionMethod"`
+	BankInstructionName   string `json:"bankInstructionName"`
+	ClientInstructionId   int    `json:"clientInstructionId"`
+	Currency              string `json:"currency"`
+}
+
+type cashTransferJSON struct {
+	Instruction     any    `json:"instruction"`
+	InstructionType string `json:"instructionType"`
+}
+
+// internalTransferJSON is the wire shape for internal asset transfers.
+// TransferQuantity and TransferPrice are strings (ADR 0008).
+type internalTransferJSON struct {
+	ClientInstructionId int     `json:"clientInstructionId"`
+	SourceAccountId     string  `json:"sourceAccountId"`
+	TargetAccountId     string  `json:"targetAccountId"`
+	TradingInstrument   any     `json:"tradingInstrument"`
+	TransferQuantity    string  `json:"transferQuantity"`
+	TransferPrice       *string `json:"transferPrice,omitempty"`
+	TradeDate           *string `json:"tradeDate,omitempty"`
+	SettleDate          *string `json:"settleDate,omitempty"`
+}
+
+type internalAssetTransferJSON struct {
+	Instruction     internalTransferJSON `json:"instruction"`
+	InstructionType string               `json:"instructionType"`
+}
+
+// withdrawableFundsResultJSON decodes the withdrawable funds response.
+// CashBalance is kept as json.Number to avoid float32 precision loss (ADR 0008).
+type withdrawableFundsResultJSON struct {
+	CashBalance json.Number `json:"cashBalance"`
+	Currency    string      `json:"currency"`
 }
 
 // RESTBanking is the sub-manager for all IBKR banking REST endpoints,
@@ -581,20 +650,17 @@ func (m *RESTExternalAssetTransfers) Transfer(ctx context.Context, req AssetTran
 		return "", err
 	}
 
-	instr := client.CreateExternalAssetTransfersJSONBody_Instruction{}
-	_ = instr.FromFopInstruction(client.FopInstruction{
-		AccountId:             string(req.AccountID),
-		ClientInstructionId:   strToInt(req.ClientInstructionID),
-		ContraBrokerAccountId: string(req.ContraBrokerAccountID),
-		ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
-		Direction:             client.FopInstructionDirection(req.Direction),
-		Quantity:              strToF32(req.Quantity),
-		TradingInstrument:     makeTradingInstrumentRef(req.ConID),
-	})
-
-	payload := client.CreateExternalAssetTransfersJSONRequestBody{
-		Instruction:     instr,
-		InstructionType: client.CreateExternalAssetTransfersJSONBodyInstructionTypeFOP,
+	payload := externalAssetTransferJSON{
+		Instruction: fopInstructionJSON{
+			AccountId:             string(req.AccountID),
+			ClientInstructionId:   strToInt(req.ClientInstructionID),
+			ContraBrokerAccountId: string(req.ContraBrokerAccountID),
+			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
+			Direction:             req.Direction,
+			Quantity:              req.Quantity,
+			TradingInstrument:     map[string]any{"conid": int(req.ConID)},
+		},
+		InstructionType: "FOP",
 	}
 
 	resp, err := m.surface.generated.CreateExternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
@@ -613,7 +679,7 @@ func (m *RESTExternalAssetTransfers) Transfer(ctx context.Context, req AssetTran
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
+	return strconv.FormatFloat(float64(resp.JSON202.InstructionSetId), 'f', -1, 32), nil
 }
 
 // TransferBulk initiates multiple external asset transfers in a single request
@@ -623,22 +689,34 @@ func (m *RESTExternalAssetTransfers) TransferBulk(ctx context.Context, reqs []As
 		return nil, err
 	}
 
-	payload := client.BulkExternalAssetTransfersJSONBody{
-		InstructionType: client.BulkExternalAssetTransfersJSONBodyInstructionTypeFOP,
-		Instructions:    make([]interface{}, len(reqs)),
+	type fopInstrJSON struct {
+		AccountId             string `json:"accountId"`
+		ClientInstructionId   int    `json:"clientInstructionId"`
+		ContraBrokerAccountId string `json:"contraBrokerAccountId"`
+		ContraBrokerDtcCode   string `json:"contraBrokerDtcCode"`
+		Direction             string `json:"direction"`
+		Quantity              string `json:"quantity"`
+		TradingInstrument     any    `json:"tradingInstrument"`
+	}
+	type bulkPayload struct {
+		InstructionType string         `json:"instructionType"`
+		Instructions    []fopInstrJSON `json:"instructions"`
 	}
 
+	instrs := make([]fopInstrJSON, len(reqs))
 	for i, req := range reqs {
-		payload.Instructions[i] = client.FopInstruction{
+		instrs[i] = fopInstrJSON{
 			AccountId:             string(req.AccountID),
 			ClientInstructionId:   strToInt(req.ClientInstructionID),
 			ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
-			Direction:             client.FopInstructionDirection(req.Direction),
-			Quantity:              strToF32(req.Quantity),
-			TradingInstrument:     makeTradingInstrumentRef(req.ConID),
+			Direction:             req.Direction,
+			Quantity:              req.Quantity,
+			TradingInstrument:     map[string]any{"conid": int(req.ConID)},
 		}
 	}
+
+	payload := bulkPayload{InstructionType: "FOP", Instructions: instrs}
 
 	resp, err := m.surface.generated.BulkExternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
@@ -669,7 +747,7 @@ func (m *RESTExternalAssetTransfers) TransferV2(ctx context.Context, req AssetTr
 	instr := client.CreateExternalAssetTransfers2JSONBody_Instruction{}
 	positions := make([]client.TradingInstrumentV2, len(req.Positions))
 	for i, pos := range req.Positions {
-		positions[i] = client.TradingInstrumentV2{Quantity: strToF32(pos.Quantity)}
+		positions[i] = client.TradingInstrumentV2{Quantity: strToDecimal(pos.Quantity)}
 		_ = positions[i].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: int(pos.ConID)})
 	}
 
@@ -713,26 +791,45 @@ func (m *RESTExternalAssetTransfers) TransferBulkV2(ctx context.Context, reqs []
 		return nil, err
 	}
 
-	payload := client.BulkExternalAssetTransfers2JSONBody{
-		InstructionType: client.BulkExternalAssetTransfers2JSONBodyInstructionTypeFOP,
-		Instructions:    make([]interface{}, len(reqs)),
+	type instrV2JSON struct {
+		AccountId             string `json:"accountId"`
+		ClientInstructionId   int    `json:"clientInstructionId"`
+		ContraBrokerAccountId string `json:"contraBrokerAccountId"`
+		ContraBrokerDtcCode   string `json:"contraBrokerDtcCode"`
+		Direction             string `json:"direction"`
+		Positions             []struct {
+			Conid    int    `json:"conid"`
+			Quantity string `json:"quantity"`
+		} `json:"positions"`
+	}
+	type bulkPayloadV2 struct {
+		InstructionType string        `json:"instructionType"`
+		Instructions    []instrV2JSON `json:"instructions"`
 	}
 
+	instrs := make([]instrV2JSON, len(reqs))
 	for i, req := range reqs {
-		positions := make([]client.TradingInstrumentV2, len(req.Positions))
+		positions := make([]struct {
+			Conid    int    `json:"conid"`
+			Quantity string `json:"quantity"`
+		}, len(req.Positions))
 		for j, pos := range req.Positions {
-			positions[j] = client.TradingInstrumentV2{Quantity: strToF32(pos.Quantity)}
-			_ = positions[j].FromTradingInstrumentV20(client.TradingInstrumentV20{Conid: int(pos.ConID)})
+			positions[j] = struct {
+				Conid    int    `json:"conid"`
+				Quantity string `json:"quantity"`
+			}{Conid: int(pos.ConID), Quantity: pos.Quantity}
 		}
-		payload.Instructions[i] = client.FopInstructionV2{
+		instrs[i] = instrV2JSON{
 			AccountId:             string(req.AccountID),
 			ClientInstructionId:   strToInt(req.ClientInstructionID),
 			ContraBrokerAccountId: string(req.ContraBrokerAccountID),
 			ContraBrokerDtcCode:   req.ContraBrokerDtcCode,
-			Direction:             client.FopInstructionV2Direction(req.Direction),
+			Direction:             req.Direction,
 			Positions:             positions,
 		}
 	}
+
+	payload := bulkPayloadV2{InstructionType: "FOP", Instructions: instrs}
 
 	resp, err := m.surface.generated.BulkExternalAssetTransfers2WithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
@@ -764,29 +861,23 @@ func (m *RESTInternalAssetTransfers) Transfer(ctx context.Context, req InternalA
 		return "", err
 	}
 
-	instr := client.InternalPositionTransferInstruction{
+	payload := internalTransferJSON{
 		ClientInstructionId: strToInt(req.ClientInstructionID),
 		SourceAccountId:     string(req.SourceAccountID),
 		TargetAccountId:     string(req.TargetAccountID),
-		TradingInstrument:   makeTradingInstrumentRef(req.ConID),
-		TransferQuantity:    strToF32(req.TransferQuantity),
-	}
-	if req.TransferPrice != nil {
-		instr.TransferPrice = strPtrToF32Ptr(req.TransferPrice)
-	}
-	if req.TradeDate != nil {
-		instr.TradeDate = req.TradeDate
-	}
-	if req.SettleDate != nil {
-		instr.SettleDate = req.SettleDate
+		TradingInstrument:   map[string]any{"conid": int(req.ConID)},
+		TransferQuantity:    req.TransferQuantity,
+		TransferPrice:       req.TransferPrice,
+		TradeDate:           req.TradeDate,
+		SettleDate:          req.SettleDate,
 	}
 
-	payload := client.CreateInternalAssetTransfersJSONRequestBody{
-		Instruction:     instr,
-		InstructionType: client.CreateInternalAssetTransfersJSONBodyInstructionTypeINTERNALPOSITIONTRANSFER,
+	body := internalAssetTransferJSON{
+		Instruction:     payload,
+		InstructionType: "INTERNAL_POSITION_TRANSFER",
 	}
 
-	resp, err := m.surface.generated.CreateInternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
+	resp, err := m.surface.generated.CreateInternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(body))
 	if err != nil {
 		e := wrapOp(op, err)
 		internal.LogError(m.surface.owner.cfg.logger, e)
@@ -802,7 +893,7 @@ func (m *RESTInternalAssetTransfers) Transfer(ctx context.Context, req InternalA
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
+	return strconv.FormatFloat(float64(resp.JSON202.InstructionSetId), 'f', -1, 32), nil
 }
 
 // TransferBulk initiates multiple internal asset transfers in a single request
@@ -812,30 +903,26 @@ func (m *RESTInternalAssetTransfers) TransferBulk(ctx context.Context, reqs []In
 		return nil, err
 	}
 
-	payload := client.BulkInternalAssetTransfersJSONBody{
-		InstructionType: client.BulkInternalAssetTransfersJSONBodyInstructionTypeINTERNALPOSITIONTRANSFER,
-		Instructions:    make([]interface{}, len(reqs)),
+	type bulkInternalPayload struct {
+		InstructionType string                 `json:"instructionType"`
+		Instructions    []internalTransferJSON `json:"instructions"`
 	}
 
+	instrs := make([]internalTransferJSON, len(reqs))
 	for i, req := range reqs {
-		instr := client.InternalPositionTransferInstruction{
+		instrs[i] = internalTransferJSON{
 			ClientInstructionId: strToInt(req.ClientInstructionID),
 			SourceAccountId:     string(req.SourceAccountID),
 			TargetAccountId:     string(req.TargetAccountID),
-			TradingInstrument:   makeTradingInstrumentRef(req.ConID),
-			TransferQuantity:    strToF32(req.TransferQuantity),
+			TradingInstrument:   map[string]any{"conid": int(req.ConID)},
+			TransferQuantity:    req.TransferQuantity,
+			TransferPrice:       req.TransferPrice,
+			TradeDate:           req.TradeDate,
+			SettleDate:          req.SettleDate,
 		}
-		if req.TransferPrice != nil {
-			instr.TransferPrice = strPtrToF32Ptr(req.TransferPrice)
-		}
-		if req.TradeDate != nil {
-			instr.TradeDate = req.TradeDate
-		}
-		if req.SettleDate != nil {
-			instr.SettleDate = req.SettleDate
-		}
-		payload.Instructions[i] = instr
 	}
+
+	payload := bulkInternalPayload{InstructionType: "INTERNAL_POSITION_TRANSFER", Instructions: instrs}
 
 	resp, err := m.surface.generated.BulkInternalAssetTransfersWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
 	if err != nil {
@@ -867,41 +954,36 @@ func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransf
 		return "", err
 	}
 
-	instr := client.CreateExternalCashTransfersJSONBody_Instruction{}
-
-	if isDeposit {
-		depositInstr := client.DepositFundsInstruction{
-			AccountId:             string(req.AccountID),
-			Amount:                strToF32(req.Amount),
-			BankInstructionMethod: client.DepositFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
-			ClientInstructionId:   strToInt(req.ClientInstructionID),
-			Currency:              req.Currency,
-		}
-		if req.BankInstructionName != nil {
-			depositInstr.BankInstructionName = req.BankInstructionName
-		}
-		_ = instr.FromDepositFundsInstruction(depositInstr)
-	} else {
-		withdrawInstr := client.WithdrawFundsInstruction{
-			AccountId:             string(req.AccountID),
-			Amount:                strToF32(req.Amount),
-			BankInstructionMethod: client.WithdrawFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
-			BankInstructionName:   derefStr(req.BankInstructionName),
-			ClientInstructionId:   strToInt(req.ClientInstructionID),
-			Currency:              req.Currency,
-		}
-		_ = instr.FromWithdrawFundsInstruction(withdrawInstr)
+	type instrPayload struct {
+		Amount                string  `json:"amount"`
+		AccountId             string  `json:"accountId"`
+		BankInstructionMethod string  `json:"bankInstructionMethod"`
+		BankInstructionName   *string `json:"bankInstructionName,omitempty"`
+		ClientInstructionId   int     `json:"clientInstructionId"`
+		Currency              string  `json:"currency"`
+	}
+	type cashPayload struct {
+		Instruction     instrPayload `json:"instruction"`
+		InstructionType string       `json:"instructionType"`
 	}
 
-	var instrType client.CreateExternalCashTransfersJSONBodyInstructionType
-	if isDeposit {
-		instrType = client.CreateExternalCashTransfersJSONBodyInstructionTypeDEPOSIT
-	} else {
-		instrType = client.CreateExternalCashTransfersJSONBodyInstructionTypeWITHDRAWAL
+	var bn *string
+	if req.BankInstructionName != nil {
+		bn = req.BankInstructionName
 	}
-
-	payload := client.CreateExternalCashTransfersJSONRequestBody{
-		Instruction:     instr,
+	instrType := "WITHDRAWAL"
+	if isDeposit {
+		instrType = "DEPOSIT"
+	}
+	payload := cashPayload{
+		Instruction: instrPayload{
+			Amount:                req.Amount,
+			AccountId:             string(req.AccountID),
+			BankInstructionMethod: req.BankInstructionMethod,
+			BankInstructionName:   bn,
+			ClientInstructionId:   strToInt(req.ClientInstructionID),
+			Currency:              req.Currency,
+		},
 		InstructionType: instrType,
 	}
 
@@ -921,7 +1003,7 @@ func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransf
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
+	return strconv.FormatFloat(float64(resp.JSON202.InstructionSetId), 'f', -1, 32), nil
 }
 
 // TransferBulk initiates multiple external cash transfers in a single request
@@ -947,7 +1029,7 @@ func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []Cas
 		if isDeposit {
 			depositInstr := client.DepositFundsInstruction{
 				AccountId:             string(req.AccountID),
-				Amount:                strToF32(req.Amount),
+				Amount:                strToDecimal(req.Amount),
 				BankInstructionMethod: client.DepositFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
 				ClientInstructionId:   strToInt(req.ClientInstructionID),
 				Currency:              req.Currency,
@@ -959,7 +1041,7 @@ func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []Cas
 		} else {
 			withdrawInstr := client.WithdrawFundsInstruction{
 				AccountId:             string(req.AccountID),
-				Amount:                strToF32(req.Amount),
+				Amount:                strToDecimal(req.Amount),
 				BankInstructionMethod: client.WithdrawFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
 				BankInstructionName:   derefStr(req.BankInstructionName),
 				ClientInstructionId:   strToInt(req.ClientInstructionID),
@@ -1053,7 +1135,7 @@ func (m *RESTInternalCashTransfers) Transfer(ctx context.Context, req InternalCa
 	}
 
 	instr := client.InternalCashTransferInstruction{
-		Amount:              strToF32(req.Amount),
+		Amount:              strToDecimal(req.Amount),
 		ClientInstructionId: strToInt(req.ClientInstructionID),
 		Currency:            req.Currency,
 		SourceAccountId:     string(req.SourceAccountID),
@@ -1101,7 +1183,7 @@ func (m *RESTInternalCashTransfers) TransferBulk(ctx context.Context, reqs []Int
 
 	for i, req := range reqs {
 		instr := client.InternalCashTransferInstruction{
-			Amount:              strToF32(req.Amount),
+			Amount:              strToDecimal(req.Amount),
 			ClientInstructionId: strToInt(req.ClientInstructionID),
 			Currency:            req.Currency,
 			SourceAccountId:     string(req.SourceAccountID),

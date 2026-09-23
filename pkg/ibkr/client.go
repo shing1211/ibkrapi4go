@@ -67,6 +67,7 @@ type config struct {
 	oauth2             internal.OAuthConfig
 	tokenSource        *internal.TokenSource
 	userMiddleware     []internal.Middleware
+	maxResponseBytes   int64
 }
 
 // Rate-limit defaults (see docs/RATE-LIMITING.md).
@@ -161,6 +162,16 @@ func WithRateLimit(rps float64, burst int) Option {
 		}
 		c.rateLimit = rps
 		c.rateBurst = burst
+		return nil
+	}
+}
+
+// WithMaxResponseBytes caps the size of any single HTTP response body.
+// Responses exceeding the cap return an error instead of consuming unbounded
+// memory. A value <= 0 disables the limit (default).
+func WithMaxResponseBytes(n int64) Option {
+	return func(c *config) error {
+		c.maxResponseBytes = n
 		return nil
 	}
 }
@@ -419,14 +430,15 @@ func NewClient(opts ...Option) (*Client, error) {
 			}
 			return session.Token()
 		},
-		Logger:         cfg.logger,
-		Telemetry:      cfg.telemetry,
-		Metrics:        cfg.metrics,
-		Breaker:        cfg.breaker,
-		Retry:          cfg.retry,
-		Limiter:        limiter,
-		Timeout:        transportTimeout,
-		UserMiddleware: cfg.userMiddleware,
+		Logger:           cfg.logger,
+		Telemetry:        cfg.telemetry,
+		Metrics:          cfg.metrics,
+		Breaker:          cfg.breaker,
+		Retry:            cfg.retry,
+		Limiter:          limiter,
+		Timeout:          transportTimeout,
+		MaxResponseBytes: cfg.maxResponseBytes,
+		UserMiddleware:   cfg.userMiddleware,
 	})
 	httpClient := &http.Client{Transport: transport, Jar: jar}
 

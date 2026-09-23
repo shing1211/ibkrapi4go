@@ -122,14 +122,15 @@ func NewTransportPool(opts ...Option) (*TransportPool, error) {
 			}
 			return session.Token()
 		},
-		Logger:         cfg.logger,
-		Telemetry:      cfg.telemetry,
-		Metrics:        cfg.metrics,
-		Breaker:        cfg.breaker,
-		Retry:          cfg.retry,
-		Limiter:        limiter,
-		Timeout:        transportTimeout,
-		UserMiddleware: cfg.userMiddleware,
+		Logger:           cfg.logger,
+		Telemetry:        cfg.telemetry,
+		Metrics:          cfg.metrics,
+		Breaker:          cfg.breaker,
+		Retry:            cfg.retry,
+		Limiter:          limiter,
+		Timeout:          transportTimeout,
+		MaxResponseBytes: cfg.maxResponseBytes,
+		UserMiddleware:   cfg.userMiddleware,
 	})
 	httpClient := &http.Client{Transport: transport, Jar: jar}
 

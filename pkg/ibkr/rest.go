@@ -51,13 +51,14 @@ func (c *Client) REST() (*RESTSurface, error) {
 			}
 			return "Bearer " + tok, true
 		},
-		Logger:    c.cfg.logger,
-		Telemetry: c.cfg.telemetry,
-		Metrics:   c.cfg.metrics,
-		Breaker:   c.cfg.breaker,
-		Retry:     c.cfg.retry,
-		Limiter:   limiter,
-		Timeout:   c.cfg.requestTimeout,
+		Logger:           c.cfg.logger,
+		Telemetry:        c.cfg.telemetry,
+		Metrics:          c.cfg.metrics,
+		Breaker:          c.cfg.breaker,
+		Retry:            c.cfg.retry,
+		Limiter:          limiter,
+		Timeout:          c.cfg.requestTimeout,
+		MaxResponseBytes: c.cfg.maxResponseBytes,
 	})
 	httpClient := &http.Client{Transport: transport, Jar: jar}
 

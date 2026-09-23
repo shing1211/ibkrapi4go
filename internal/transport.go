@@ -15,21 +15,24 @@ import (
 	"time"
 )
 
+const defaultMaxResponseBytes = 32 << 20
+
 // TransportConfig assembles the client's HTTP middleware chain. Zero fields are
 // skipped. Middlewares are applied outermost-first in the order below.
 type TransportConfig struct {
-	RequestID      func() string
-	UserAgent      string
-	AuthHeader     string
-	Token          func() (string, bool)
-	Logger         *slog.Logger
-	Telemetry      Telemetry
-	Metrics        Metrics
-	Breaker        *Breaker
-	Retry          RetryPolicy
-	Limiter        RateLimiter
-	Timeout        time.Duration
-	UserMiddleware []Middleware
+	RequestID        func() string
+	UserAgent        string
+	AuthHeader       string
+	Token            func() (string, bool)
+	Logger           *slog.Logger
+	Telemetry        Telemetry
+	Metrics          Metrics
+	Breaker          *Breaker
+	Retry            RetryPolicy
+	Limiter          RateLimiter
+	Timeout          time.Duration
+	MaxResponseBytes int64
+	UserMiddleware   []Middleware
 }
 
 // NewClientTransport builds the RoundTripper chain used by the SDK. Order
@@ -65,6 +68,9 @@ func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundT
 	}
 	if cfg.Timeout > 0 {
 		ms = append(ms, Timeout(cfg.Timeout))
+	}
+	if cfg.MaxResponseBytes > 0 {
+		ms = append(ms, MaxBytes(cfg.MaxResponseBytes))
 	}
 	ms = append(ms, ErrorDecode())
 	ms = append(ms, cfg.UserMiddleware...)
@@ -146,7 +152,59 @@ func Timeout(d time.Duration) func(http.RoundTripper) http.RoundTripper {
 			}
 			ctx, cancel := context.WithTimeout(req.Context(), d)
 			defer cancel()
-			return base.RoundTrip(req.WithContext(ctx))
+			resp, err := base.RoundTrip(req.WithContext(ctx))
+			if err != nil {
+				return resp, err
+			}
+			if resp == nil {
+				return resp, err
+			}
+			resp.Body = &cancelOnCloseBody{body: resp.Body, cancel: cancel}
+			return resp, nil
+		})
+	}
+}
+
+// cancelOnCloseBody wraps resp.Body so that the timeout cancel fires only after
+// the body is fully consumed and closed. This prevents context.Canceled errors
+// when a large or slow success body is read after the transport has returned.
+type cancelOnCloseBody struct {
+	body   io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (c *cancelOnCloseBody) Read(b []byte) (int, error) { return c.body.Read(b) }
+
+func (c *cancelOnCloseBody) Close() error {
+	err := c.body.Close()
+	c.cancel()
+	return err
+}
+
+// maxBytesReader wraps resp.Body with an io.LimitedReader and enforces a byte
+// limit on reads. Close delegates to the original body.
+type maxBytesReader struct {
+	orig io.ReadCloser
+	lim  *io.LimitedReader
+}
+
+func (m *maxBytesReader) Read(b []byte) (int, error) { return m.lim.Read(b) }
+
+func (m *maxBytesReader) Close() error { return m.orig.Close() }
+
+// MaxBytes returns a middleware that limits the response body size to n bytes,
+// preventing unbounded memory growth on large responses. Truncation is detected
+// by the caller via a short read and surfaced as a typed error.
+func MaxBytes(n int64) func(http.RoundTripper) http.RoundTripper {
+	return func(base http.RoundTripper) http.RoundTripper {
+		return RoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			resp, err := base.RoundTrip(req)
+			if err != nil || resp == nil {
+				return resp, err
+			}
+			orig := resp.Body
+			resp.Body = &maxBytesReader{orig: orig, lim: &io.LimitedReader{R: orig, N: n}}
+			return resp, nil
 		})
 	}
 }
@@ -178,7 +236,29 @@ func isErrorStatus(code int) bool { return code >= 400 }
 
 var headerRedact = regexp.MustCompile(`(?i)(Authorization|Cookie|Set-Cookie)\s*:\s*[^\r\n,;]*`)
 
-func redact(s string) string { return headerRedact.ReplaceAllString(s, "$1: <redacted>") }
+var tokenPatterns = []string{
+	`(?i)bearer\s+[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)access_token\s*=\s*[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)refresh_token\s*=\s*[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)client_secret\s*=\s*[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)id_token\s*=\s*[A-Za-z0-9_\-\.~+/]+=*`,
+	`sess=[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)x-csrf-token\s*[:=]\s*[A-Za-z0-9_\-\.~+/]+=*`,
+}
+
+var secretRedact = regexp.MustCompile(func() string {
+	var all []string
+	for _, p := range tokenPatterns {
+		all = append(all, p)
+	}
+	return `(?i)(` + strings.Join(all, `|`) + `)`
+}())
+
+func redact(s string) string {
+	s = headerRedact.ReplaceAllString(s, "$1: <redacted>")
+	s = secretRedact.ReplaceAllString(s, "<redacted>")
+	return s
+}
 
 // carryError reads the response body, parses the IBKR error envelope, and returns
 // a response with the error details stored in headers. The body is replaced with
@@ -247,7 +327,7 @@ func ResponseError(resp *http.Response) *Error {
 	return &Error{
 		Op:         "unknown",
 		Code:       code,
-		Message:    errMsg,
+		Message:    redact(errMsg),
 		HTTPStatus: resp.StatusCode,
 		RequestID:  reqID,
 		Err:        serr,

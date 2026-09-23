@@ -31,7 +31,7 @@ go run ./examples/mock
   positions.
 - [`middleware/main.go`](./middleware/main.go) — inject custom HTTP middleware via
   `WithTransportMiddleware`.
-- [`mock/error-handling.go`](./mock/error-handling.go) — retry, error types, and
+- [`mock-error-handling/main.go`](./mock-error-handling/main.go) — retry, error types, and
   graceful degradation patterns.
 
 ### Mock gateway configuration
