@@ -14,4 +14,4 @@
 | H1 | Fix method/type name collisions | backend | done | A1b |
 | I1 | Update all tests for renamed symbols | tester | done | A1a–H1 |
 | I2 | Verify: make check + race tests | tester | done | I1 |
-| I3 | CHANGELOG + commit + tag v0.3.0 + push | release | doing | I2 |
+| I3 | CHANGELOG + commit + tag v0.3.0 + push | release | done | I2 |
