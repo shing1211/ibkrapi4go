@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   sbom:
-    name: SBOM generation
+    name: SBOM (CycloneDX)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -21,16 +21,19 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26'
-          check-latest: true
 
-      - name: Generate SBOM
-        run: bash scripts/sbom-gen.sh > sbom.txt
+      - name: Build SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: golang:1.26
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
 
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
         with:
-          name: sbom
-          path: sbom.txt
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
           retention-days: 90
 
   secret-scan:
@@ -41,36 +44,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Scan for hardcoded secrets
-        run: |
-          FOUND=0
-
-          # Credentials / passwords
-          if grep -rn --include='*.go' --include='*.yaml' --include='*.yml' --include='*.json' --include='*.toml' \
-              -E '(password|passwd|secret|token)\s*[:=]\s*"[^"]{8,}"' . 2>/dev/null; then
-            echo "::error::Potential hardcoded secret detected"
-            FOUND=1
-          fi
-
-          # API keys
-          if grep -rn --include='*.go' --include='*.yaml' --include='*.yml' --include='*.json' --include='*.toml' \
-              -E '(api_key|apikey|api[-_]?secret|access_token)\s*[:=]\s*"[^"]{8,}"' . 2>/dev/null; then
-            echo "::error::Potential hardcoded API key detected"
-            FOUND=1
-          fi
-
-          # Private keys
-          if grep -rn --include='*.go' --include='*.pem' --include='*.key' \
-              -E '-----BEGIN (RSA |EC )?PRIVATE KEY-----' . 2>/dev/null; then
-            echo "::error::Private key material detected"
-            FOUND=1
-          fi
-
-          if [ "$FOUND" -eq 1 ]; then
-            exit 1
-          fi
-
-          echo "No secrets detected."
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
 
   dep-audit:
     name: dependency audit
