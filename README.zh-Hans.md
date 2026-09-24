@@ -149,6 +149,40 @@ ibkrapi4go/
 └── specs/           # 缓存的 OpenAPI 规范（已 gitignore）
 ```
 
+## 整体如何协作
+
+```text
+NewClient(options...)
+   │
+   ▼
+SessionManager.Initialize(ctx)   → tickle goroutine starts
+   │
+   ▼
+Manager calls (Account, Portfolio, Trade, MarketData)
+   │
+   ▼
+Client.Close()                   → tickle stops, logout, ws closed
+```
+
+每个请求在到达网关之前都会经过一条传输链：
+
+```text
+Request
+  → request ID + User-Agent
+  → auth header injection (bearer)
+  → logging + telemetry hooks
+  → circuit breaker (optional)
+  → retry (safe methods only; honors Retry-After)
+  → per-endpoint rate limiter
+  → global rate limiter
+  → per-request timeout (when the caller sets none)
+  → HTTP call
+  → error parsing (IBKR envelope → *ibkr.Error)
+Response
+```
+
+完整分层见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
+
 ## 仓库文档
 
 | 文档 | 内容 |

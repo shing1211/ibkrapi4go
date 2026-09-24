@@ -152,6 +152,40 @@ ibkrapi4go/
 └── specs/           # キャッシュされた OpenAPI 仕様（gitignore 済み）
 ```
 
+## 全体の流れ
+
+```text
+NewClient(options...)
+   │
+   ▼
+SessionManager.Initialize(ctx)   → tickle goroutine starts
+   │
+   ▼
+Manager calls (Account, Portfolio, Trade, MarketData)
+   │
+   ▼
+Client.Close()                   → tickle stops, logout, ws closed
+```
+
+すべてのリクエストはゲートウェイに到達する前にトランスポートチェーンを通ります：
+
+```text
+Request
+  → request ID + User-Agent
+  → auth header injection (bearer)
+  → logging + telemetry hooks
+  → circuit breaker (optional)
+  → retry (safe methods only; honors Retry-After)
+  → per-endpoint rate limiter
+  → global rate limiter
+  → per-request timeout (when the caller sets none)
+  → HTTP call
+  → error parsing (IBKR envelope → *ibkr.Error)
+Response
+```
+
+詳細なレイヤリングは [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) を参照。
+
 ## リポジトリのドキュメント
 
 | ドキュメント | 内容 |

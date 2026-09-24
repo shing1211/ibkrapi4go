@@ -154,6 +154,40 @@ ibkrapi4go/
 └── specs/           # Especificación OpenAPI en caché (gitignore)
 ```
 
+## Cómo encaja todo
+
+```text
+NewClient(options...)
+   │
+   ▼
+SessionManager.Initialize(ctx)   → tickle goroutine starts
+   │
+   ▼
+Manager calls (Account, Portfolio, Trade, MarketData)
+   │
+   ▼
+Client.Close()                   → tickle stops, logout, ws closed
+```
+
+Toda petición pasa por una cadena de transporte antes de llegar a la pasarela:
+
+```text
+Request
+  → request ID + User-Agent
+  → auth header injection (bearer)
+  → logging + telemetry hooks
+  → circuit breaker (optional)
+  → retry (safe methods only; honors Retry-After)
+  → per-endpoint rate limiter
+  → global rate limiter
+  → per-request timeout (when the caller sets none)
+  → HTTP call
+  → error parsing (IBKR envelope → *ibkr.Error)
+Response
+```
+
+Consulta [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) para el detalle de capas.
+
 ## Documentación del repositorio
 
 | Documento | Contenido |

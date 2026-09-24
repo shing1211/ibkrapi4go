@@ -152,6 +152,40 @@ ibkrapi4go/
 └── specs/           # 캐시된 OpenAPI 명세 (gitignore)
 ```
 
+## 전체 흐름
+
+```text
+NewClient(options...)
+   │
+   ▼
+SessionManager.Initialize(ctx)   → tickle goroutine starts
+   │
+   ▼
+Manager calls (Account, Portfolio, Trade, MarketData)
+   │
+   ▼
+Client.Close()                   → tickle stops, logout, ws closed
+```
+
+모든 요청은 게이트웨이에 도달하기 전에 전송 체인을 거칩니다:
+
+```text
+Request
+  → request ID + User-Agent
+  → auth header injection (bearer)
+  → logging + telemetry hooks
+  → circuit breaker (optional)
+  → retry (safe methods only; honors Retry-After)
+  → per-endpoint rate limiter
+  → global rate limiter
+  → per-request timeout (when the caller sets none)
+  → HTTP call
+  → error parsing (IBKR envelope → *ibkr.Error)
+Response
+```
+
+전체 계층 구조는 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)를 참고하세요.
+
 ## 저장소 문서
 
 | 문서 | 내용 |

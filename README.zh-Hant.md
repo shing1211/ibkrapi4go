@@ -149,6 +149,40 @@ ibkrapi4go/
 └── specs/           # 快取的 OpenAPI 規範（已 gitignore）
 ```
 
+## 整體如何協作
+
+```text
+NewClient(options...)
+   │
+   ▼
+SessionManager.Initialize(ctx)   → tickle goroutine starts
+   │
+   ▼
+Manager calls (Account, Portfolio, Trade, MarketData)
+   │
+   ▼
+Client.Close()                   → tickle stops, logout, ws closed
+```
+
+每個請求在到達閘道之前都會經過一條傳輸鏈：
+
+```text
+Request
+  → request ID + User-Agent
+  → auth header injection (bearer)
+  → logging + telemetry hooks
+  → circuit breaker (optional)
+  → retry (safe methods only; honors Retry-After)
+  → per-endpoint rate limiter
+  → global rate limiter
+  → per-request timeout (when the caller sets none)
+  → HTTP call
+  → error parsing (IBKR envelope → *ibkr.Error)
+Response
+```
+
+完整分層見 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
+
 ## 倉庫文件
 
 | 文件 | 內容 |
