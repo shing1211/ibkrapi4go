@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
+- Made the optional Gitee CI mirror authenticate with `GITEE_TOKEN` and skip
+  cleanly when the secret is not configured.
+
 ## [1.0.5] - 2026-09-24
 
 ### Fixed

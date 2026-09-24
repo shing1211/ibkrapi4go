@@ -41,6 +41,9 @@ jobs:
           draft: false
 
       - name: Push to Gitee
+        if: ${{ secrets.GITEE_TOKEN != '' }}
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
-          git remote add gitee https://gitee.com/shing1211/ibkrapi4go.git
+          git remote add gitee "https://${GITEE_TOKEN}@gitee.com/shing1211/ibkrapi4go.git"
           git push gitee HEAD:main --tags

@@ -51,8 +51,10 @@ git push origin main --tags
 git push gitee  main --tags
 ```
 
-Create the corresponding Gitee release from the same changelog section. Docs stay
-in English except the translated READMEs (`README.<locale>.md`); see
+Create the corresponding Gitee release from the same changelog section. The CI
+mirror step uses the optional `GITEE_TOKEN` repository secret; without it, the
+step is skipped and the GitHub release still completes. Docs stay in English
+except the translated READMEs (`README.<locale>.md`); see
 [TRANSLATING.md](../TRANSLATING.md).
 
 ## Deprecation
