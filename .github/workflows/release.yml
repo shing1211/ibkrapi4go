@@ -43,4 +43,4 @@ jobs:
       - name: Push to Gitee
         run: |
           git remote add gitee https://gitee.com/shing1211/ibkrapi4go.git
-          git push gitee main --tags
+          git push gitee HEAD:main --tags
