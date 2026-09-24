@@ -34,11 +34,11 @@ type Snapshot struct {
 // second char = P(snapshot)/p(consolidated),
 // third char = B(book).
 type MarketDataStatus struct {
-	Availability  string
-	Consolidated  string
-	Book          string
-	IsDelayed     bool
-	IsFrozen      bool
+	Availability    string
+	Consolidated    string
+	Book            string
+	IsDelayed       bool
+	IsFrozen        bool
 	IsNotSubscribed bool
 }
 

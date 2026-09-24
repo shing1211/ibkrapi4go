@@ -118,7 +118,7 @@ func (r *SubmitResult) Accepted() bool { return len(r.Replies) == 0 && r.OrderID
 
 // Order is a working or recently completed order.
 type Order struct {
-	ClientOrderID      string
+	ClientOrderID     string
 	OrderID           string
 	AccountID         AccountID
 	ConID             ConID
@@ -358,7 +358,7 @@ func (m *TradeManager) OpenOrders(ctx context.Context) ([]Order, error) {
 	out := make([]Order, 0, len(raw.Orders))
 	for _, o := range raw.Orders {
 		out = append(out, Order{
-			ClientOrderID:      rawToString(o, "cOID"),
+			ClientOrderID:     rawToString(o, "cOID"),
 			OrderID:           rawToString(o, "orderId"),
 			AccountID:         AccountID(firstNonEmpty(rawToString(o, "account"), rawToString(o, "acct"))),
 			ConID:             ConID(jsonNumberToInt(jsonNumber(o["conid"]))),
