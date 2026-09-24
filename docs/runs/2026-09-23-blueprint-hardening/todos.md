@@ -37,12 +37,12 @@ Statuses: `todo` · `doing` · `blocked` · `review` · `done`
 |----|------|------|--------|-----------|------|-----------|
  | C1 | `internal/ws.go` unit tests | tester | done | A1 | M | ws.go covered |
 | C2 | Fix flaky `TestWS_SystemUpdates`; `sts` on subscribe | tester | done | C1 | S | stable ×20 |
-| C3 | Resilience tests (storm/heartbeat/cancel-write/dup/out-of-order) | tester | todo | C1 | M | pass under `-race` |
-| C4 | Injectable clock/dialer | backend | todo | C1 | M | fake clock in tests |
+| C3 | Resilience tests (storm/heartbeat/cancel-write/dup/out-of-order) | tester | done | C1 | M | pass under `-race` |
+| C4 | Injectable clock/dialer | backend | done | C1 | M | fake clock in tests |
 | C5 | Missing metrics (retry/pacing/heartbeat/dropped/queue/durations) | backend | todo | — | M | metrics emitted + tested |
 | C6 | Composite health/readiness probe | backend | todo | C5 | M | structured `Health(ctx)` |
 | C7 | Real OTel tracing bridge (`contrib/otel`) | backend | todo | C5 | L | REST + WS spans |
-| C8 | Fuzz in CI + WS/REST-error targets | tester | todo | A1 | S/M | `make fuzz` + CI job |
+| C8 | Fuzz in CI + WS/REST-error targets | tester | done | A1 | S/M | `make fuzz` + CI job |
 
 ## Phase D — Feature Gaps
 
@@ -62,7 +62,7 @@ Statuses: `todo` · `doing` · `blocked` · `review` · `done`
 |----|------|------|--------|-----------|------|-----------|
 | E1 | Fix version/spec drift (doc.go, README×6, SPEC, ROADMAP) | docs | done | — | S | v1.0.1 / spec v2.40.0 |
 | E2 | Fix wrong error docs | docs | done | — | S | ERRORS.md matches code |
-| E3 | Fix `scripts/check_design/main.go` | backend | todo | — | S/M | fails on real drift |
+| E3 | Fix `scripts/check_design/main.go` | backend | done | — | S/M | fails on real drift |
 | E4 | Remove leaking `CreateSessionRaw` | backend | todo | — | S | no generated type in public sig |
 | E5 | Add `docs/GATEWAY-SETUP.md` + `docs/PERMISSIONS.md` | docs | todo | — | S | linked from README |
 | E6 | Fix misleading live examples | docs | todo | — | S | examples accurate |
