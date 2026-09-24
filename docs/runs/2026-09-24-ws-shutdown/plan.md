@@ -31,10 +31,13 @@ after shutdown had begun.
 | W3 | Add Windows-oriented regression coverage | done | Silent-peer, sequence, public close, and repeated-run tests pass |
 | W4 | Sync docs, release metadata, and mirrors | done | Changelog/run docs updated; release mirrors synchronized |
 | W5 | Make `money-check` precise and green | done | Struct-aware scanner passes with a seeded-field self-test |
+| W6 | Expose explicit OAuth2 refresh/invalidation | done | Additive `RESTSurface` methods with closed-client behavior |
+| W7 | Protect token flights from stale invalidation | done | Generation-aware result delivery and preserved refresh tokens |
+| W8 | Update OAuth2 example and lifecycle tests | done | No token output; concurrent and public REST tests pass |
 
 ## Constraints
 
-- No public API signature changes.
+- No breaking public API changes; P3 adds methods only.
 - No generated-client edits.
 - No new dependencies.
 - No order mutation retry behavior changes.

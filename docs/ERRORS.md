@@ -90,7 +90,9 @@ not have reached IBKR. The SDK never resubmits. It returns an `*Error` with
 Token acquisition on the IB REST surface returns an `*Error` with
 `Op == "OAuth.Token"` and the token endpoint's HTTP status. A 401 maps to
 `ErrSessionExpired`. Tokens are refreshed on the next call rather than retried
-blindly (see [adr/0011](./adr/0011-oauth2-surface.md)).
+blindly. Call `RESTSurface.ForceRefresh(ctx)` to request an immediate
+reacquisition; `Invalidate()` only clears the access-token cache and preserves
+the rotated refresh token (see [adr/0011](./adr/0011-oauth2-surface.md)).
 
 ## IBKR error envelope
 

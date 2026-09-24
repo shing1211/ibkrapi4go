@@ -5,6 +5,7 @@ package ibkr
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -73,6 +74,81 @@ func TestRESTSurface_Details(t *testing.T) {
 	if detailsPath != "/gw/api/v1/accounts/U1234567/details" {
 		t.Errorf("path = %q; want REST account details", detailsPath)
 	}
+}
+
+func TestRESTSurface_ForceRefreshAndInvalidate(t *testing.T) {
+	var (
+		mu          sync.Mutex
+		tokenCalls  int
+		authHeaders []string
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/oauth2/api/v1/token":
+			mu.Lock()
+			tokenCalls++
+			token := fmt.Sprintf("tok-%d", tokenCalls)
+			mu.Unlock()
+			fmt.Fprintf(w, `{"access_token":%q,"expires_in":3600,"token_type":"Bearer"}`, token)
+		case "/gw/api/v1/accounts/U1234567/details":
+			mu.Lock()
+			authHeaders = append(authHeaders, r.Header.Get("Authorization"))
+			mu.Unlock()
+			fmt.Fprint(w, `{"accountId":"U1234567","accountAlias":"Main","accountTitle":"Main Account","baseCurrency":"USD","household":"HH1"}`)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	cli, err := NewClient(
+		WithGatewayURL(srv.URL),
+		WithRESTGateway(srv.URL),
+		WithOAuth2ClientCredentials("cid", "sec"),
+		WithOAuth2TokenURL(srv.URL+"/oauth2/api/v1/token"),
+		WithTickleInterval(time.Hour),
+	)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	t.Cleanup(func() { _ = cli.Close() })
+
+	rest, err := cli.REST()
+	if err != nil {
+		t.Fatalf("REST: %v", err)
+	}
+	if _, err := rest.Token(context.Background()); err != nil {
+		t.Fatalf("Token: %v", err)
+	}
+	if err := rest.ForceRefresh(context.Background()); err != nil {
+		t.Fatalf("ForceRefresh: %v", err)
+	}
+	if _, err := rest.Accounts().Details(context.Background(), "U1234567"); err != nil {
+		t.Fatalf("Details after ForceRefresh: %v", err)
+	}
+	rest.Invalidate()
+	if _, err := rest.Accounts().Details(context.Background(), "U1234567"); err != nil {
+		t.Fatalf("Details after Invalidate: %v", err)
+	}
+
+	mu.Lock()
+	headers := append([]string(nil), authHeaders...)
+	mu.Unlock()
+	if len(headers) != 2 {
+		t.Fatalf("Authorization headers = %d; want 2", len(headers))
+	}
+	if headers[0] != "Bearer tok-2" || headers[1] != "Bearer tok-3" {
+		t.Errorf("Authorization headers = %v; want tok-2 then tok-3", headers)
+	}
+
+	if err := cli.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if err := rest.ForceRefresh(context.Background()); !errors.Is(err, ErrClosed) {
+		t.Errorf("ForceRefresh after Close = %v; want ErrClosed", err)
+	}
+	rest.Invalidate()
 }
 
 func TestRESTSurface_NotConfigured(t *testing.T) {

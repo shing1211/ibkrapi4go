@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
+## [1.0.6] - 2026-09-24
+
+### Added
+
+- Added explicit `RESTSurface.ForceRefresh` and `RESTSurface.Invalidate`
+  lifecycle controls while preserving automatic token refresh.
+- Hardened OAuth single-flight result delivery and prevented invalidated
+  in-flight results from repopulating the access-token cache.
+- Updated the OAuth2 live example to avoid printing token material.
+
+### Fixed
+
 - Made the optional Gitee CI mirror authenticate with `GITEE_TOKEN` and skip
   cleanly when the secret is not configured.
 
@@ -513,7 +525,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.2...v1.0.3

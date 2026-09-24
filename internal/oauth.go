@@ -68,10 +68,17 @@ type TokenSource struct {
 	token        string
 	expiry       time.Time
 	refreshToken string
-	lastErr      error
-	inflight     chan struct{}
+	generation   uint64
+	inflight     *tokenFlight
 
 	clock *Clock
+}
+
+type tokenFlight struct {
+	generation uint64
+	done       chan struct{}
+	token      string
+	err        error
 }
 
 // NewTokenSource builds a TokenSource from cfg.
@@ -130,36 +137,42 @@ func (ts *TokenSource) Token(ctx context.Context) (string, error) {
 		ts.mu.Unlock()
 		return tok, nil
 	}
-	if ch := ts.inflight; ch != nil {
+	if flight := ts.inflight; flight != nil && flight.generation == ts.generation {
 		ts.mu.Unlock()
 		select {
-		case <-ch:
+		case <-flight.done:
+			return flight.token, flight.err
 		case <-ctx.Done():
 			return "", ctx.Err()
 		}
-		ts.mu.Lock()
-		tok, err := ts.token, ts.lastErr
-		ts.mu.Unlock()
-		return tok, err
 	}
-	ch := make(chan struct{})
-	ts.inflight = ch
+	generation := ts.generation
+	flight := &tokenFlight{
+		generation: generation,
+		done:       make(chan struct{}),
+	}
+	ts.inflight = flight
 	ts.mu.Unlock()
 
 	tok, expiry, newRefresh, err := ts.fetch(ctx)
 
 	ts.mu.Lock()
-	ts.inflight = nil
-	ts.lastErr = err
-	if err == nil {
-		ts.token = tok
-		ts.expiry = expiry
-		if newRefresh != "" {
-			ts.refreshToken = newRefresh
+	if ts.inflight == flight {
+		ts.inflight = nil
+	}
+	if ts.generation == generation {
+		if err == nil {
+			ts.token = tok
+			ts.expiry = expiry
+			if newRefresh != "" {
+				ts.refreshToken = newRefresh
+			}
 		}
 	}
-	close(ch)
 	ts.mu.Unlock()
+	flight.token = tok
+	flight.err = err
+	close(flight.done)
 	if err != nil {
 		ts.logger.Warn("ibkr.oauth token refresh failed", "err", redact(err.Error()))
 		incrCounter(ctx, ts.metrics, MetricOAuthTokenFailures, 1)
@@ -173,10 +186,35 @@ func (ts *TokenSource) Token(ctx context.Context) (string, error) {
 // ForceRefresh discards the cached token and fetches a new one.
 func (ts *TokenSource) ForceRefresh(ctx context.Context) (string, error) {
 	ts.mu.Lock()
-	ts.token = ""
-	ts.expiry = time.Time{}
+	if flight := ts.inflight; flight != nil && flight.generation == ts.generation {
+		ts.mu.Unlock()
+		select {
+		case <-flight.done:
+			return flight.token, flight.err
+		case <-ctx.Done():
+			return "", ctx.Err()
+		}
+	}
+	ts.invalidateLocked()
 	ts.mu.Unlock()
 	return ts.Token(ctx)
+}
+
+// Invalidate clears the cached access token without discarding the refresh token.
+func (ts *TokenSource) Invalidate() {
+	if ts == nil {
+		return
+	}
+	ts.mu.Lock()
+	ts.invalidateLocked()
+	ts.mu.Unlock()
+}
+
+func (ts *TokenSource) invalidateLocked() {
+	ts.generation++
+	ts.token = ""
+	ts.expiry = time.Time{}
+	ts.inflight = nil
 }
 
 func (ts *TokenSource) fetch(ctx context.Context) (string, time.Time, string, error) {

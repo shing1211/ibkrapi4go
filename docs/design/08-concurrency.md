@@ -49,6 +49,8 @@ Every test that starts goroutines runs `goleak` to assert none survive `Close`.
 
 ## Deadlock avoidance
 
+- OAuth token invalidation uses generations; an in-flight result from an older
+  generation is returned to its caller but never repopulates the cache.
 - Never hold a mutex while performing I/O or blocking on a channel.
 - Channel sends select on `ctx.Done()`.
 - The ws reader never blocks on a consumer (bounded buffer + drop policy,

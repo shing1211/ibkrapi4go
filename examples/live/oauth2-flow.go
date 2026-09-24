@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Command oauth2-flow demonstrates the full OAuth2 token lifecycle for the IB REST
-// surface: acquisition, refresh, error handling, and proactive expiry checks.
+// surface: acquisition, automatic and explicit refresh, invalidation, and error handling.
 //
 // This example requires a live IBKR account with OAuth2 credentials.
 // Set the environment variables before running:
@@ -79,11 +79,10 @@ func main() {
 		log.Fatalf("Client.REST: %v", err)
 	}
 
-	token, err := rest.Token(ctx)
-	if err != nil {
+	if _, err := rest.Token(ctx); err != nil {
 		log.Fatalf("REST.Token (acquire): %v", err)
 	}
-	fmt.Printf("  Access token acquired (truncated): %s...\n", truncate(token, 40))
+	fmt.Println("  Access token acquired (value not displayed)")
 	fmt.Printf("  Gateway URL: %s\n", rest.GatewayURL())
 
 	// Step 2: Verify token validity by making a read call to the REST surface.
@@ -97,17 +96,14 @@ func main() {
 	fmt.Printf("  Base Currency: %s\n", accounts.BaseCurrency)
 
 	// Step 3: The token source auto-refreshes before expiry (30s early by
-	// default). Callers keep using the surface; a fresh token is fetched
-	// transparently when the cached one nears expiry. There is no public
-	// "force refresh" call — the lifecycle is managed internally.
-	fmt.Println("\n=== Step 3: Automatic Token Refresh ===")
-	newToken, err := rest.Token(ctx)
-	if err != nil {
-		log.Fatalf("REST.Token (refresh check): %v", err)
+	// default). Callers can also request a refresh explicitly.
+	fmt.Println("\n=== Step 3: Explicit Token Refresh ===")
+	if err := rest.ForceRefresh(ctx); err != nil {
+		log.Fatalf("REST.ForceRefresh: %v", err)
 	}
-	fmt.Printf("  Token still valid (cached): %s...\n", truncate(newToken, 40))
-	fmt.Println("  The token source refreshes automatically before expiry; no manual")
-	fmt.Println("  refresh call is required. Refresh-token rotation is handled internally.")
+	fmt.Println("  Access token refreshed (value not displayed)")
+	rest.Invalidate()
+	fmt.Println("  Cached access token invalidated; the next REST call will reacquire it")
 
 	// Step 4: Demonstrate error handling for expired/invalid credentials.
 	fmt.Println("\n=== Step 4: Error Handling — Invalid Credentials ===")
@@ -143,6 +139,7 @@ func main() {
 	badOpts := []ibkr.Option{
 		ibkr.WithRESTGateway(badGateway),
 		ibkr.WithOAuth2ClientCredentials(clientID, clientSecret),
+		ibkr.WithOAuth2TokenURL("http://127.0.0.1:1/oauth2/api/v1/token"),
 	}
 	if refreshToken != "" {
 		badOpts = append(badOpts, ibkr.WithOAuth2RefreshToken(refreshToken))
@@ -168,17 +165,12 @@ func main() {
 		fmt.Println("  WARNING: Network error was not raised")
 	}
 
-	// Step 6: Demonstrate the refresh token rotation.
-	// When a new refresh token is returned, the token source updates it automatically.
+	// Step 6: Demonstrate refresh-token rotation without exposing token material.
 	fmt.Println("\n=== Step 6: Refresh Token Rotation ===")
-	// Make another call to trigger a refresh cycle
-	currentToken, err := rest.Token(ctx)
-	if err != nil {
-		log.Fatalf("REST.Token (rotation check): %v", err)
+	if err := rest.ForceRefresh(ctx); err != nil {
+		log.Fatalf("REST.ForceRefresh (rotation check): %v", err)
 	}
-	fmt.Printf("  Current token after rotation check: %s...\n", truncate(currentToken, 40))
-	fmt.Println("  Note: Refresh token rotation is handled internally by the token source.")
-	fmt.Println("  The rotated refresh token is available via TokenSource.RefreshToken() if needed.")
+	fmt.Println("  Rotated refresh token retained internally (value not displayed)")
 
 	fmt.Println("\n=== OAuth2 Lifecycle Complete ===")
 	fmt.Println("Summary:")
@@ -188,14 +180,6 @@ func main() {
 	fmt.Println("  4. Invalid credentials produce an error on token fetch")
 	fmt.Println("  5. Network errors are surfaced with proper error wrapping")
 	fmt.Println("  6. Refresh token rotation is handled automatically by the token source")
-}
-
-// truncate returns the first n characters of s, appending "..." if truncated.
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
 }
 
 // isAuthError returns true if err indicates an authentication failure.
@@ -217,7 +201,7 @@ func handleAuthError(ctx context.Context, err error, rest *ibkr.RESTSurface) err
 		return err
 	}
 	fmt.Println("  Authentication error detected, token may need re-acquisition")
-	_, refreshErr := rest.Token(ctx)
+	refreshErr := rest.ForceRefresh(ctx)
 	if refreshErr != nil {
 		return fmt.Errorf("token re-acquisition failed: %w", refreshErr)
 	}

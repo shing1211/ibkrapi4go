@@ -139,14 +139,147 @@ func TestTokenSource_SingleFlight(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := ts.Token(context.Background()); err != nil {
+			tok, err := ts.Token(context.Background())
+			if err != nil {
 				t.Errorf("Token: %v", err)
+				return
+			}
+			if tok != "tok-1" {
+				t.Errorf("token = %q; want tok-1", tok)
 			}
 		}()
 	}
 	wg.Wait()
 	if srv.calls.Load() != 1 {
 		t.Errorf("token requests = %d; want 1 (single-flight)", srv.calls.Load())
+	}
+}
+
+func TestTokenSource_Invalidate(t *testing.T) {
+	srv := newTokenServer(t, []string{"tok-1", "tok-2"}, []string{"refresh-1", "refresh-2"})
+	ts := NewTokenSource(OAuthConfig{TokenURL: srv.URL, ClientID: "cid"})
+
+	if _, err := ts.Token(context.Background()); err != nil {
+		t.Fatalf("Token 1: %v", err)
+	}
+	ts.Invalidate()
+	tok, err := ts.Token(context.Background())
+	if err != nil {
+		t.Fatalf("Token 2: %v", err)
+	}
+	if tok != "tok-2" {
+		t.Errorf("token = %q; want tok-2", tok)
+	}
+	if srv.calls.Load() != 2 {
+		t.Errorf("token requests = %d; want 2", srv.calls.Load())
+	}
+	form := srv.lastForm(t)
+	if form["grant_type"] != "refresh_token" || form["refresh_token"] != "refresh-1" {
+		t.Errorf("refresh form = %v; want refresh_token grant with refresh-1", form)
+	}
+	if got := ts.RefreshToken(); got != "refresh-2" {
+		t.Errorf("RefreshToken = %q; want refresh-2", got)
+	}
+}
+
+func TestTokenSource_InvalidateDuringFetch(t *testing.T) {
+	var calls atomic.Int32
+	firstStarted := make(chan struct{})
+	secondStarted := make(chan struct{})
+	releaseFirst := make(chan struct{})
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		if n == 1 {
+			close(firstStarted)
+			<-releaseFirst
+		}
+		if n == 2 {
+			close(secondStarted)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"access_token":"tok-%d","expires_in":3600}`, n)
+	}))
+	defer srv.Close()
+
+	ts := NewTokenSource(OAuthConfig{TokenURL: srv.URL, ClientID: "cid"})
+	type result struct {
+		token string
+		err   error
+	}
+	firstDone := make(chan result, 1)
+	go func() {
+		token, err := ts.Token(context.Background())
+		firstDone <- result{token: token, err: err}
+	}()
+
+	select {
+	case <-firstStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("first token request did not start")
+	}
+
+	ts.Invalidate()
+	secondDone := make(chan result, 1)
+	go func() {
+		token, err := ts.Token(context.Background())
+		secondDone <- result{token: token, err: err}
+	}()
+
+	select {
+	case <-secondStarted:
+	case <-time.After(2 * time.Second):
+		t.Fatal("second token request did not start")
+	}
+	close(releaseFirst)
+
+	first := <-firstDone
+	if first.err != nil || first.token != "tok-1" {
+		t.Fatalf("first result = (%q, %v); want (tok-1, nil)", first.token, first.err)
+	}
+	second := <-secondDone
+	if second.err != nil || second.token != "tok-2" {
+		t.Fatalf("second result = (%q, %v); want (tok-2, nil)", second.token, second.err)
+	}
+
+	cached, err := ts.Token(context.Background())
+	if err != nil {
+		t.Fatalf("cached Token: %v", err)
+	}
+	if cached != "tok-2" {
+		t.Errorf("cached token = %q; want tok-2", cached)
+	}
+	if got := calls.Load(); got != 2 {
+		t.Errorf("token requests = %d; want 2", got)
+	}
+}
+
+func TestTokenSource_ForceRefreshFailureClearsCachedToken(t *testing.T) {
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if calls.Add(1) == 1 {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"access_token":"tok-1","expires_in":3600}`)
+			return
+		}
+		w.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(w, `{"error":"invalid_client"}`)
+	}))
+	defer srv.Close()
+
+	ts := NewTokenSource(OAuthConfig{TokenURL: srv.URL, ClientID: "cid"})
+	if _, err := ts.Token(context.Background()); err != nil {
+		t.Fatalf("initial Token: %v", err)
+	}
+	tok, err := ts.ForceRefresh(context.Background())
+	if err == nil {
+		t.Fatal("ForceRefresh error = nil; want token endpoint error")
+	}
+	if tok != "" {
+		t.Errorf("ForceRefresh token = %q; want empty", tok)
+	}
+	if tok, err := ts.Token(context.Background()); err == nil || tok != "" {
+		t.Errorf("Token after failed refresh = (%q, %v); want empty token and error", tok, err)
 	}
 }
 

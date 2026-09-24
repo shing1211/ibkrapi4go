@@ -96,10 +96,10 @@ integration tier is still required.
 ## OAuth2 / REST surface tests
 
 - Token source: client-credentials acquisition, refresh-before-expiry,
-  single-flight, refresh-token rotation, error mapping
-  (`internal/oauth_test.go`).
-- REST surface: bearer injection against the REST base URL and account-details
-  mapping (`pkg/ibkr/rest_test.go`).
+  single-flight, explicit invalidation/refresh, stale in-flight protection,
+  refresh-token rotation, error mapping (`internal/oauth_test.go`).
+- REST surface: bearer injection, explicit refresh/invalidation, closed-client
+  behavior, and account-details mapping (`pkg/ibkr/rest_test.go`).
 
 ## Codegen validation
 

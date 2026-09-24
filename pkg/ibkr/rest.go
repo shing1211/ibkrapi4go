@@ -78,6 +78,20 @@ func (s *RESTSurface) Token(ctx context.Context) (string, error) {
 	return s.owner.cfg.tokenSource.Token(ctx)
 }
 
+// ForceRefresh discards the cached OAuth2 access token and acquires a new one.
+func (s *RESTSurface) ForceRefresh(ctx context.Context) error {
+	if err := s.owner.checkOpen(); err != nil {
+		return err
+	}
+	_, err := s.owner.cfg.tokenSource.ForceRefresh(ctx)
+	return err
+}
+
+// Invalidate clears the cached OAuth2 access token while preserving its refresh token.
+func (s *RESTSurface) Invalidate() {
+	s.owner.cfg.tokenSource.Invalidate()
+}
+
 // GatewayURL returns the configured REST base URL.
 func (s *RESTSurface) GatewayURL() string { return s.owner.cfg.restGatewayURL }
 

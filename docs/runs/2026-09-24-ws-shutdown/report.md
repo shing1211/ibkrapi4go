@@ -9,7 +9,8 @@
 ## Summary
 
 Fixed the WebSocket shutdown hang introduced by D4 and hardened the connection
-lifecycle. The change is internal and additive; no exported signature changed.
+lifecycle. The change is internal and additive; no existing exported signature
+changed.
 
 ## Changes
 
@@ -25,6 +26,10 @@ lifecycle. The change is internal and additive; no exported signature changed.
   base-commit lock cycle.
 - Tightened `scripts/check_money.py` to inspect exported public struct fields
   and ignore generated code, unexported adapters, and function bodies.
+- Added `RESTSurface.ForceRefresh` and `RESTSurface.Invalidate`.
+- Added generation-aware OAuth single-flight results so invalidated in-flight
+  fetches cannot repopulate the access-token cache.
+- Updated the live OAuth2 example to avoid printing token material.
 
 ## Verification
 
@@ -37,6 +42,6 @@ lifecycle. The change is internal and additive; no exported signature changed.
 
 ## Follow-up
 
-P2 remains the next recommended maintenance phase: make `money-check` precise
-and green. P3 (public token refresh) and P4 (unified streaming events) remain
-backlog items.
+P3 is complete. P4 (unified typed streaming events) is the next recommended
+phase; scheduled spec drift monitoring and E3 checker accuracy remain backlog
+items.

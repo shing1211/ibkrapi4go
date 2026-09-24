@@ -55,6 +55,17 @@ memory only. Configure it with `WithOAuth2ClientCredentials`,
 `IBKR_CLIENT_ID` / `IBKR_CLIENT_SECRET` / `IBKR_CLIENT_REFRESH_TOKEN`
 environment variables). See [ADR 0011](./adr/0011-oauth2-surface.md).
 
+`Client.REST()` exposes the lifecycle controls:
+
+- `Token(ctx)` returns the current access token and refreshes automatically
+  when needed. Treat the returned value as a secret.
+- `ForceRefresh(ctx)` discards the access-token cache and acquires a new token.
+- `Invalidate()` clears only the access-token cache; the rotated refresh token
+  is preserved and the next request reacquires an access token.
+
+`Invalidate` does not cancel an already-running request. A stale in-flight
+result is returned only to its original caller and is not cached.
+
 ## Secrets handling
 
 - Tokens live in memory only; never written to disk.

@@ -10,5 +10,8 @@
 | W6 | Correct run metadata and release documentation | done | Changelog, roadmap, and run records updated |
 | W7 | Publish `v1.0.4` to GitHub and Gitee | done | Tag and both remotes synchronized |
 | W8 | Make `money-check` struct-aware and green | done | Scanner passes and retains the seeded-field self-test |
+| W9 | Add public OAuth2 `ForceRefresh` and `Invalidate` | done | Automatic refresh remains default; refresh token is preserved |
+| W10 | Harden OAuth single-flight invalidation | done | Stale in-flight results cannot repopulate the cache |
+| W11 | Update OAuth2 example and lifecycle tests | done | No token material printed; REST bearer rotation tested |
 
 Status values: `todo` · `doing` · `blocked` · `review` · `done`

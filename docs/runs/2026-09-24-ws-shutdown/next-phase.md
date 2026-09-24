@@ -10,13 +10,21 @@ P2 is now complete: `scripts/check_money.py` is struct-aware and
 
 ### P3 — Expose explicit OAuth2 token refresh
 
-- Add an additive `ForceRefresh`/`Invalidate` surface on `RESTSurface`.
-- Keep automatic refresh as the default behavior.
-- Update the OAuth2 example and add lifecycle tests.
-- Do not expose internal token values or credentials.
+**Status:** Done. `RESTSurface.ForceRefresh(ctx)` and `Invalidate()` are now
+available. Automatic refresh remains the default, rotated refresh tokens are
+preserved, invalidated in-flight results cannot repopulate the cache, and the
+live example no longer prints token material.
+
+## Recommended next phase
+
+### P4 — Unified typed streaming events
+
+- Add one entry point for account, portfolio, order, notification, and user
+  events.
+- Preserve the existing per-subscription channels and reconnect behavior.
+- Document ordering and duplicate-delivery expectations.
 
 ## Later backlog
 
-- P4: add a unified typed streaming event entry point.
 - Add a scheduled upstream spec drift check.
 - Complete E3 design-checker accuracy work; it remains under review.

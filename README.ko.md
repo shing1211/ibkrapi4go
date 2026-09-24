@@ -56,7 +56,7 @@
 | 메트릭 + 로깅 | ✅ 구현됨 ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI 품질 게이트 (커버리지, 프리컴밋) | ✅ 구현됨 |
 | 문서 웹사이트 + Discussions | ✅ 구현됨 ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| 릴리스 | ✅ v1.0.5 (GitHub + Gitee) |
+| 릴리스 | ✅ v1.0.6 (GitHub + Gitee) |
 
 현재 저장소에는 **생성된 OpenAPI 클라이언트**, 문서, 코드 생성 도구가 포함되어
 있습니다. 모든 185개 API 오퍼레이션이 구현되었습니다. 계획은

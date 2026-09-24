@@ -80,8 +80,9 @@ modified, and no transfers are initiated.
   (instruments, locations, scan types), then run a market scanner.
 - [`multi-account/main.go`](./multi-account/main.go) — aggregate accounts and
   positions across multiple clients using `MultiClient`.
-- [`live/oauth2-flow.go`](./live/oauth2-flow.go) — OAuth2 token acquisition and
-  refresh for IB REST API.
+- [`live/oauth2-flow.go`](./live/oauth2-flow.go) — OAuth2 acquisition,
+  automatic/explicit refresh, invalidation, and error handling for the IB REST
+  API; token values are never printed.
 
 ## See also
 

@@ -47,14 +47,10 @@ non-money exceptions for observability aggregates and the legacy bank
 instruction ID. `python scripts/check_money.py` passes.
 
 ### P3 — Public OAuth2 token-refresh surface
-**Objective:** Expose an explicit `ForceRefresh`/`Invalidate` on `RESTSurface`
-(wrapping `internal.TokenSource.ForceRefresh`) and update the OAuth2 example to
-use it.
-**Why now:** Callers occasionally need to force a rotation (credential change,
-diagnostics); today it is unreachable.
-**Effort:** S
-**Dependencies:** C7 (OTel) not required.
-**Risks:** Additive API; document that automatic refresh remains the default.
+
+**Status:** Done. `RESTSurface.ForceRefresh(ctx)` and `Invalidate()` are
+available with automatic refresh preserved, refresh-token rotation retained,
+and stale in-flight results prevented from repopulating the cache.
 
 ### P4 — Unified streaming event API
 **Objective:** Add a single `SubscribeEvents` (or manager-scoped) entry point
@@ -73,7 +69,8 @@ a D4 regression rather than a base-commit lock-ordering defect. The follow-up
 fixed sequence-map initialization, made close interrupt active I/O, prevented
 late reconnect publication, and added Windows-oriented regression tests.
 
-The next recommended work is P2: make `money-check` precise and green.
+The next recommended work is P4: add a unified typed streaming event entry
+point.
 
 ## 5. Open Questions
 
