@@ -144,6 +144,20 @@ func TestOrderBuilder_FirstErrorWins(t *testing.T) {
 	}
 }
 
+func TestOrderBuilder_ParentID(t *testing.T) {
+	b := NewOrderBuilder().ConID(123).Side(SideBuy).Quantity("10").Type(OrderTypeLimit).ParentID("ABC")
+	if b.req.ParentID != "ABC" {
+		t.Errorf("ParentID = %q; want ABC", b.req.ParentID)
+	}
+}
+
+func TestOrderBuilder_IsSingleGroup(t *testing.T) {
+	b := NewOrderBuilder().ConID(123).Side(SideBuy).Quantity("10").Type(OrderTypeLimit).IsSingleGroup()
+	if !b.req.IsSingleGroup {
+		t.Error("IsSingleGroup = false; want true")
+	}
+}
+
 // ---------------------------------------------------------------------------
 // ContractBuilder tests
 // ---------------------------------------------------------------------------

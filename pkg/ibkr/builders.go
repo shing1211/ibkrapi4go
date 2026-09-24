@@ -118,6 +118,18 @@ func (b *OrderBuilder) ClientOrderID(id string) *OrderBuilder {
 	return b
 }
 
+// ParentID sets the parent OrderID for bracket orders.
+func (b *OrderBuilder) ParentID(id string) *OrderBuilder {
+	b.req.ParentID = id
+	return b
+}
+
+// IsSingleGroup marks the order as part of an OCA group.
+func (b *OrderBuilder) IsSingleGroup() *OrderBuilder {
+	b.req.IsSingleGroup = true
+	return b
+}
+
 // Build validates and returns the OrderRequest. Returns an error if any
 // required field is missing or any value is invalid.
 func (b *OrderBuilder) Build() (*OrderRequest, error) {

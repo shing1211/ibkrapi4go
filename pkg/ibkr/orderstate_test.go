@@ -164,3 +164,37 @@ func TestAdvanceTo_UnknownState(t *testing.T) {
 		t.Error("AdvanceTo(OrderStateUnknown, OrderStateAccepted) = nil; want error")
 	}
 }
+
+func TestTimeInForce_Validate(t *testing.T) {
+	valid := []TimeInForce{TimeInForceDay, TimeInForceGTC, TimeInForceIOC, TimeInForceOPG, TimeInForceFOK, TimeInForceGTD, ""}
+	for _, tif := range valid {
+		if err := tif.Validate(); err != nil {
+			t.Errorf("Validate(%q) = %v; want nil", tif, err)
+		}
+	}
+	if err := TimeInForce("INVALID").Validate(); err == nil {
+		t.Error("Validate(INVALID) = nil; want error")
+	}
+}
+
+func TestOrderRequest_Validate(t *testing.T) {
+	tests := []struct {
+		req  OrderRequest
+		want bool
+	}{
+		{OrderRequest{ConID: 1, Side: SideBuy, Quantity: "100", OrderType: OrderTypeLimit}, true},
+		{OrderRequest{Side: SideBuy, Quantity: "100", OrderType: OrderTypeLimit}, false},
+		{OrderRequest{ConID: 1, Side: "INVALID", Quantity: "100", OrderType: OrderTypeLimit}, false},
+		{OrderRequest{ConID: 1, Side: SideBuy, Quantity: "100", OrderType: OrderTypeLimit, TimeInForce: TimeInForceDay}, true},
+		{OrderRequest{ConID: 1, Side: SideBuy, Quantity: "100", OrderType: OrderTypeLimit, TimeInForce: "INVALID"}, false},
+	}
+	for _, tt := range tests {
+		err := tt.req.Validate()
+		if tt.want && err != nil {
+			t.Errorf("Validate() = %v; want nil for %+v", err, tt.req)
+		}
+		if !tt.want && err == nil {
+			t.Errorf("Validate() = nil; want error for %+v", tt.req)
+		}
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/shing1211/ibkrapi4go/client"
@@ -38,6 +39,13 @@ type OrderRequest struct {
 	AllOrNone bool
 	// ClientOrderID is an optional caller-supplied order reference.
 	ClientOrderID string
+	// ParentID is the OrderID of the parent order for bracket children.
+	// Empty for standalone orders. When set, this order is linked to the parent.
+	ParentID string
+	// IsSingleGroup marks this order as part of an OCA (One-Cancels-All) group.
+	// All siblings (same ParentID or same group) must have the same value.
+	// When one sibling fills, all other siblings in the group are cancelled.
+	IsSingleGroup bool
 }
 
 func (r OrderRequest) toJSON() orderTicketJSON {
@@ -53,7 +61,34 @@ func (r OrderRequest) toJSON() orderTicketJSON {
 		AllOrNone:     r.AllOrNone,
 		ClientOrderID: r.ClientOrderID,
 	}
+	if r.ParentID != "" {
+		t.ParentID = r.ParentID
+	}
+	if r.IsSingleGroup {
+		t.IsSingleGroup = r.IsSingleGroup
+	}
 	return t
+}
+
+func (r OrderRequest) Validate() error {
+	if r.ConID == 0 {
+		return fmt.Errorf("ibkr: OrderRequest.ConID is required")
+	}
+	if r.Side != SideBuy && r.Side != SideSell {
+		return fmt.Errorf("ibkr: OrderRequest.Side must be BUY or SELL")
+	}
+	if r.Quantity == "" {
+		return fmt.Errorf("ibkr: OrderRequest.Quantity is required")
+	}
+	if r.OrderType == "" {
+		return fmt.Errorf("ibkr: OrderRequest.OrderType is required")
+	}
+	if r.TimeInForce != "" {
+		if err := r.TimeInForce.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Reply is an order reply message that must be confirmed before the order is
@@ -526,6 +561,8 @@ type orderTicketJSON struct {
 	AllOrNone     bool      `json:"allOrNone,omitempty"`
 	ClientOrderID string    `json:"cOID,omitempty"`
 	AccountID     AccountID `json:"acctId,omitempty"`
+	ParentID      string    `json:"parentId,omitempty"`
+	IsSingleGroup bool      `json:"isSingleGroup,omitempty"`
 }
 
 type ordersSubmissionJSON struct {
