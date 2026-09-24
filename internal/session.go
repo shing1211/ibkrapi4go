@@ -127,6 +127,7 @@ type Session struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	logger          *slog.Logger
+	clock           *Clock
 }
 
 type SessionConfig struct {
@@ -135,6 +136,7 @@ type SessionConfig struct {
 	TickleInterval time.Duration
 	RequestTimeout time.Duration
 	Logger         *slog.Logger
+	Clock          *Clock
 }
 
 func NewSession(cfg SessionConfig) *Session {
@@ -150,6 +152,9 @@ func NewSession(cfg SessionConfig) *Session {
 	if cfg.Logger == nil {
 		cfg.Logger = NopLogger()
 	}
+	if cfg.Clock == nil {
+		cfg.Clock = &Clock{}
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Session{
 		api:            newHTTPAPI(cfg.HTTPClient, cfg.ServerURL),
@@ -159,6 +164,7 @@ func NewSession(cfg SessionConfig) *Session {
 		state:          int32(StateDisconnected),
 		ctx:            ctx,
 		cancel:         cancel,
+		clock:          cfg.Clock,
 	}
 }
 
@@ -227,8 +233,12 @@ func (s *Session) Initialize(ctx context.Context) error {
 	{
 		pollCtx, cancel := context.WithTimeout(ctx, s.requestTimeout)
 		defer cancel()
-		time.Sleep(1 * time.Second)
-		ticker := time.NewTicker(1 * time.Second)
+		clock := s.clock
+		if clock == nil {
+			clock = &Clock{}
+		}
+		clock.Sleep(1 * time.Second)
+		ticker := clock.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
@@ -312,7 +322,11 @@ func (s *Session) startTickle() {
 			}
 			close(doneCh)
 		}()
-		ticker := time.NewTicker(interval)
+		clock := s.clock
+		if clock == nil {
+			clock = &Clock{}
+		}
+		ticker := clock.NewTicker(interval)
 		defer ticker.Stop()
 		var ctxDone <-chan struct{}
 		if s.ctx != nil {

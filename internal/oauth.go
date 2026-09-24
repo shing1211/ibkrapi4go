@@ -41,6 +41,8 @@ type OAuthConfig struct {
 	Logger *slog.Logger
 	// Metrics receives token refresh counters. Nil disables metrics.
 	Metrics Metrics
+	// Clock provides time for expiry checks. Nil uses the real clock.
+	Clock *Clock
 
 	// JWTKey is the RSA private key for JWT-bearer token exchange.
 	// When set, the token source uses client_assertion grant (private_key_jwt)
@@ -68,6 +70,8 @@ type TokenSource struct {
 	refreshToken string
 	lastErr      error
 	inflight     chan struct{}
+
+	clock *Clock
 }
 
 // NewTokenSource builds a TokenSource from cfg.
@@ -85,6 +89,9 @@ func NewTokenSource(cfg OAuthConfig) *TokenSource {
 	if cfg.Logger == nil {
 		cfg.Logger = NopLogger()
 	}
+	if cfg.Clock == nil {
+		cfg.Clock = &Clock{}
+	}
 	var jwtKey *rsa.PrivateKey
 	switch {
 	case cfg.JWTKey != nil:
@@ -96,7 +103,7 @@ func NewTokenSource(cfg OAuthConfig) *TokenSource {
 			jwtKey = nil
 		}
 	}
-	return &TokenSource{cfg: cfg, client: hc, jwtKey: jwtKey, logger: cfg.Logger, metrics: cfg.Metrics, refreshToken: cfg.RefreshToken}
+	return &TokenSource{cfg: cfg, client: hc, jwtKey: jwtKey, logger: cfg.Logger, metrics: cfg.Metrics, refreshToken: cfg.RefreshToken, clock: cfg.Clock}
 }
 
 // SetMetrics installs a metrics sink. It is safe to call after construction and
@@ -118,7 +125,7 @@ func (ts *TokenSource) RefreshToken() string {
 // Token returns a valid access token, refreshing it when missing or near expiry.
 func (ts *TokenSource) Token(ctx context.Context) (string, error) {
 	ts.mu.Lock()
-	if ts.token != "" && time.Now().Before(ts.expiry.Add(-ts.cfg.EarlyRefresh)) {
+	if ts.token != "" && ts.clock.Now().Before(ts.expiry.Add(-ts.cfg.EarlyRefresh)) {
 		tok := ts.token
 		ts.mu.Unlock()
 		return tok, nil
@@ -232,9 +239,9 @@ func (ts *TokenSource) fetchWithSecret(ctx context.Context) (string, time.Time, 
 	if tr.AccessToken == "" {
 		return "", time.Time{}, "", &Error{Op: "OAuth.Token", Message: "token response missing access_token", Err: ErrNotAuthenticated}
 	}
-	expiry := time.Now().Add(time.Duration(tr.ExpiresIn) * time.Second)
+	expiry := ts.clock.Now().Add(time.Duration(tr.ExpiresIn) * time.Second)
 	if tr.ExpiresIn <= 0 {
-		expiry = time.Now().Add(time.Minute)
+		expiry = ts.clock.Now().Add(time.Minute)
 	}
 	return tr.AccessToken, expiry, tr.RefreshToken, nil
 }
@@ -295,9 +302,9 @@ func (ts *TokenSource) fetchWithJWTAssertion(ctx context.Context) (string, time.
 	if tr.AccessToken == "" {
 		return "", time.Time{}, "", &Error{Op: "OAuth.Token", Message: "token response missing access_token", Err: ErrNotAuthenticated}
 	}
-	expiry := time.Now().Add(time.Duration(tr.ExpiresIn) * time.Second)
+	expiry := ts.clock.Now().Add(time.Duration(tr.ExpiresIn) * time.Second)
 	if tr.ExpiresIn <= 0 {
-		expiry = time.Now().Add(time.Minute)
+		expiry = ts.clock.Now().Add(time.Minute)
 	}
 	return tr.AccessToken, expiry, tr.RefreshToken, nil
 }

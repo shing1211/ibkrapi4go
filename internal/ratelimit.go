@@ -35,6 +35,7 @@ type Limiter struct {
 	Logger *slog.Logger
 
 	metrics Metrics
+	clock   *Clock
 }
 
 // NewLimiter builds a limiter. rps<=0 disables per-endpoint limiting;
@@ -44,6 +45,7 @@ func NewLimiter(rps float64, burst int, globalRPS float64) *Limiter {
 		buckets:  map[string]*rate.Limiter{},
 		lastUsed: map[string]time.Time{},
 		Logger:   NopLogger(),
+		clock:    &Clock{},
 	}
 	if rps > 0 {
 		if burst <= 0 {
@@ -75,6 +77,20 @@ func (l *Limiter) SetMetrics(m Metrics) {
 	l.metrics = m
 }
 
+// SetClock installs a clock. Nil uses the real clock. It is safe to call after
+// construction and before concurrent use.
+func (l *Limiter) SetClock(c *Clock) {
+	if l == nil {
+		return
+	}
+	l.mu.Lock()
+	if c == nil {
+		c = &Clock{}
+	}
+	l.clock = c
+	l.mu.Unlock()
+}
+
 // Wait blocks until the request is permitted by the applicable buckets or the
 // context is done. Waits longer than 100ms are logged at Debug.
 func (l *Limiter) Wait(ctx context.Context, method, path string) error {
@@ -82,9 +98,9 @@ func (l *Limiter) Wait(ctx context.Context, method, path string) error {
 		return nil
 	}
 	needsWait := l.needsWait(method, path)
-	start := time.Now()
+	start := l.clock.Now()
 	err := l.wait(ctx, method, path)
-	waited := time.Since(start)
+	waited := l.clock.Now().Sub(start)
 	if needsWait {
 		incrCounter(ctx, l.metrics, MetricRateLimitWaits, 1)
 		observeHistogram(ctx, l.metrics, MetricRateLimitWaitMS, float64(waited.Nanoseconds())/1e6)
@@ -132,7 +148,7 @@ func (l *Limiter) wait(ctx context.Context, method, path string) error {
 
 func (l *Limiter) endpoint(method, path string) *rate.Limiter {
 	key := EndpointKey(method, path)
-	now := time.Now()
+	now := l.clock.Now()
 
 	l.mu.Lock()
 	defer l.mu.Unlock()

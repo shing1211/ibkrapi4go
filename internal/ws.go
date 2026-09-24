@@ -63,6 +63,9 @@ type WSSystemSink interface {
 	Fail(error)
 }
 
+// DialWSFunc dials a WebSocket connection.
+type DialWSFunc func(ctx context.Context, wsURL string, httpClient *http.Client) (*websocket.Conn, error)
+
 // WSOptions configures a WSConn.
 type WSOptions struct {
 	HTTPClient    *http.Client
@@ -73,6 +76,8 @@ type WSOptions struct {
 	Reconnect     bool
 	ReconnectBase time.Duration
 	ReconnectMax  time.Duration
+	Clock         *Clock
+	DialWS        DialWSFunc
 }
 
 // WSHandle is a registered subscription on a WSConn.
@@ -129,6 +134,17 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 	}
 	if opts.Logger == nil {
 		opts.Logger = NopLogger()
+	}
+	if opts.Clock == nil {
+		opts.Clock = &Clock{}
+	}
+	if opts.DialWS == nil {
+		opts.DialWS = func(ctx context.Context, wsURL string, httpClient *http.Client) (*websocket.Conn, error) {
+			dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			conn, _, err := websocket.Dial(dctx, wsURL, &websocket.DialOptions{HTTPClient: httpClient})
+			return conn, err
+		}
 	}
 	c := &WSConn{
 		wsURL:  wsURL,
@@ -211,7 +227,7 @@ func (c *WSConn) Close() error {
 	}
 	select {
 	case <-c.doneCh:
-	case <-time.After(3 * time.Second):
+	case <-c.opts.Clock.After(3 * time.Second):
 	}
 	return nil
 }
@@ -219,9 +235,7 @@ func (c *WSConn) Close() error {
 // --- internals --------------------------------------------------------------
 
 func (c *WSConn) dial(ctx context.Context) error {
-	dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	conn, _, err := websocket.Dial(dctx, c.wsURL, &websocket.DialOptions{HTTPClient: c.opts.HTTPClient})
+	conn, err := c.opts.DialWS(ctx, c.wsURL, c.opts.HTTPClient)
 	if err != nil {
 		return err
 	}
@@ -282,7 +296,7 @@ func (c *WSConn) reconnect(attempt *int) error {
 	for {
 		delay := backoffDelay(*attempt, c.opts.ReconnectBase, c.opts.ReconnectMax)
 		select {
-		case <-time.After(delay):
+		case <-c.opts.Clock.After(delay):
 		case <-c.stopCh:
 			return ErrClosed
 		case <-c.ctx.Done():
@@ -335,7 +349,7 @@ func (c *WSConn) writeLoop() {
 }
 
 func (c *WSConn) pingLoop() {
-	ticker := time.NewTicker(c.opts.PingInterval)
+	ticker := c.opts.Clock.NewTicker(c.opts.PingInterval)
 	defer ticker.Stop()
 	for {
 		select {

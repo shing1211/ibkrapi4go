@@ -35,6 +35,8 @@ type Breaker struct {
 	probing     bool
 
 	budget *errorBudget
+
+	clock *Clock
 }
 
 // NewBreaker returns a breaker, or nil when threshold<=0 (disabled).
@@ -125,6 +127,20 @@ func (b *Breaker) SetMetrics(m Metrics) {
 	setGauge(context.Background(), m, MetricBreakerState, float64(state), Attr{Key: "state", Value: label})
 }
 
+// SetClock installs a clock and returns self for chaining. A nil clock uses
+// the real clock. It is safe to call after construction and before concurrent use.
+func (b *Breaker) SetClock(c *Clock) {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	if c == nil {
+		c = &Clock{}
+	}
+	b.clock = c
+	b.mu.Unlock()
+}
+
 // Allow reports whether a request may proceed. It returns ErrCircuitOpen while
 // the breaker is open.
 func (b *Breaker) Allow() error {
@@ -136,7 +152,11 @@ func (b *Breaker) Allow() error {
 		b.mu.Unlock()
 		return nil
 	}
-	if time.Now().Before(b.openUntil) {
+	clock := b.clock
+	if clock == nil {
+		clock = &Clock{}
+	}
+	if clock.Now().Before(b.openUntil) {
 		b.mu.Unlock()
 		return ErrCircuitOpen
 	}
@@ -158,6 +178,10 @@ func (b *Breaker) Record(err error, status int) {
 	if b == nil {
 		return
 	}
+	clock := b.clock
+	if clock == nil {
+		clock = &Clock{}
+	}
 	b.mu.Lock()
 	if breakerFailure(err, status) {
 		wasProbing := b.probing
@@ -171,14 +195,14 @@ func (b *Breaker) Record(err error, status int) {
 		// Check sliding-window error budget.
 		budgetTrip := false
 		if b.budget != nil && !consecutiveTrip {
-			budgetTrip = b.budget.record(time.Now())
+			budgetTrip = b.budget.record(clock.Now())
 		}
 
 		if consecutiveTrip || budgetTrip {
 			if b.openUntil.IsZero() || wasProbing {
 				transitioned = true
 			}
-			b.openUntil = time.Now().Add(b.cooldown)
+			b.openUntil = clock.Now().Add(b.cooldown)
 		}
 		consecutive, threshold, cooldown := b.consecutive, b.threshold, b.cooldown
 		metrics := b.metrics
