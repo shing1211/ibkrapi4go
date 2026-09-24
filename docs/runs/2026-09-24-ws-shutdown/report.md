@@ -2,8 +2,8 @@
 
 - **Run:** `docs/runs/2026-09-24-ws-shutdown/`
 - **Base commit:** `945182e`
-- **Feature commit:** `05fa6ea`
-- **Close-out commit:** `05fa6ea`
+- **Feature commit:** `cdef66b`
+- **Close-out commit:** `cdef66b`
 - **Status:** complete
 
 ## Summary
