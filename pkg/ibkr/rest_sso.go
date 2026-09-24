@@ -155,37 +155,6 @@ func (m *RESTSSOSessions) CreateSession(ctx context.Context, req SSOSessionReque
 	return out, nil
 }
 
-// CreateSessionRaw creates an SSO session and returns the raw HTTP response.
-// This is useful when you need to handle non-standard responses.
-func (m *RESTSSOSessions) CreateSessionRaw(ctx context.Context, req SSOSessionRequest) (*client.CreateSsoSessionsResponse, error) {
-	const op = "SSO.CreateSession"
-	if err := m.surface.owner.checkOpen(); err != nil {
-		return nil, err
-	}
-	auth, err := m.surface.Token(ctx)
-	if err != nil {
-		e := wrapOp(op, err)
-		internal.LogError(m.surface.owner.cfg.logger, e)
-		return nil, e
-	}
-	payload := client.CreateSessionRequest{
-		Credential: req.Credential,
-		Ip:         req.IP,
-	}
-	if len(req.AlternativeIPs) > 0 {
-		payload.AlternativeIps = &req.AlternativeIPs
-	}
-	if req.Service != "" {
-		payload.Service = &req.Service
-	}
-	return m.surface.generated.CreateSsoSessionsWithBodyWithResponse(
-		ctx,
-		&client.CreateSsoSessionsParams{Authorization: client.AuthorizationHeaderParam(auth)},
-		"application/json",
-		bytes.NewReader(jsonMarshal(payload)),
-	)
-}
-
 func jsonMarshal(v interface{}) []byte {
 	data, _ := json.Marshal(v)
 	return data
