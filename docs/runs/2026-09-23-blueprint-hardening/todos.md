@@ -22,21 +22,21 @@ Statuses: `todo` · `doing` · `blocked` · `review` · `done`
 
 | ID | Task | Role | Status | Depends On | Size | Acceptance |
 |----|------|------|--------|-----------|------|-----------|
-| B1 | Run `golangci-lint` in CI + enable `gosec` | devops | todo | A1 | S | CI fails on lint |
-| B2 | Consolidate duplicate release workflows | devops | todo | — | S | single `v*` release path |
+ | B1 | Run `golangci-lint` in CI + enable `gosec` | devops | done | A1 | S | CI fails on lint |
+| B2 | Consolidate duplicate release workflows | devops | done | — | S | single `v*` release path |
 | B3 | GoReleaser multi-arch + checksums + provenance; fix SLSA claim | devops | B2 | M | binaries + checksums published |
-| B4 | Coverage threshold + `-coverpkg` | devops | A1 | S | CI fails below threshold |
-| B5 | OS/Go-version test matrix | devops | A1 | S | matrix runs |
-| B6 | DCO enforcement + dependency-review | devops | — | S | unsigned commit blocked |
-| B7 | Real secret scanner + CycloneDX SBOM | devops | B6 | M | standard SBOM artifact |
-| E9 | Enforce GoDoc in CI | devops | B1 | S | undocumented export fails CI |
+| B4 | Coverage threshold + `-coverpkg` | devops | done | A1 | S | CI fails below threshold |
+| B5 | OS/Go-version test matrix | devops | done | A1 | S | matrix runs |
+| B6 | DCO enforcement + dependency-review | devops | done | — | S | unsigned commit blocked |
+| B7 | Real secret scanner + CycloneDX SBOM | devops | done | B6 | M | standard SBOM artifact |
+| E9 | Enforce GoDoc in CI | devops | done | B1 | S | undocumented export fails CI |
 
 ## Phase C — Reliability & Observability
 
 | ID | Task | Role | Status | Depends On | Size | Acceptance |
 |----|------|------|--------|-----------|------|-----------|
-| C1 | `internal/ws.go` unit tests | tester | todo | A1 | M | ws.go covered |
-| C2 | Fix flaky `TestWS_SystemUpdates`; `sts` on subscribe | tester | todo | C1 | S | stable ×20 |
+ | C1 | `internal/ws.go` unit tests | tester | done | A1 | M | ws.go covered |
+| C2 | Fix flaky `TestWS_SystemUpdates`; `sts` on subscribe | tester | done | C1 | S | stable ×20 |
 | C3 | Resilience tests (storm/heartbeat/cancel-write/dup/out-of-order) | tester | todo | C1 | M | pass under `-race` |
 | C4 | Injectable clock/dialer | backend | todo | C1 | M | fake clock in tests |
 | C5 | Missing metrics (retry/pacing/heartbeat/dropped/queue/durations) | backend | todo | — | M | metrics emitted + tested |
