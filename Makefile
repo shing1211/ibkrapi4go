@@ -11,7 +11,7 @@ OAPI_CODEGEN_VERSION ?= v2.8.0
 
 .PHONY: help tools fmt vet test test-race test-integration coverage check \
         codegen codegen-verify docs-spec docs-check \
-        license license-check mock-gateway clean
+        license license-check mock-gateway fuzz clean
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -64,6 +64,9 @@ docs-check: ## Check markdown links, README translations, and design doc accurac
 
 mock-gateway: ## Run the standalone mock IBKR gateway
 	$(GO) run ./cmd/ibkr-mock-gateway
+
+fuzz: ## Run fuzz targets for 60s
+	go test -fuzz=FuzzParseStreamFrame -fuzztime=60s ./internal/
 
 license: ## Apply SPDX headers to sources
 	@if [ -f go.mod ]; then \
