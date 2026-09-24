@@ -157,6 +157,8 @@ ibkrapi4go/
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Layering, composition, middleware |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Phased plan with exit criteria |
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | In-repo mock gateway for tests, examples, and a standalone binary |
+| [docs/GATEWAY-SETUP.md](./docs/GATEWAY-SETUP.md) | Running and authenticating the Client Portal Gateway |
+| [docs/PERMISSIONS.md](./docs/PERMISSIONS.md) | Trading permissions, market-data entitlements, delayed data |
 | [docs/AUTH.md](./docs/AUTH.md) | The two auth models |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | Spec fetch, patch, generate, verify |
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | Metrics, benchmarks, fuzz tests, logging |

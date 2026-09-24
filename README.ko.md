@@ -160,6 +160,8 @@ ibkrapi4go/
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 계층, 구성, 미들웨어 |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 종료 기준이 있는 단계별 계획 |
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | 저장소 내 모의 게이트웨이 (테스트, 예제, 독립 실행 파일) |
+| [docs/GATEWAY-SETUP.md](./docs/GATEWAY-SETUP.md) | Client Portal Gateway 실행 및 인증 |
+| [docs/PERMISSIONS.md](./docs/PERMISSIONS.md) | 거래 권한, 시장 데이터 자격, 지연 데이터 |
 | [docs/AUTH.md](./docs/AUTH.md) | 두 가지 인증 모델 |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 명세 가져오기, 패치, 생성, 검증 |
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | 메트릭, 벤치마크, 퍼즈 테스트, 로깅 |

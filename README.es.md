@@ -162,6 +162,8 @@ ibkrapi4go/
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Capas, composición, middleware |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Plan por fases con criterios de salida |
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | Pasarela simulada del repositorio (pruebas, ejemplos, binario independiente) |
+| [docs/GATEWAY-SETUP.md](./docs/GATEWAY-SETUP.md) | Ejecutar y autenticar la Client Portal Gateway |
+| [docs/PERMISSIONS.md](./docs/PERMISSIONS.md) | Permisos de trading, derechos de datos de mercado, datos retrasados |
 | [docs/AUTH.md](./docs/AUTH.md) | Los dos modelos de autenticación |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | Obtención, parcheo, generación y verificación |
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | Métricas, benchmarks, fuzz tests, logging |

@@ -157,6 +157,8 @@ ibkrapi4go/
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 分层、组合、中间件 |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 带退出标准的分阶段计划 |
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | 仓库内模拟网关（测试、示例、独立二进制） |
+| [docs/GATEWAY-SETUP.md](./docs/GATEWAY-SETUP.md) | 运行并认证 Client Portal Gateway |
+| [docs/PERMISSIONS.md](./docs/PERMISSIONS.md) | 交易权限、行情数据授权、延迟数据 |
 | [docs/AUTH.md](./docs/AUTH.md) | 两种认证模型 |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 规范获取、修补、生成、验证 |
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | 指标、基准测试、模糊测试、日志 |

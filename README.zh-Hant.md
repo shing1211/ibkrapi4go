@@ -157,6 +157,8 @@ ibkrapi4go/
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 分層、組合、中介軟體 |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 含退出標準的分階段計畫 |
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | 倉庫內模擬閘道（測試、範例、獨立二進位） |
+| [docs/GATEWAY-SETUP.md](./docs/GATEWAY-SETUP.md) | 執行並認證 Client Portal Gateway |
+| [docs/PERMISSIONS.md](./docs/PERMISSIONS.md) | 交易權限、行情資料授權、延遲資料 |
 | [docs/AUTH.md](./docs/AUTH.md) | 兩種認證模型 |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 規範取得、修補、產生、驗證 |
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | 指標、基準測試、模糊測試、日誌 |

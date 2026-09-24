@@ -160,6 +160,8 @@ ibkrapi4go/
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | レイヤリング、構成、ミドルウェア |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 終了条件付きの段階的計画 |
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | リポジトリ内モックゲートウェイ（テスト、サンプル、単体バイナリ） |
+| [docs/GATEWAY-SETUP.md](./docs/GATEWAY-SETUP.md) | Client Portal Gateway の実行と認証 |
+| [docs/PERMISSIONS.md](./docs/PERMISSIONS.md) | 取引権限、マーケットデータ権利、遅延データ |
 | [docs/AUTH.md](./docs/AUTH.md) | 2 つの認証モデル |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 仕様の取得、パッチ、生成、検証 |
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | メトリクス、ベンチマーク、ファズテスト、ロギング |
