@@ -38,6 +38,8 @@ const (
 	SystemUpdateNotification SystemUpdateType = "ntf"
 	SystemUpdateOrder        SystemUpdateType = "sor"
 	SystemUpdateUser         SystemUpdateType = "usr"
+	SystemUpdateAccount      SystemUpdateType = "acq"
+	SystemUpdatePortfolio    SystemUpdateType = "pos"
 )
 
 // SystemUpdate is a non-market-data frame delivered on a Subscription.
@@ -56,9 +58,11 @@ type SystemUpdate struct {
 	// Typed payloads — populated when parsing succeeds, nil on failure.
 	// Consumers should check the Type field first, then access the
 	// corresponding typed field.
-	OrderEvent        *OrderEvent
-	NotificationEvent *NotificationEvent
-	UserMessageEvent  *UserMessageEvent
+	OrderEvent         *OrderEvent
+	NotificationEvent  *NotificationEvent
+	UserMessageEvent   *UserMessageEvent
+	AccountUpdateEvent *AccountUpdateEvent
+	PortfolioEvent     *PortfolioEvent
 
 	// Received is when the client received the update.
 	Received time.Time
@@ -124,7 +128,9 @@ type Subscription struct {
 	errs    chan error
 	dropped atomic.Int64
 
-	systemUpdates chan SystemUpdate
+	systemUpdates   chan SystemUpdate
+	accountUpdates  chan AccountUpdateEvent
+	portfolioUpdates chan PortfolioEvent
 
 	closedCh chan struct{}
 
@@ -143,11 +149,13 @@ func newSubscription(conids []ConID, buffer int) *Subscription {
 		wants[int(c)] = struct{}{}
 	}
 	return &Subscription{
-		wants:         wants,
-		updates:       make(chan Update, buffer),
-		errs:          make(chan error, buffer),
-		systemUpdates: make(chan SystemUpdate, buffer),
-		closedCh:      make(chan struct{}),
+		wants:          wants,
+		updates:        make(chan Update, buffer),
+		errs:           make(chan error, buffer),
+		systemUpdates:  make(chan SystemUpdate, buffer),
+		accountUpdates: make(chan AccountUpdateEvent, buffer),
+		portfolioUpdates: make(chan PortfolioEvent, buffer),
+		closedCh:       make(chan struct{}),
 	}
 }
 
@@ -161,6 +169,14 @@ func (s *Subscription) Errors() <-chan error { return s.errs }
 // SystemUpdates returns the stream of non-market-data frames (connection status,
 // notifications, order updates, user messages). The channel is closed by Close.
 func (s *Subscription) SystemUpdates() <-chan SystemUpdate { return s.systemUpdates }
+
+// AccountUpdates returns the stream of account value updates ("acq" frames).
+// The channel is closed by Close.
+func (s *Subscription) AccountUpdates() <-chan AccountUpdateEvent { return s.accountUpdates }
+
+// PortfolioUpdates returns the stream of position updates ("pos" frames).
+// The channel is closed by Close.
+func (s *Subscription) PortfolioUpdates() <-chan PortfolioEvent { return s.portfolioUpdates }
 
 // Dropped returns the number of updates dropped due to a full buffer.
 func (s *Subscription) Dropped() int64 { return s.dropped.Load() }
@@ -180,6 +196,8 @@ func (s *Subscription) Close() error {
 		close(s.updates)
 		close(s.errs)
 		close(s.systemUpdates)
+		close(s.accountUpdates)
+		close(s.portfolioUpdates)
 		s.mu.Unlock()
 	})
 	return nil
@@ -257,6 +275,10 @@ func (s *Subscription) DeliverSystem(frame internal.WSSystemFrame) {
 		up.NotificationEvent = parseNotificationEvent(frame.Topic, frame.Payload, received)
 	case "usr":
 		up.UserMessageEvent = parseUserMessageEvent(frame.Payload, received)
+	case "acq":
+		up.AccountUpdateEvent = parseAccountUpdateEvent(frame.Payload, received)
+	case "pos":
+		up.PortfolioEvent = parsePortfolioEvent(frame.Payload, received)
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -266,6 +288,18 @@ func (s *Subscription) DeliverSystem(frame internal.WSSystemFrame) {
 	select {
 	case s.systemUpdates <- up:
 	default:
+	}
+	if up.AccountUpdateEvent != nil {
+		select {
+		case s.accountUpdates <- *up.AccountUpdateEvent:
+		default:
+		}
+	}
+	if up.PortfolioEvent != nil {
+		select {
+		case s.portfolioUpdates <- *up.PortfolioEvent:
+		default:
+		}
 	}
 }
 
@@ -446,6 +480,68 @@ func parseUserMessageEvent(payload []byte, received time.Time) *UserMessageEvent
 	e := &UserMessageEvent{Received: received}
 	if raw.Message != nil {
 		e.Message = *raw.Message
+	}
+	return e
+}
+
+// parseAccountUpdateEvent parses the raw JSON payload of an "acq" frame.
+func parseAccountUpdateEvent(payload []byte, received time.Time) *AccountUpdateEvent {
+	var raw struct {
+		Account      *string `json:"account"`
+		NetLiquidity *string `json:"net"`
+		Cash         *string `json:"cash"`
+		Equity       *string `json:"equity"`
+		MaintMargin  *string `json:"maintmargin"`
+	}
+	if err := json.Unmarshal(payload, &raw); err != nil {
+		return nil
+	}
+	e := &AccountUpdateEvent{Received: received}
+	if raw.Account != nil {
+		e.Account = *raw.Account
+	}
+	if raw.NetLiquidity != nil {
+		e.NetLiquidity = *raw.NetLiquidity
+	}
+	if raw.Cash != nil {
+		e.Cash = *raw.Cash
+	}
+	if raw.Equity != nil {
+		e.Equity = *raw.Equity
+	}
+	if raw.MaintMargin != nil {
+		e.MaintMargin = *raw.MaintMargin
+	}
+	return e
+}
+
+// parsePortfolioEvent parses the raw JSON payload of a "pos" frame.
+func parsePortfolioEvent(payload []byte, received time.Time) *PortfolioEvent {
+	var raw struct {
+		Conid         *int64  `json:"conid"`
+		Position      *string `json:"pos"`
+		AvgCost       *string `json:"avgCost"`
+		MarketValue   *string `json:"mktVal"`
+		UnrealizedPNL *string `json:"unrealizedPnl"`
+	}
+	if err := json.Unmarshal(payload, &raw); err != nil {
+		return nil
+	}
+	e := &PortfolioEvent{Received: received}
+	if raw.Conid != nil {
+		e.Conid = *raw.Conid
+	}
+	if raw.Position != nil {
+		e.Position = *raw.Position
+	}
+	if raw.AvgCost != nil {
+		e.AvgCost = *raw.AvgCost
+	}
+	if raw.MarketValue != nil {
+		e.MarketValue = *raw.MarketValue
+	}
+	if raw.UnrealizedPNL != nil {
+		e.UnrealizedPNL = *raw.UnrealizedPNL
 	}
 	return e
 }

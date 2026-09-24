@@ -206,6 +206,16 @@ func OrderFrame(payload any) map[string]any {
 	return map[string]any{"sor": payload}
 }
 
+// AccountFrame returns an "acq" (account) frame.
+func AccountFrame(payload any) map[string]any {
+	return map[string]any{"acq": payload}
+}
+
+// PortfolioFrame returns a "pos" (portfolio) frame.
+func PortfolioFrame(payload any) map[string]any {
+	return map[string]any{"pos": payload}
+}
+
 // streamConn is one accepted WebSocket connection and its subscription state.
 type streamConn struct {
 	conn    *websocket.Conn
@@ -312,6 +322,10 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 			}
 		case streamOpUnsubscribe:
 			sc.unsubscribe(conids)
+		case streamOpAccount:
+			s.handleAccountSubscribe(sc, fields)
+		case streamOpPortfolio:
+			s.handlePortfolioSubscribe(sc, fields)
 		}
 	}
 }
@@ -355,6 +369,33 @@ func (s *Server) handleSubscribe(sc *streamConn, conids []int, fields []string) 
 	return true
 }
 
+// handleAccountSubscribe emits deterministic account frames.
+func (s *Server) handleAccountSubscribe(sc *streamConn, fields []string) {
+	if script := s.stream.script; script.Hello {
+		_ = sc.sendFrame(StatusFrame("connected"))
+	}
+	accountPayload := map[string]any{
+		"account":       "U123456",
+		"net":           "50000",
+		"cash":          "45000",
+		"equity":        "45000",
+		"maintmargin":   "10000",
+	}
+	_ = sc.sendFrame(AccountFrame(accountPayload))
+}
+
+// handlePortfolioSubscribe emits deterministic portfolio frames.
+func (s *Server) handlePortfolioSubscribe(sc *streamConn, fields []string) {
+	if script := s.stream.script; script.Hello {
+		_ = sc.sendFrame(StatusFrame("connected"))
+	}
+	positions := []map[string]any{
+		{"conid": 265598, "pos": "100", "avgCost": "150", "mktVal": "15500", "unrealizedPnl": "500"},
+		{"conid": 276555, "pos": "50", "avgCost": "200", "mktVal": "10500", "unrealizedPnl": "250"},
+	}
+	_ = sc.sendFrame(PortfolioFrame(positions))
+}
+
 // limitMessage returns a non-empty error message when the subscribe exceeds the
 // configured limits. distinct is the projected number of distinct conids held
 // after the frame is applied; adding is the raw conid count of the frame.
@@ -375,6 +416,8 @@ const (
 	streamOpIgnore streamOp = iota
 	streamOpSubscribe
 	streamOpUnsubscribe
+	streamOpAccount
+	streamOpPortfolio
 )
 
 // parseStreamFrame decodes a subscribe or unsubscribe frame. It accepts the
@@ -400,6 +443,10 @@ func parseStreamFrame(data []byte) (streamOp, []int, []string) {
 			return streamOpSubscribe, f.Params.Conids, f.Params.Fields
 		case "unsubscribe":
 			return streamOpUnsubscribe, f.Params.Conids, nil
+		case "account":
+			return streamOpAccount, nil, f.Params.Fields
+		case "portfolio":
+			return streamOpPortfolio, nil, f.Params.Fields
 		default:
 			return streamOpIgnore, nil, nil
 		}

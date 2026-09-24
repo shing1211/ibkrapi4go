@@ -51,3 +51,23 @@ type UserMessageEvent struct {
 	Message  string
 	Received time.Time
 }
+
+// AccountUpdateEvent is an account value update from the "acq" WebSocket frame.
+type AccountUpdateEvent struct {
+	Account      string
+	NetLiquidity string
+	Cash         string
+	Equity       string
+	MaintMargin  string
+	Received     time.Time
+}
+
+// PortfolioEvent is a position update from the "pos" WebSocket frame.
+type PortfolioEvent struct {
+	Conid         int64
+	Position      string
+	AvgCost       string
+	MarketValue   string
+	UnrealizedPNL string
+	Received      time.Time
+}
