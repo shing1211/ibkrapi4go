@@ -7,25 +7,27 @@
 # internal/ is enforced by review (see docs/design/04-generated-wrapping.md),
 # not by a linter, to avoid false positives in tests.
 
+version: 2
+
 run:
   timeout: 5m
   tests: true
+  go: "1.26"
 
 linters:
   enable:
     - errcheck
-    - govet
+    - revive
     - staticcheck
     - unused
     - ineffassign
+    - copyloopvar
+    - gosec
     - misspell
-    - gofmt
-    - goimports
     - bodyclose
     - contextcheck
     - errorlint
     - nolintlint
-    - revive
     - unconvert
 
 linters-settings:
@@ -33,10 +35,15 @@ linters-settings:
     rules:
       - name: exported
         severity: warning
+  gosec:
+    excludes:
+      - G104
 
 issues:
   exclude-dirs:
     - client
+    - contrib
+  exclude-use-fatal: true
   exclude-rules:
     - path: _test\.go
       linters:
