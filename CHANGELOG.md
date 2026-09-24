@@ -4,11 +4,17 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
+## [1.0.3] - 2026-09-24
 
 ### Added
 
+- **Phase B CI hardening:** golangci-lint + gosec, single release workflow with
+  GoReleaser, coverage threshold 60%, OS×Go test matrix, DCO enforcement,
+  dependency-review, TruffleHog secret scanner, CycloneDX SBOM, GoDoc exported
+  enforcement.
+- **Phase C reliability/observability:** `internal/ws.go` unit tests, ws
+  resilience tests + fuzz targets, injectable `Clock` + `DialWSFunc`, missing
+  metrics, composite `Health()` probe, OTel tracing bridge, fuzz targets in CI.
 - **Order state machine + duplicate-submission protection:** `OrderState` with
   legal transitions and a per-`TradeManager` `ClientOrderID` registry that
   rejects duplicate submissions (`pkg/ibkr/orderstate.go`).
@@ -46,6 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`RESTSSOSessions.CreateSessionRaw`:** removed because it leaked the generated
   `*client.CreateSsoSessionsResponse` through a public signature
   (`docs/design/04-generated-wrapping.md`). Use `CreateSession`.
+
+## [Unreleased]
+
+
 
 ## [1.0.1] - 2026-09-21
 

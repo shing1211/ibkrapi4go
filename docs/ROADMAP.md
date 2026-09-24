@@ -253,7 +253,7 @@ Exit criteria:
 The feature roadmap is complete: all 185 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.0.1`**.
+**`v1.0.3`**.
 
 A follow-up hardening run (2026-09-23) tightened correctness/security, made the
 CI gates real, and closed the remaining feature gaps — order state machine,
