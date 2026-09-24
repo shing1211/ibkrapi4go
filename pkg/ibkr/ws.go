@@ -25,6 +25,9 @@ type Update struct {
 	Value string
 	// Received is when the client received the update.
 	Received time.Time
+	// Status is the market-data availability (field 6509), or nil.
+	// It is non-nil when Field is "6509".
+	Status *MarketDataStatus
 }
 
 // SystemUpdateType classifies a system (non-market-data) frame.
@@ -186,6 +189,9 @@ func (s *Subscription) Close() error {
 // update and increments Dropped.
 func (s *Subscription) Deliver(u internal.WSUpdate) {
 	up := Update{ConID: ConID(u.ConID), Field: Field(u.Field), Value: u.Value, Received: time.Now()}
+	if u.Field == "6509" {
+		up.Status = parseMarketDataStatusString(u.Value)
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if s.isClosed {
@@ -442,4 +448,33 @@ func parseUserMessageEvent(payload []byte, received time.Time) *UserMessageEvent
 		e.Message = *raw.Message
 	}
 	return e
+}
+
+// parseMarketDataStatusString parses the string value of field 6509 into a MarketDataStatus.
+func parseMarketDataStatusString(s string) *MarketDataStatus {
+	if len(s) == 0 {
+		return nil
+	}
+	m := &MarketDataStatus{}
+	if len(s) >= 1 {
+		m.Availability = s[:1]
+	}
+	if len(s) >= 2 {
+		m.Consolidated = s[1:2]
+	}
+	if len(s) >= 3 {
+		m.Book = s[2:3]
+	}
+	switch m.Availability {
+	case "D":
+		m.IsDelayed = true
+	case "Z":
+		m.IsFrozen = true
+	case "Y":
+		m.IsFrozen = true
+		m.IsDelayed = true
+	case "N":
+		m.IsNotSubscribed = true
+	}
+	return m
 }

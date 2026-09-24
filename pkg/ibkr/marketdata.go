@@ -23,6 +23,23 @@ type Snapshot struct {
 	Fields map[Field]string
 	// Updated is the UTC timestamp of the data.
 	Updated time.Time
+	// Status is the market-data availability (field 6509), or nil.
+	// Availability values: R=real-time, D=delayed, Z=frozen,
+	// Y=frozen-delayed, N=not-subscribed, i=incomplete, v=VDR-exempt.
+	Status *MarketDataStatus
+}
+
+// MarketDataStatus describes market-data availability for a contract.
+// Field 6509: first char = R(real-time)/D(delayed)/Z(frozen)/Y(frozen-delayed)/N(not-subscribed)/i(incomplete)/v(VDR-exempt),
+// second char = P(snapshot)/p(consolidated),
+// third char = B(book).
+type MarketDataStatus struct {
+	Availability  string
+	Consolidated  string
+	Book          string
+	IsDelayed     bool
+	IsFrozen      bool
+	IsNotSubscribed bool
 }
 
 // Bar is a single OHLC bar; prices are decimal strings (ADR 0008).
@@ -189,7 +206,9 @@ func snapshotFromRaw(item map[string]json.RawMessage) Snapshot {
 			if json.Unmarshal(val, &n) == nil {
 				s.Updated = time.Unix(jsonNumberToInt64(n), 0).UTC()
 			}
-		case "server_id", "6119", "6509":
+		case "6509":
+			s.Status = parseMarketDataStatus(val)
+		case "server_id", "6119":
 			// metadata, not field values
 		default:
 			s.Fields[Field(key)] = rawScalarString(val)
@@ -214,6 +233,35 @@ func rawScalarString(val json.RawMessage) string {
 		return strconv.FormatBool(b)
 	}
 	return strings.Trim(string(val), `"`)
+}
+
+func parseMarketDataStatus(raw json.RawMessage) *MarketDataStatus {
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil || len(s) == 0 {
+		return nil
+	}
+	m := &MarketDataStatus{}
+	if len(s) >= 1 {
+		m.Availability = s[:1]
+	}
+	if len(s) >= 2 {
+		m.Consolidated = s[1:2]
+	}
+	if len(s) >= 3 {
+		m.Book = s[2:3]
+	}
+	switch m.Availability {
+	case "D":
+		m.IsDelayed = true
+	case "Z":
+		m.IsFrozen = true
+	case "Y":
+		m.IsFrozen = true
+		m.IsDelayed = true
+	case "N":
+		m.IsNotSubscribed = true
+	}
+	return m
 }
 
 func joinConIDs(conids []ConID) string {
