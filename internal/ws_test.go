@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -517,5 +518,15 @@ func TestWS_ConcurrentSubscribeClose(t *testing.T) {
 
 	for err := range errCh {
 		t.Errorf("concurrent error: %v", err)
+	}
+}
+
+func TestWSGapError(t *testing.T) {
+	err := &WSGapError{Conid: 123, LastSeq: 100, ReceivedSeq: 97}
+	if msg := err.Error(); msg == "" {
+		t.Error("WSGapError.Error() returned empty string")
+	}
+	if !strings.Contains(err.Error(), "sequence gap") {
+		t.Error("WSGapError.Error() should contain 'sequence gap'")
 	}
 }

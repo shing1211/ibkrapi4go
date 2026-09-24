@@ -27,6 +27,44 @@ var (
 	ErrWSReconnected = errors.New("ibkr: ws: reconnected")
 )
 
+// WSGapError signals a sequence discontinuity for a contract. A gap of more
+// than 1 in the _updated sequence indicates missed messages.
+type WSGapError struct {
+	Conid       int
+	LastSeq     int64
+	ReceivedSeq int64
+}
+
+func (e *WSGapError) Error() string {
+	return "ibkr: ws: sequence gap for conid " + itoa(int64(e.Conid)) +
+		": last=" + itoa(e.LastSeq) + " received=" + itoa(e.ReceivedSeq)
+}
+
+// itoa converts an int to a string without importing fmt.
+func itoa(n int64) string {
+	if n == 0 {
+		return "0"
+	}
+	if n < 0 {
+		return "-" + uitoa(uint64(-n))
+	}
+	return uitoa(uint64(n))
+}
+
+func uitoa(n uint64) string {
+	if n == 0 {
+		return "0"
+	}
+	var buf [20]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	return string(buf[i:])
+}
+
 // WSUpdate is a single field update dispatched to a sink.
 type WSUpdate struct {
 	ConID int
@@ -104,6 +142,8 @@ type WSConn struct {
 	mu   sync.Mutex
 	conn *websocket.Conn
 	subs map[*wsSub]struct{}
+
+	lastUpdated map[int]int64
 
 	out    chan []byte
 	stopCh chan struct{}
@@ -448,6 +488,25 @@ func (c *WSConn) dispatch(data []byte) {
 		return
 	}
 	conid := int(jsonNumberToInt64(num))
+
+	// Gap detection: check _updated sequence before reserved-field filtering.
+	if rawUpdated, ok := m["_updated"]; ok {
+		var seqNum json.Number
+		if json.Unmarshal(rawUpdated, &seqNum) == nil {
+			newSeq, _ := seqNum.Int64()
+			c.mu.Lock()
+			lastSeq, seen := c.lastUpdated[conid]
+			c.lastUpdated[conid] = newSeq
+			c.mu.Unlock()
+			if seen && newSeq < lastSeq {
+				gap := lastSeq - newSeq
+				if gap > 1 {
+					c.failAll(&WSGapError{Conid: conid, LastSeq: lastSeq, ReceivedSeq: newSeq})
+				}
+			}
+		}
+	}
+
 	updates := make([]WSUpdate, 0, len(m))
 	for k, v := range m {
 		if wsReservedField(k) {

@@ -82,6 +82,10 @@ func (s *Server) Recorder() *Recorder { return s.recorder }
 // Fixtures returns the fixture registry.
 func (s *Server) Fixtures() *Fixtures { return s.fixtures }
 
+// Hub returns the StreamHub for the mock gateway. Tests use it to inject
+// frames directly (e.g., to simulate gaps).
+func (s *Server) Hub() *StreamHub { return s.stream }
+
 // Scenario returns the fault-injection scenario.
 func (s *Server) Scenario() *Scenario { return s.scenario }
 
