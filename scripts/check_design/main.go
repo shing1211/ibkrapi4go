@@ -253,27 +253,31 @@ func checkManagerCounts(repoRoot string) error {
 
 	// For each manager, count actual exported methods in the corresponding Go file.
 	// Map manager names to their source files.
-	managerFiles := map[string]string{
-		"AccountManager":        "pkg/ibkr/account.go",
-		"PortfolioManager":      "pkg/ibkr/portfolio.go",
-		"TradeManager":          "pkg/ibkr/trade.go",
-		"MarketDataManager":     "pkg/ibkr/marketdata.go",
-		"TradingAccountManager": "pkg/ibkr/trading_accounts.go",
-		"AlertManager":          "pkg/ibkr/alerts.go",
-		"ForecastManager":       "pkg/ibkr/events.go",
-		"ScannerManager":        "pkg/ibkr/scanner.go",
-		"AllocationManager":     "pkg/ibkr/allocation.go",
-		"ModelManager":          "pkg/ibkr/models.go",
-		"FYIManager":            "pkg/ibkr/notifications.go",
-		"OAuthManager":          "pkg/ibkr/oauth1.go",
-		"WatchlistManager":      "pkg/ibkr/watchlists.go",
-		"PerformanceManager":    "pkg/ibkr/performance.go",
+	managerFiles := map[string][]string{
+		"AccountManager":        {"pkg/ibkr/account.go"},
+		"PortfolioManager":      {"pkg/ibkr/portfolio.go"},
+		"TradeManager":          {"pkg/ibkr/trade.go", "pkg/ibkr/contract.go"},
+		"MarketDataManager":     {"pkg/ibkr/marketdata.go", "pkg/ibkr/ws.go"},
+		"TradingAccountManager": {"pkg/ibkr/trading_accounts.go"},
+		"AlertManager":          {"pkg/ibkr/alerts.go"},
+		"ForecastManager":       {"pkg/ibkr/events.go"},
+		"ScannerManager":        {"pkg/ibkr/scanner.go"},
+		"AllocationManager":     {"pkg/ibkr/allocation.go"},
+		"ModelManager":          {"pkg/ibkr/models.go"},
+		"FYIManager":            {"pkg/ibkr/notifications.go"},
+		"OAuthManager":          {"pkg/ibkr/oauth1.go"},
+		"WatchlistManager":      {"pkg/ibkr/watchlists.go"},
+		"PerformanceManager":    {"pkg/ibkr/performance.go"},
 	}
 
-	for manager, file := range managerFiles {
-		actualCount, err := countManagerMethods(repoRoot, file, manager)
-		if err != nil {
-			continue // skip if file doesn't exist
+	for manager, files := range managerFiles {
+		actualCount := 0
+		for _, file := range files {
+			n, err := countManagerMethods(repoRoot, file, manager)
+			if err != nil {
+				continue // skip if file doesn't exist
+			}
+			actualCount += n
 		}
 
 		// Extract the documented count for this manager from the doc
@@ -307,41 +311,66 @@ func countManagerMethods(repoRoot, file, managerType string) (int, error) {
 	}
 
 	var count int
-	prefix := managerType + ")"
 	for _, decl := range parsed.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Recv == nil {
 			continue
 		}
-		// Get receiver type name
 		recv := fn.Recv.List[0].Type
+		var name string
 		switch t := recv.(type) {
 		case *ast.StarExpr:
-			if ident, ok := t.X.(*ast.Ident); ok && ident.Name == prefix {
-				if fn.Name.IsExported() {
-					count++
-				}
+			if ident, ok := t.X.(*ast.Ident); ok {
+				name = ident.Name
 			}
 		case *ast.Ident:
-			if t.Name == prefix {
-				if fn.Name.IsExported() {
-					count++
-				}
-			}
+			name = t.Name
+		}
+		if name == managerType && fn.Name.IsExported() {
+			count++
 		}
 	}
 	return count, nil
 }
 
 func extractDocCount(doc string, manager string) int {
-	// Match: | `ManagerName` | ... | N ops |
-	// Escape the manager name for use in regex (it contains no special chars but be safe)
 	escaped := strings.ReplaceAll(manager, "*", "\\*")
 	re := regexp.MustCompile(`\|` + escaped + `\|[^|]*\|\s*(\d+)\s*ops\|`)
 	m := re.FindStringSubmatch(doc)
-	if m == nil {
+	if m != nil {
+		n, _ := strconv.Atoi(m[1])
+		return n
+	}
+	// No "N ops" — count backtick-quoted method names in the table row.
+	// The manager is on a row like: | `Name` | scope | `Method1`, `Method2` |
+	// Find the row by looking for the manager name (with optional surrounding space)
+	// then extract the third pipe-delimited field.
+	backtick := "\x60"
+	pat := backtick + `\s*` + escaped + `\s*` + backtick
+	loc := regexp.MustCompile(pat).FindStringIndex(doc)
+	if loc == nil {
+		// Try: backtick + space + name
+		pat2 := backtick + `\s+` + escaped + `\s*` + backtick
+		loc = regexp.MustCompile(pat2).FindStringIndex(doc)
+	}
+	if loc == nil {
 		return 0
 	}
-	n, _ := strconv.Atoi(m[1])
-	return n
+	// Find the start of this row: go backward to the last | before loc[0]
+	rowStart := 0
+	for i := loc[0] - 1; i >= 0; i-- {
+		if doc[i] == '|' {
+			rowStart = i
+			break
+		}
+	}
+	// Find the end of the row: the next | after the third field
+	row := doc[rowStart:]
+	fields := strings.Split(row, "|")
+	if len(fields) < 4 {
+		return 0
+	}
+	methodCol := fields[3]
+	count := len(regexp.MustCompile(backtick + "[^" + backtick + "]+" + backtick).FindAllString(methodCol, -1))
+	return count
 }

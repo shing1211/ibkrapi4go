@@ -8,7 +8,7 @@ client and returns stable public types.
 | Manager | Scope | Methods (implemented) |
 |---------|-------|-----------------------|
 | `AccountManager` | accounts & summaries | `List`, `Summary`, `PnL` |
-| `PortfolioManager` | positions & ledger | `Accounts`, `Subaccounts`, `Positions`, `PositionsPaginated`, `Position`, `Ledger`, `Allocation`, `Summary`, `Meta`, `Invalidate`, `AllAccountsForConid`, `ManySubaccounts`, `ComboPositions`, `UncachedPositions` |
+| `PortfolioManager` | positions & ledger | `Accounts`, `Subaccounts`, `SubaccountsPager`, `Positions`, `PositionsPaginated`, `Position`, `Ledger`, `Allocation`, `Summary`, `Meta`, `Invalidate`, `AllAccountsForConid`, `ManySubaccounts`, `ComboPositions`, `UncachedPositions` |
 | `TradeManager` | orders & contracts | `Submit`, `Confirm`, `WhatIf`, `Modify`, `Cancel`, `OpenOrders`, `OrderStatus`, `Trades`, `SuppressOrderReplies`, `ResetOrderSuppression`, plus contract search/info ops (`SearchContracts`, `ContractInfo`, `ContractRules`, `Strikes`, `InfoAndRules`, `TradingSchedule`, `CurrencyPairs`, `ExchangeRates`, `BondFilters`, `AlgosByInstrument`, `SecDefInfos`, `ContractSymbolsFromBody`, `ConidsByExchange`, `FutureBySymbol`, `InstrumentDefinition`, `TradingScheduleBySymbol`, `StockBySymbol`) |
 | `MarketDataManager` | quotes, history & streaming | `Snapshot`, `History`, `Unsubscribe`, `UnsubscribeAll`, `Subscribe` |
 | `TradingAccountManager` | trading-account ops | 9 ops (owners, active/dynamic accounts, fund/balance/margin/market summaries) |
