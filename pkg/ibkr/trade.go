@@ -118,6 +118,7 @@ func (r *SubmitResult) Accepted() bool { return len(r.Replies) == 0 && r.OrderID
 
 // Order is a working or recently completed order.
 type Order struct {
+	ClientOrderID      string
 	OrderID           string
 	AccountID         AccountID
 	ConID             ConID
@@ -137,6 +138,7 @@ type Order struct {
 
 // OrderStatus is the status of a single order.
 type OrderStatus struct {
+	ClientOrderID     string
 	OrderID           string
 	Status            string
 	ConID             ConID
@@ -356,6 +358,7 @@ func (m *TradeManager) OpenOrders(ctx context.Context) ([]Order, error) {
 	out := make([]Order, 0, len(raw.Orders))
 	for _, o := range raw.Orders {
 		out = append(out, Order{
+			ClientOrderID:      rawToString(o, "cOID"),
 			OrderID:           rawToString(o, "orderId"),
 			AccountID:         AccountID(firstNonEmpty(rawToString(o, "account"), rawToString(o, "acct"))),
 			ConID:             ConID(jsonNumberToInt(jsonNumber(o["conid"]))),
@@ -390,6 +393,7 @@ func (m *TradeManager) OrderStatus(ctx context.Context, orderID string) (*OrderS
 		return nil, err
 	}
 	st := &OrderStatus{
+		ClientOrderID:     rawToString(raw, "cOID"),
 		OrderID:           firstNonEmpty(rawToString(raw, "order_id"), rawToString(raw, "orderId")),
 		Status:            firstNonEmpty(rawToString(raw, "order_status"), rawToString(raw, "status")),
 		ConID:             ConID(jsonNumberToInt(jsonNumber(raw["conid"]))),
