@@ -4,6 +4,7 @@
 package ibkr
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -128,8 +129,8 @@ type Subscription struct {
 	errs    chan error
 	dropped atomic.Int64
 
-	systemUpdates   chan SystemUpdate
-	accountUpdates  chan AccountUpdateEvent
+	systemUpdates    chan SystemUpdate
+	accountUpdates   chan AccountUpdateEvent
 	portfolioUpdates chan PortfolioEvent
 
 	closedCh chan struct{}
@@ -149,13 +150,13 @@ func newSubscription(conids []ConID, buffer int) *Subscription {
 		wants[int(c)] = struct{}{}
 	}
 	return &Subscription{
-		wants:          wants,
-		updates:        make(chan Update, buffer),
-		errs:           make(chan error, buffer),
-		systemUpdates:  make(chan SystemUpdate, buffer),
-		accountUpdates: make(chan AccountUpdateEvent, buffer),
+		wants:            wants,
+		updates:          make(chan Update, buffer),
+		errs:             make(chan error, buffer),
+		systemUpdates:    make(chan SystemUpdate, buffer),
+		accountUpdates:   make(chan AccountUpdateEvent, buffer),
 		portfolioUpdates: make(chan PortfolioEvent, buffer),
-		closedCh:       make(chan struct{}),
+		closedCh:         make(chan struct{}),
 	}
 }
 
@@ -268,6 +269,7 @@ func (s *Subscription) DeliverSystem(frame internal.WSSystemFrame) {
 		Payload:  frame.Payload,
 		Received: received,
 	}
+	var portfolioEvents []PortfolioEvent
 	switch frame.Type {
 	case "sor":
 		up.OrderEvent = parseOrderEvent(frame.Payload, received)
@@ -278,7 +280,10 @@ func (s *Subscription) DeliverSystem(frame internal.WSSystemFrame) {
 	case "acq":
 		up.AccountUpdateEvent = parseAccountUpdateEvent(frame.Payload, received)
 	case "pos":
-		up.PortfolioEvent = parsePortfolioEvent(frame.Payload, received)
+		portfolioEvents = parsePortfolioEvents(frame.Payload, received)
+		if len(portfolioEvents) > 0 {
+			up.PortfolioEvent = &portfolioEvents[0]
+		}
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -295,9 +300,9 @@ func (s *Subscription) DeliverSystem(frame internal.WSSystemFrame) {
 		default:
 		}
 	}
-	if up.PortfolioEvent != nil {
+	for _, pe := range portfolioEvents {
 		select {
-		case s.portfolioUpdates <- *up.PortfolioEvent:
+		case s.portfolioUpdates <- pe:
 		default:
 		}
 	}
@@ -366,6 +371,70 @@ func (m *MarketDataManager) Subscribe(ctx context.Context, conids []ConID, field
 		}
 	}()
 	return sub, nil
+}
+
+// subscribeChannel opens a non-conid (channel/push) stream subscription using
+// the given gateway method (for example "account" or "portfolio"). Account and
+// portfolio frames are delivered on the returned Subscription's typed channels.
+func (c *Client) subscribeChannel(ctx context.Context, op, method string, fields []Field) (*Subscription, error) {
+	if err := c.checkOpen(); err != nil {
+		return nil, err
+	}
+	lim := c.cfg.streamingLimits
+	if len(fields) > lim.MaxFieldsPerRequest {
+		return nil, &Error{Op: op, Code: "streaming_limit",
+			Message: fmt.Sprintf("fields exceed limit %d", lim.MaxFieldsPerRequest), Err: ErrStreamingLimit}
+	}
+
+	conn, err := c.ensureWS(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if conn.ActiveSubscriptions() >= lim.MaxSubscriptions {
+		return nil, &Error{Op: op, Code: "streaming_limit",
+			Message: fmt.Sprintf("max subscriptions %d reached", lim.MaxSubscriptions), Err: ErrStreamingLimit}
+	}
+
+	sub := newSubscription(nil, lim.BufferSize)
+	subCtx, cancel := context.WithCancel(ctx)
+	sub.cancel = cancel
+
+	strFields := make([]string, len(fields))
+	for i, f := range fields {
+		strFields[i] = string(f)
+	}
+
+	handle, err := conn.SubscribeStream(subCtx, sub, sub, method, strFields)
+	if err != nil {
+		cancel()
+		_ = sub.Close()
+		return nil, &Error{Op: op, Message: err.Error(), Err: err}
+	}
+	sub.handle = handle
+
+	go func() {
+		defer func() {
+			_ = recover()
+		}()
+		select {
+		case <-subCtx.Done():
+			_ = sub.Close()
+		case <-sub.closedCh:
+		}
+	}()
+	return sub, nil
+}
+
+// SubscribeAccount opens an account value streaming subscription. Updates are
+// delivered on Subscription.AccountUpdates; connection notices on Errors.
+func (m *AccountManager) SubscribeAccount(ctx context.Context, fields []Field) (*Subscription, error) {
+	return m.client.subscribeChannel(ctx, "Account.SubscribeAccount", "account", fields)
+}
+
+// SubscribePortfolio opens a portfolio (position) streaming subscription.
+// Updates are delivered on Subscription.PortfolioUpdates.
+func (m *PortfolioManager) SubscribePortfolio(ctx context.Context, fields []Field) (*Subscription, error) {
+	return m.client.subscribeChannel(ctx, "Portfolio.SubscribePortfolio", "portfolio", fields)
 }
 
 // ensureWS lazily dials and caches the multiplexed WebSocket connection.
@@ -515,35 +584,54 @@ func parseAccountUpdateEvent(payload []byte, received time.Time) *AccountUpdateE
 	return e
 }
 
-// parsePortfolioEvent parses the raw JSON payload of a "pos" frame.
-func parsePortfolioEvent(payload []byte, received time.Time) *PortfolioEvent {
-	var raw struct {
+// parsePortfolioEvents parses the raw JSON payload of a "pos" frame. The payload
+// may be a single position object or an array of position objects.
+func parsePortfolioEvents(payload []byte, received time.Time) []PortfolioEvent {
+	type posRaw struct {
 		Conid         *int64  `json:"conid"`
 		Position      *string `json:"pos"`
 		AvgCost       *string `json:"avgCost"`
 		MarketValue   *string `json:"mktVal"`
 		UnrealizedPNL *string `json:"unrealizedPnl"`
 	}
-	if err := json.Unmarshal(payload, &raw); err != nil {
+	convert := func(raw posRaw) PortfolioEvent {
+		e := PortfolioEvent{Received: received}
+		if raw.Conid != nil {
+			e.Conid = *raw.Conid
+		}
+		if raw.Position != nil {
+			e.Position = *raw.Position
+		}
+		if raw.AvgCost != nil {
+			e.AvgCost = *raw.AvgCost
+		}
+		if raw.MarketValue != nil {
+			e.MarketValue = *raw.MarketValue
+		}
+		if raw.UnrealizedPNL != nil {
+			e.UnrealizedPNL = *raw.UnrealizedPNL
+		}
+		return e
+	}
+
+	trimmed := bytes.TrimSpace(payload)
+	if len(trimmed) > 0 && trimmed[0] == '[' {
+		var raws []posRaw
+		if err := json.Unmarshal(trimmed, &raws); err != nil {
+			return nil
+		}
+		out := make([]PortfolioEvent, 0, len(raws))
+		for _, r := range raws {
+			out = append(out, convert(r))
+		}
+		return out
+	}
+
+	var raw posRaw
+	if err := json.Unmarshal(trimmed, &raw); err != nil {
 		return nil
 	}
-	e := &PortfolioEvent{Received: received}
-	if raw.Conid != nil {
-		e.Conid = *raw.Conid
-	}
-	if raw.Position != nil {
-		e.Position = *raw.Position
-	}
-	if raw.AvgCost != nil {
-		e.AvgCost = *raw.AvgCost
-	}
-	if raw.MarketValue != nil {
-		e.MarketValue = *raw.MarketValue
-	}
-	if raw.UnrealizedPNL != nil {
-		e.UnrealizedPNL = *raw.UnrealizedPNL
-	}
-	return e
+	return []PortfolioEvent{convert(raw)}
 }
 
 // parseMarketDataStatusString parses the string value of field 6509 into a MarketDataStatus.

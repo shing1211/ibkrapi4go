@@ -323,8 +323,14 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 		case streamOpUnsubscribe:
 			sc.unsubscribe(conids)
 		case streamOpAccount:
+			if s.stream.script.DropFirstConnection && sc.ordinal == 1 {
+				return
+			}
 			s.handleAccountSubscribe(sc, fields)
 		case streamOpPortfolio:
+			if s.stream.script.DropFirstConnection && sc.ordinal == 1 {
+				return
+			}
 			s.handlePortfolioSubscribe(sc, fields)
 		}
 	}
@@ -375,11 +381,11 @@ func (s *Server) handleAccountSubscribe(sc *streamConn, fields []string) {
 		_ = sc.sendFrame(StatusFrame("connected"))
 	}
 	accountPayload := map[string]any{
-		"account":       "U123456",
-		"net":           "50000",
-		"cash":          "45000",
-		"equity":        "45000",
-		"maintmargin":   "10000",
+		"account":     "U123456",
+		"net":         "50000",
+		"cash":        "45000",
+		"equity":      "45000",
+		"maintmargin": "10000",
 	}
 	_ = sc.sendFrame(AccountFrame(accountPayload))
 }

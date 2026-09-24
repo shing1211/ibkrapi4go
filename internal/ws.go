@@ -129,6 +129,7 @@ type WSHandle struct {
 type wsSub struct {
 	sink       WSSink
 	systemSink WSSystemSink
+	method     string
 	conids     []int
 	fields     []string
 }
@@ -226,7 +227,7 @@ func (c *WSConn) Subscribe(ctx context.Context, sink WSSink, systemSink WSSystem
 	if c.closed.Load() {
 		return nil, ErrClosed
 	}
-	s := &wsSub{sink: sink, systemSink: systemSink, conids: conids, fields: fields}
+	s := &wsSub{sink: sink, systemSink: systemSink, method: "subscribe", conids: conids, fields: fields}
 	c.mu.Lock()
 	c.subs[s] = struct{}{}
 	c.mu.Unlock()
@@ -241,6 +242,31 @@ func (c *WSConn) Subscribe(ctx context.Context, sink WSSink, systemSink WSSystem
 	return &WSHandle{conn: c, sub: s}, nil
 }
 
+// SubscribeStream registers a non-market-data subscription (for example
+// "account" or "portfolio") and sends the corresponding subscribe frame. It is
+// used for channel/push streams that are not keyed by conid.
+func (c *WSConn) SubscribeStream(ctx context.Context, sink WSSink, systemSink WSSystemSink, method string, fields []string) (*WSHandle, error) {
+	if c.closed.Load() {
+		return nil, ErrClosed
+	}
+	if method == "" {
+		method = "subscribe"
+	}
+	s := &wsSub{sink: sink, systemSink: systemSink, method: method, fields: fields}
+	c.mu.Lock()
+	c.subs[s] = struct{}{}
+	c.mu.Unlock()
+	setGauge(c.ctx, c.opts.Metrics, MetricWSActiveSubscriptions, float64(c.ActiveSubscriptions()))
+	if err := c.send(ctx, method, subscribeParams(s)); err != nil {
+		c.mu.Lock()
+		delete(c.subs, s)
+		c.mu.Unlock()
+		return nil, err
+	}
+	c.opts.Telemetry.OnWSSubscribe(ctx, WSSubInfo{Event: method, Fields: fields})
+	return &WSHandle{conn: c, sub: s}, nil
+}
+
 // Close unsubscribes and removes the handle. It is idempotent.
 func (h *WSHandle) Close() error {
 	h.once.Do(func() {
@@ -249,7 +275,7 @@ func (h *WSHandle) Close() error {
 		h.conn.mu.Unlock()
 		setGauge(h.conn.ctx, h.conn.opts.Metrics, MetricWSActiveSubscriptions, float64(h.conn.ActiveSubscriptions()))
 		h.conn.opts.Telemetry.OnWSUnsubscribe(context.Background(), WSSubInfo{Event: "unsubscribe", ConIDs: h.sub.conids})
-		_ = h.conn.send(context.Background(), "unsubscribe", map[string]any{"conids": h.sub.conids})
+		_ = h.conn.send(context.Background(), "unsubscribe", subscribeParams(h.sub))
 	})
 	return nil
 }
@@ -374,7 +400,11 @@ func (c *WSConn) reconnect(attempt *int) error {
 
 func (c *WSConn) resubscribeAll() {
 	for _, s := range c.snapshotSubs() {
-		_ = c.send(c.ctx, "subscribe", subscribeParams(s))
+		method := s.method
+		if method == "" {
+			method = "subscribe"
+		}
+		_ = c.send(c.ctx, method, subscribeParams(s))
 	}
 }
 
@@ -578,6 +608,14 @@ func parseSystemFrame(m map[string]json.RawMessage) *WSSystemFrame {
 		frame.Type = "usr"
 		frame.Payload = m["usr"]
 		return &frame
+	case m["acq"] != nil:
+		frame.Type = "acq"
+		frame.Payload = m["acq"]
+		return &frame
+	case m["pos"] != nil:
+		frame.Type = "pos"
+		frame.Payload = m["pos"]
+		return &frame
 	default:
 		return nil
 	}
@@ -614,7 +652,10 @@ func (c *WSConn) notifyReconnect() {
 }
 
 func subscribeParams(s *wsSub) map[string]any {
-	params := map[string]any{"conids": s.conids}
+	params := map[string]any{}
+	if len(s.conids) > 0 {
+		params["conids"] = s.conids
+	}
 	if len(s.fields) > 0 {
 		params["fields"] = s.fields
 	}
