@@ -5,6 +5,7 @@ package ibkr
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -48,6 +49,14 @@ type SystemUpdate struct {
 	Topic string
 	// Payload is the raw JSON payload for "ntf", "sor", or "usr" frames.
 	Payload []byte
+
+	// Typed payloads — populated when parsing succeeds, nil on failure.
+	// Consumers should check the Type field first, then access the
+	// corresponding typed field.
+	OrderEvent        *OrderEvent
+	NotificationEvent *NotificationEvent
+	UserMessageEvent  *UserMessageEvent
+
 	// Received is when the client received the update.
 	Received time.Time
 }
@@ -227,12 +236,21 @@ func (s *Subscription) WantsSystem() bool {
 
 // DeliverSystem implements internal.WSSystemSink.
 func (s *Subscription) DeliverSystem(frame internal.WSSystemFrame) {
+	received := time.Now()
 	up := SystemUpdate{
 		Type:     SystemUpdateType(frame.Type),
 		Status:   frame.Status,
 		Topic:    frame.Topic,
 		Payload:  frame.Payload,
-		Received: time.Now(),
+		Received: received,
+	}
+	switch frame.Type {
+	case "sor":
+		up.OrderEvent = parseOrderEvent(frame.Payload, received)
+	case "ntf":
+		up.NotificationEvent = parseNotificationEvent(frame.Topic, frame.Payload, received)
+	case "usr":
+		up.UserMessageEvent = parseUserMessageEvent(frame.Payload, received)
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -331,4 +349,97 @@ func (c *Client) ensureWS(ctx context.Context) (*internal.WSConn, error) {
 	}
 	c.ws = conn
 	return conn, nil
+}
+
+// parseOrderEvent parses the raw JSON payload of a "sor" frame into an OrderEvent.
+func parseOrderEvent(payload []byte, received time.Time) *OrderEvent {
+	var raw struct {
+		Conid         *int64  `json:"conid"`
+		OrderId       *int64  `json:"order_id"`
+		ClientOrderID *string `json:"cOID"`
+		Account       *string `json:"account"`
+		OrderStatus   *string `json:"order_status"`
+		Side          *string `json:"side"`
+		OrderType     *string `json:"order_type"`
+		Tif           *string `json:"tif"`
+		Size          *string `json:"size"`
+		CumFill       *string `json:"cum_fill"`
+		AveragePrice  *string `json:"average_price"`
+		TotalSize     *string `json:"total_size"`
+		OrderTime     *string `json:"order_time"`
+	}
+	if err := json.Unmarshal(payload, &raw); err != nil {
+		return nil
+	}
+	e := &OrderEvent{Received: received}
+	if raw.Conid != nil {
+		e.Conid = *raw.Conid
+	}
+	if raw.OrderId != nil {
+		e.OrderID = *raw.OrderId
+	}
+	if raw.ClientOrderID != nil {
+		e.ClientOrderID = *raw.ClientOrderID
+	}
+	if raw.Account != nil {
+		e.Account = *raw.Account
+	}
+	if raw.OrderStatus != nil {
+		e.Status = WSOrderStatus(*raw.OrderStatus)
+	}
+	if raw.Side != nil {
+		e.Side = *raw.Side
+	}
+	if raw.OrderType != nil {
+		e.OrderType = *raw.OrderType
+	}
+	if raw.Tif != nil {
+		e.TIF = *raw.Tif
+	}
+	if raw.Size != nil {
+		e.Size = *raw.Size
+	}
+	if raw.CumFill != nil {
+		e.CumFill = *raw.CumFill
+	}
+	if raw.AveragePrice != nil {
+		e.AveragePrice = *raw.AveragePrice
+	}
+	if raw.TotalSize != nil {
+		e.TotalSize = *raw.TotalSize
+	}
+	if raw.OrderTime != nil {
+		e.OrderTime = *raw.OrderTime
+	}
+	return e
+}
+
+// parseNotificationEvent parses the raw JSON payload of an "ntf" frame.
+func parseNotificationEvent(topic string, payload []byte, received time.Time) *NotificationEvent {
+	var raw struct {
+		Message *string `json:"message"`
+	}
+	if err := json.Unmarshal(payload, &raw); err != nil {
+		return &NotificationEvent{Topic: topic, Received: received}
+	}
+	e := &NotificationEvent{Topic: topic, Received: received}
+	if raw.Message != nil {
+		e.Message = *raw.Message
+	}
+	return e
+}
+
+// parseUserMessageEvent parses the raw JSON payload of a "usr" frame.
+func parseUserMessageEvent(payload []byte, received time.Time) *UserMessageEvent {
+	var raw struct {
+		Message *string `json:"message"`
+	}
+	if err := json.Unmarshal(payload, &raw); err != nil {
+		return nil
+	}
+	e := &UserMessageEvent{Received: received}
+	if raw.Message != nil {
+		e.Message = *raw.Message
+	}
+	return e
 }

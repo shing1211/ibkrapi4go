@@ -265,3 +265,81 @@ func TestWS_SystemUpdates(t *testing.T) {
 		t.Error("SystemUpdates channel not closed after Close")
 	}
 }
+
+func TestParseOrderEvent(t *testing.T) {
+	payload := []byte(`{
+		"conid": 12345,
+		"order_id": 999,
+		"cOID": "my-order-1",
+		"account": "AB1234",
+		"order_status": "Filled",
+		"side": "BUY",
+		"order_type": "LMT",
+		"tif": "DAY",
+		"size": "0",
+		"cum_fill": "100",
+		"average_price": "150.50",
+		"total_size": "100",
+		"order_time": "260924120000"
+	}`)
+	received := time.Now()
+	e := parseOrderEvent(payload, received)
+
+	if e.Conid != 12345 {
+		t.Errorf("Conid = %d; want 12345", e.Conid)
+	}
+	if e.OrderID != 999 {
+		t.Errorf("OrderID = %d; want 999", e.OrderID)
+	}
+	if e.ClientOrderID != "my-order-1" {
+		t.Errorf("ClientOrderID = %q; want my-order-1", e.ClientOrderID)
+	}
+	if e.Status != WSOrderStatusFilled {
+		t.Errorf("Status = %q; want Filled", e.Status)
+	}
+	if e.CumFill != "100" {
+		t.Errorf("CumFill = %q; want 100", e.CumFill)
+	}
+	if e.AveragePrice != "150.50" {
+		t.Errorf("AveragePrice = %q; want 150.50", e.AveragePrice)
+	}
+	if !e.Received.Equal(received) {
+		t.Errorf("Received = %v; want %v", e.Received, received)
+	}
+}
+
+func TestParseOrderEventMalformed(t *testing.T) {
+	e := parseOrderEvent([]byte("not json{"), time.Now())
+	if e != nil {
+		t.Error("expected nil on malformed JSON")
+	}
+}
+
+func TestParseNotificationEvent(t *testing.T) {
+	payload := []byte(`{"message": "order filled"}`)
+	e := parseNotificationEvent("topic1", payload, time.Now())
+	if e.Topic != "topic1" {
+		t.Errorf("Topic = %q; want topic1", e.Topic)
+	}
+	if e.Message != "order filled" {
+		t.Errorf("Message = %q; want 'order filled'", e.Message)
+	}
+}
+
+func TestParseUserMessageEvent(t *testing.T) {
+	payload := []byte(`{"message": "hello"}`)
+	e := parseUserMessageEvent(payload, time.Now())
+	if e == nil {
+		t.Fatal("expected non-nil")
+	}
+	if e.Message != "hello" {
+		t.Errorf("Message = %q; want 'hello'", e.Message)
+	}
+}
+
+func TestParseUserMessageEventMalformed(t *testing.T) {
+	e := parseUserMessageEvent([]byte("not json"), time.Now())
+	if e != nil {
+		t.Error("expected nil on malformed JSON")
+	}
+}
