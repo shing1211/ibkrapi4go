@@ -41,9 +41,15 @@ jobs:
           draft: false
 
       - name: Push to Gitee
-        if: ${{ secrets.GITEE_TOKEN != '' }}
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_REPO: ${{ vars.GITEE_REPO }}
         run: |
-          git remote add gitee "https://${GITEE_TOKEN}@gitee.com/shing1211/ibkrapi4go.git"
+          GITEE_REPO="${GITEE_REPO:-shing1211/ibkrapi4go}"
+          if [ -z "$GITEE_TOKEN" ]; then
+            echo "GITEE_TOKEN is not configured; skipping authenticated Gitee mirror."
+            exit 0
+          fi
+          git remote remove gitee 2>/dev/null || true
+          git remote add gitee "https://${GITEE_TOKEN}@gitee.com/${GITEE_REPO}.git"
           git push gitee HEAD:main --tags

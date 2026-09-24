@@ -371,6 +371,6 @@ func extractDocCount(doc string, manager string) int {
 		return 0
 	}
 	methodCol := fields[3]
-	count := len(regexp.MustCompile(backtick + "[^" + backtick + "]+" + backtick).FindAllString(methodCol, -1))
+	count := len(regexp.MustCompile(backtick+"[^"+backtick+"]+"+backtick).FindAllString(methodCol, -1))
 	return count
 }
