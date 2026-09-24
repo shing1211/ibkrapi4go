@@ -10,13 +10,13 @@ Statuses: `todo` · `doing` · `blocked` · `review` · `done`
 
 | ID | Task | Role | Status | Depends On | Size | Acceptance |
 |----|------|------|--------|-----------|------|-----------|
-| A1 | Fix broken build (`examples/mock` duplicate `main`/`defaultGatewayURL`) | backend | todo | — | S | `go build ./...` exits 0 |
-| A2 | Fix `check_money.py` regex + scan `client/`/`internal/` | backend | todo | — | M | detects scalar/map/pointer float money |
-| A3 | Fix money precision leaks (`rest_banking.go`, `rest.go`, `CashBalance`) | backend | todo | A2 | M | money/qty never cast to float32 |
-| A4 | Fix timeout body-cancellation (`internal/transport.go:138`) | backend | todo | — | S | large body read succeeds |
-| A5 | Bound success-response sizes | backend | todo | — | M | oversized response → typed error |
-| A6 | Harden redaction (bearer/`sess`/csrf/form secrets) | security | todo | — | S | secrets masked on all paths |
-| A7 | Sanitize `Error.Message` at construction | security | todo | — | S | user-visible message redacted |
+ | A1 | Fix broken build (`examples/mock` duplicate `main`/`defaultGatewayURL`) | backend | done | — | S | `go build ./...` exits 0 |
+| A2 | Fix `check_money.py` regex + scan `client/`/`internal/` | backend | done | — | M | detects scalar/map/pointer float money |
+| A3 | Fix money precision leaks (`rest_banking.go`, `rest.go`, `CashBalance`) | backend | done | A2 | M | money/qty never cast to float32 |
+| A4 | Fix timeout body-cancellation (`internal/transport.go:138`) | backend | done | — | S | large body read succeeds |
+| A5 | Bound success-response sizes | backend | done | — | M | oversized response → typed error |
+| A6 | Harden redaction (bearer/`sess`/csrf/form secrets) | security | done | — | S | secrets masked on all paths |
+| A7 | Sanitize `Error.Message` at construction | security | done | — | S | user-visible message redacted |
 
 ## Phase B — CI/CD & Release
 
@@ -60,8 +60,8 @@ Statuses: `todo` · `doing` · `blocked` · `review` · `done`
 
 | ID | Task | Role | Status | Depends On | Size | Acceptance |
 |----|------|------|--------|-----------|------|-----------|
-| E1 | Fix version/spec drift (doc.go, README×6, SPEC, ROADMAP) | docs | todo | — | S | v1.0.1 / spec v2.40.0 |
-| E2 | Fix wrong error docs | docs | todo | — | S | ERRORS.md matches code |
+| E1 | Fix version/spec drift (doc.go, README×6, SPEC, ROADMAP) | docs | done | — | S | v1.0.1 / spec v2.40.0 |
+| E2 | Fix wrong error docs | docs | done | — | S | ERRORS.md matches code |
 | E3 | Fix `scripts/check_design/main.go` | backend | todo | — | S/M | fails on real drift |
 | E4 | Remove leaking `CreateSessionRaw` | backend | todo | — | S | no generated type in public sig |
 | E5 | Add `docs/GATEWAY-SETUP.md` + `docs/PERMISSIONS.md` | docs | todo | — | S | linked from README |
