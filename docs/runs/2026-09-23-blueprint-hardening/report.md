@@ -4,7 +4,7 @@
 - **Mode:** BUILD
 - **Base commit:** `96d7d75`
 - **Feature commit:** `34055b2`
-- **Close-out commit:** see the commit that adds this report
+- **Close-out commit:** `15bb42b`
 - **Status:** complete
 
 ## Summary
