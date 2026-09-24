@@ -7,9 +7,11 @@ import (
 	"context"
 	"testing"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/trace"
 
 	ibkr "github.com/shing1211/ibkrapi4go/pkg/ibkr"
 )
@@ -165,4 +167,49 @@ func TestOTelMetrics_ConcurrentSafety(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		<-done
 	}
+}
+
+func testTracer(t *testing.T) trace.Tracer {
+	t.Helper()
+	return otel.Tracer("test")
+}
+
+func TestOTelTracing_InterfaceSatisfaction(t *testing.T) {
+	tracer := testTracer(t)
+	tracing := NewTracing(tracer)
+	var _ ibkr.Telemetry = tracing
+}
+
+func TestOTelTracing_NopTracerNoPanic(t *testing.T) {
+	tracing := NewTracing(nil)
+	ctx := context.Background()
+
+	tracing.OnWSConnect(ctx, ibkr.WSConnInfo{Event: "connect", URL: "localhost:5000", Subscriptions: 0})
+	tracing.OnWSDisconnect(ctx, ibkr.WSConnInfo{Event: "disconnect", URL: "localhost:5000", Subscriptions: 1})
+	tracing.OnWSSubscribe(ctx, ibkr.WSSubInfo{Event: "subscribe", ConIDs: []int{1234}, Fields: []string{"55"}})
+	tracing.OnWSUnsubscribe(ctx, ibkr.WSSubInfo{Event: "unsubscribe", ConIDs: []int{1234}})
+	tracing.OnOrderSubmit(ctx, ibkr.OrderEventInfo{Event: "submit", AccountID: "A1", ClientOrderID: "C123", ConID: 1234})
+	tracing.OnOrderUpdate(ctx, ibkr.OrderEventInfo{Event: "fill", OrderID: "O1", AccountID: "A1"})
+}
+
+func TestOTelTracing_RealTracerNoPanic(t *testing.T) {
+	tracer := testTracer(t)
+	tracing := NewTracing(tracer)
+	ctx := context.Background()
+
+	tracing.OnWSConnect(ctx, ibkr.WSConnInfo{Event: "connect", URL: "localhost:5000", Subscriptions: 0})
+	tracing.OnWSDisconnect(ctx, ibkr.WSConnInfo{Event: "disconnect", URL: "localhost:5000", Subscriptions: 1})
+	tracing.OnWSSubscribe(ctx, ibkr.WSSubInfo{Event: "subscribe", ConIDs: []int{1234}, Fields: []string{"55"}})
+	tracing.OnWSUnsubscribe(ctx, ibkr.WSSubInfo{Event: "unsubscribe", ConIDs: []int{1234}})
+	tracing.OnOrderSubmit(ctx, ibkr.OrderEventInfo{Event: "submit", AccountID: "A1", ClientOrderID: "C123", ConID: 1234})
+	tracing.OnOrderUpdate(ctx, ibkr.OrderEventInfo{Event: "fill", OrderID: "O1", AccountID: "A1"})
+}
+
+func TestTraceMetrics_New(t *testing.T) {
+	meter, _ := testMeter(t)
+	tracer := testTracer(t)
+	tm := NewTraceMetrics(meter, tracer)
+
+	var _ ibkr.Metrics = tm
+	var _ ibkr.Telemetry = tm
 }

@@ -148,6 +148,14 @@ func (m *TradeManager) Submit(ctx context.Context, account AccountID, req OrderR
 	if err != nil {
 		return nil, &Error{Op: op, Message: "encode request: " + err.Error(), Err: err}
 	}
+	if sink := m.client.telemetrySink(); sink != nil {
+		sink.OnOrderSubmit(ctx, internal.OrderEventInfo{
+			Event:         "submit",
+			AccountID:     string(account),
+			ClientOrderID: req.ClientOrderID,
+			ConID:         int(req.ConID),
+		})
+	}
 	resp, err := m.mutate(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.SubmitNewOrderWithBody(ctx, string(account),
 			"application/json", bytes.NewReader(body))

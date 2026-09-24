@@ -78,6 +78,7 @@ type WSOptions struct {
 	ReconnectMax  time.Duration
 	Clock         *Clock
 	DialWS        DialWSFunc
+	Telemetry     Telemetry
 }
 
 // WSHandle is a registered subscription on a WSConn.
@@ -146,6 +147,9 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 			return conn, err
 		}
 	}
+	if opts.Telemetry == nil {
+		opts.Telemetry = NopTelemetry()
+	}
 	c := &WSConn{
 		wsURL:  wsURL,
 		opts:   opts,
@@ -159,6 +163,7 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 		return nil, err
 	}
 	incrCounter(ctx, c.opts.Metrics, MetricWSConnects, 1)
+	c.opts.Telemetry.OnWSConnect(ctx, WSConnInfo{Event: "connect", URL: c.wsURL, Subscriptions: 0})
 	c.wg.Add(3)
 	go c.wgDoneWrapper(c.readLoop)
 	go c.wgDoneWrapper(c.writeLoop)
@@ -192,6 +197,7 @@ func (c *WSConn) Subscribe(ctx context.Context, sink WSSink, systemSink WSSystem
 		c.mu.Unlock()
 		return nil, err
 	}
+	c.opts.Telemetry.OnWSSubscribe(ctx, WSSubInfo{Event: "subscribe", ConIDs: conids, Fields: fields})
 	return &WSHandle{conn: c, sub: s}, nil
 }
 
@@ -202,6 +208,7 @@ func (h *WSHandle) Close() error {
 		delete(h.conn.subs, h.sub)
 		h.conn.mu.Unlock()
 		setGauge(h.conn.ctx, h.conn.opts.Metrics, MetricWSActiveSubscriptions, float64(h.conn.ActiveSubscriptions()))
+		h.conn.opts.Telemetry.OnWSUnsubscribe(context.Background(), WSSubInfo{Event: "unsubscribe", ConIDs: h.sub.conids})
 		_ = h.conn.send(context.Background(), "unsubscribe", map[string]any{"conids": h.sub.conids})
 	})
 	return nil
@@ -220,6 +227,7 @@ func (c *WSConn) Close() error {
 	if c.closed.Swap(true) {
 		return nil
 	}
+	c.opts.Telemetry.OnWSDisconnect(c.ctx, WSConnInfo{Event: "disconnect", URL: c.wsURL, Subscriptions: c.ActiveSubscriptions()})
 	close(c.stopCh)
 	c.mu.Lock()
 	conn := c.conn
@@ -319,6 +327,7 @@ func (c *WSConn) reconnect(attempt *int) error {
 		*attempt = 0
 		c.notifyReconnect()
 		c.resubscribeAll()
+		c.opts.Telemetry.OnWSConnect(c.ctx, WSConnInfo{Event: "reconnect", URL: c.wsURL, Subscriptions: c.ActiveSubscriptions()})
 		return nil
 	}
 }

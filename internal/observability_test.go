@@ -33,6 +33,13 @@ func (t *recordingTelemetry) OnRequestEnd(ctx context.Context, info RequestInfo,
 	t.resp = resp
 }
 
+func (t *recordingTelemetry) OnWSConnect(context.Context, WSConnInfo)                         {}
+func (t *recordingTelemetry) OnWSDisconnect(context.Context, WSConnInfo)                     {}
+func (t *recordingTelemetry) OnWSSubscribe(context.Context, WSSubInfo)                      {}
+func (t *recordingTelemetry) OnWSUnsubscribe(context.Context, WSSubInfo)                   {}
+func (t *recordingTelemetry) OnOrderSubmit(context.Context, OrderEventInfo)                  {}
+func (t *recordingTelemetry) OnOrderUpdate(context.Context, OrderEventInfo)                  {}
+
 func newBufferLogger(buf *bytes.Buffer) *slog.Logger {
 	return slog.New(slog.NewTextHandler(buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 }

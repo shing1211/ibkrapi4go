@@ -193,6 +193,18 @@ type RequestInfo = internal.RequestInfo
 // ResponseInfo describes a request outcome for telemetry.
 type ResponseInfo = internal.ResponseInfo
 
+// SpanContext carries trace context across the API boundary.
+type SpanContext = internal.SpanContext
+
+// WSConnInfo describes a WebSocket connection event.
+type WSConnInfo = internal.WSConnInfo
+
+// WSSubInfo describes a subscription change.
+type WSSubInfo = internal.WSSubInfo
+
+// OrderEventInfo describes an order lifecycle event.
+type OrderEventInfo = internal.OrderEventInfo
+
 // WithTelemetry installs telemetry hooks invoked around each HTTP request.
 func WithTelemetry(t Telemetry) Option {
 	return func(c *config) error {
@@ -568,6 +580,9 @@ func (c *Client) checkOpen() error {
 // metricsSink returns the configured metrics sink, or nil when metrics are
 // disabled.
 func (c *Client) metricsSink() internal.Metrics { return c.cfg.metrics }
+
+// telemetrySink returns the configured telemetry sink, or nil when disabled.
+func (c *Client) telemetrySink() internal.Telemetry { return c.cfg.telemetry }
 
 // errorFrom maps a non-2xx response to *Error, tagging it with op.
 func (c *Client) errorFrom(resp *http.Response, op string) *Error {
