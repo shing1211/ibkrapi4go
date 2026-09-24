@@ -253,7 +253,7 @@ Exit criteria:
 The feature roadmap is complete: all 185 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.0.4`**.
+**`v1.0.5`**.
 
 A follow-up hardening run (2026-09-23) tightened correctness/security, made the
 CI gates real, and closed the remaining feature gaps — order state machine,
@@ -273,7 +273,8 @@ OAuth2 token-refresh API, a unified streaming event API, and spec drift watch)
 is proposed in the latest
 [`next-phase.md`](./runs/2026-09-24-ws-shutdown/next-phase.md). The WebSocket
 shutdown regression and the `money-check` scope cleanup shipped in `v1.0.4`;
-see the [`ws-shutdown` run](./runs/2026-09-24-ws-shutdown/report.md). See
+the `v1.0.5` patch also fixes the release workflow's detached-tag Gitee mirror.
+See the [`ws-shutdown` run](./runs/2026-09-24-ws-shutdown/report.md). See
 individual run reports in [docs/runs/](./runs/index.md) (current) and the
 archived [`runs index`](./archive/runs/index.md).
 

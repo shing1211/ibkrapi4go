@@ -55,7 +55,7 @@
 | 指標 + 日誌 | ✅ 已實作（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 品質閘道（覆蓋率、預提交） | ✅ 已實作 |
 | 文件網站 + Discussions | ✅ 已實作（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| 發佈 | ✅ v1.0.4（GitHub + Gitee） |
+| 發佈 | ✅ v1.0.5（GitHub + Gitee） |
 
 目前倉庫包含**產生的 OpenAPI 用戶端**、文件與程式碼產生工具。全部 185 個 API
 操作已實作。建置計畫見 [docs/ROADMAP.md](./docs/ROADMAP.md)。

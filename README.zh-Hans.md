@@ -55,7 +55,7 @@
 | 指标 + 日志 | ✅ 已实现（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 质量门禁（覆盖率、预提交） | ✅ 已实现 |
 | 文档网站 + Discussions | ✅ 已实现（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| 发布 | ✅ v1.0.4（GitHub + Gitee） |
+| 发布 | ✅ v1.0.5（GitHub + Gitee） |
 
 当前仓库包含**生成的 OpenAPI 客户端**、文档与代码生成工具。全部 185 个 API
 操作已实现。构建计划见 [docs/ROADMAP.md](./docs/ROADMAP.md)。
