@@ -34,7 +34,10 @@ linters-settings:
   revive:
     rules:
       - name: exported
-        severity: warning
+        severity: error
+        arguments:
+          - ignorePackageSuffixes:
+              - "_test"
   gosec:
     excludes:
       - G104
