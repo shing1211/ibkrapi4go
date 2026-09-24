@@ -34,6 +34,10 @@ go run ./examples/mock
   `WithTransportMiddleware`.
 - [`mock-error-handling/main.go`](./mock-error-handling/main.go) — retry, error types, and
   graceful degradation patterns.
+- [`mock/cancel-order/main.go`](./mock/cancel-order/main.go) — submit a resting
+  order, then cancel it.
+- [`mock/reconcile-open-orders/main.go`](./mock/reconcile-open-orders/main.go) —
+  reconcile the open-order list against per-order status and flag drift.
 
 ### Mock gateway configuration
 
