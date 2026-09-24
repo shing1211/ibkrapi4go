@@ -39,7 +39,7 @@ Statuses: `todo` · `doing` · `blocked` · `review` · `done`
 | C2 | Fix flaky `TestWS_SystemUpdates`; `sts` on subscribe | tester | done | C1 | S | stable ×20 |
 | C3 | Resilience tests (storm/heartbeat/cancel-write/dup/out-of-order) | tester | done | C1 | M | pass under `-race` |
 | C4 | Injectable clock/dialer | backend | done | C1 | M | fake clock in tests |
-| C5 | Missing metrics (retry/pacing/heartbeat/dropped/queue/durations) | backend | todo | — | M | metrics emitted + tested |
+| C5 | Missing metrics (retry/pacing/heartbeat/dropped/queue/durations) | backend | done | — | M | metrics emitted + tested |
 | C6 | Composite health/readiness probe | backend | todo | C5 | M | structured `Health(ctx)` |
 | C7 | Real OTel tracing bridge (`contrib/otel`) | backend | todo | C5 | L | REST + WS spans |
 | C8 | Fuzz in CI + WS/REST-error targets | tester | done | A1 | S/M | `make fuzz` + CI job |
