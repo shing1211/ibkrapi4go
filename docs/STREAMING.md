@@ -73,6 +73,56 @@ Design rules:
 - `ctx` cancellation closes the subscription.
 - `Subscription.Dropped()` reports updates dropped under backpressure.
 
+## Account and portfolio streaming
+
+The same multiplexed connection also streams account values and portfolio
+positions. Subscribe through the account/portfolio managers:
+
+```go
+acct, err := cli.Account().SubscribeAccount(ctx, nil)
+if err != nil { return err }
+defer acct.Close()
+
+port, err := cli.Portfolio().SubscribePortfolio(ctx, nil)
+if err != nil { return err }
+defer port.Close()
+
+for {
+    select {
+    case <-ctx.Done():
+        return ctx.Err()
+    case e := <-acct.AccountUpdates():
+        fmt.Printf("account %s net=%s cash=%s\n", e.Account, e.NetLiquidity, e.Cash)
+    case p := <-port.PortfolioUpdates():
+        fmt.Printf("position %d qty=%s avg=%s mv=%s pnl=%s\n",
+            p.Conid, p.Position, p.AvgCost, p.MarketValue, p.UnrealizedPNL)
+    case err := <-acct.Errors():
+        log.Println("stream error:", err)
+    }
+}
+```
+
+`SubscribeAccount` sends the gateway `account` method; `SubscribePortfolio`
+sends `portfolio`. Both return a `*Subscription` that shares the connection,
+reconnect, and backpressure behavior described below, and both honor the same
+`MaxSubscriptions`/`MaxFieldsPerRequest` limits and `ctx` cancellation. Closing
+the subscription unsubscribes server-side.
+
+### Typed events
+
+| Channel | Frame | Struct | Fields |
+|---------|-------|--------|--------|
+| `AccountUpdates()` | `acq` | `AccountUpdateEvent` | `Account`, `NetLiquidity`, `Cash`, `Equity`, `MaintMargin`, `Received` |
+| `PortfolioUpdates()` | `pos` | `PortfolioEvent` | `Conid`, `Position`, `AvgCost`, `MarketValue`, `UnrealizedPNL`, `Received` |
+
+A `pos` frame may carry a single position object or an array; each position is
+emitted as a separate `PortfolioEvent`. Money and quantities are decimal strings
+(ADR 0008).
+
+Order status (`sor`), notifications (`ntf`), and user messages (`usr`) continue
+to arrive on every subscription's `SystemUpdates()` channel alongside the typed
+account/portfolio channels.
+
 ## Connection management
 
 - One WebSocket connection per `Client`, multiplexed across subscriptions.
@@ -123,7 +173,8 @@ larger buffer or persist server-side.
 ## Testing
 
 - Mock gateway WebSocket hub ([MOCK-GATEWAY.md](./MOCK-GATEWAY.md)): subscribe →
-  receive → unsubscribe.
-- Reconnect test with a server that drops the connection once.
+  receive → unsubscribe for market data, account (`acq`), and portfolio (`pos`).
+- Reconnect test with a server that drops the connection once (market data and
+  account streams).
 - Buffer-overflow test asserts the drop policy and counter.
 - `goleak` asserts no goroutines survive `Close()`.
