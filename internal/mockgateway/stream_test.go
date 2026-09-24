@@ -165,8 +165,9 @@ func TestStream_ErrorOnSubscribe(t *testing.T) {
 
 func TestStream_StatusFrame(t *testing.T) {
 	_, c := dialStream(t, &StreamScript{Hello: true})
+	writeStreamFrame(t, c, `{"method":"subscribe","id":1,"params":{"conids":[265598]}}`)
 	frame := readStreamFrame(t, c)
 	if frame["sts"] != "connected" {
-		t.Fatalf("hello frame = %v; want sts=connected", frame)
+		t.Fatalf("first frame = %v; want sts=connected", frame)
 	}
 }

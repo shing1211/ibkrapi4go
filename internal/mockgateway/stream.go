@@ -293,10 +293,6 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 		_ = c.Close(websocket.StatusNormalClosure, "closed")
 	}()
 
-	if s.stream.script.Hello {
-		_ = sc.sendFrame(StatusFrame("connected"))
-	}
-
 	for {
 		_, data, err := c.Read(context.Background())
 		if err != nil {
@@ -338,6 +334,7 @@ func (s *Server) handleSubscribe(sc *streamConn, conids []int, fields []string) 
 	sc.subscribe(conids)
 
 	if script.Hello {
+		_ = sc.sendFrame(StatusFrame("connected"))
 		_ = sc.sendFrame(NotificationFrame("smd", map[string]any{"conids": conids}))
 	}
 
