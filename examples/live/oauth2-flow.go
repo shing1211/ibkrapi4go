@@ -96,22 +96,18 @@ func main() {
 	fmt.Printf("  Account Alias: %s\n", accounts.Alias)
 	fmt.Printf("  Base Currency: %s\n", accounts.BaseCurrency)
 
-	// Step 3: Demonstrate proactive token refresh via ForceRefresh().
-	// The token source auto-refreshes before expiry (30s early by default).
-	// ForceRefresh() discards the cached token and fetches a fresh one.
-	fmt.Println("\n=== Step 3: Proactive Token Refresh (ForceRefresh) ===")
+	// Step 3: The token source auto-refreshes before expiry (30s early by
+	// default). Callers keep using the surface; a fresh token is fetched
+	// transparently when the cached one nears expiry. There is no public
+	// "force refresh" call — the lifecycle is managed internally.
+	fmt.Println("\n=== Step 3: Automatic Token Refresh ===")
 	newToken, err := rest.Token(ctx)
 	if err != nil {
 		log.Fatalf("REST.Token (refresh check): %v", err)
 	}
 	fmt.Printf("  Token still valid (cached): %s...\n", truncate(newToken, 40))
-
-	// Force a refresh to demonstrate the lifecycle
-	forcedToken, err := forceRefreshToken(ctx, rest)
-	if err != nil {
-		log.Fatalf("ForceRefresh: %v", err)
-	}
-	fmt.Printf("  Force-refreshed token (truncated): %s...\n", truncate(forcedToken, 40))
+	fmt.Println("  The token source refreshes automatically before expiry; no manual")
+	fmt.Println("  refresh call is required. Refresh-token rotation is handled internally.")
 
 	// Step 4: Demonstrate error handling for expired/invalid credentials.
 	fmt.Println("\n=== Step 4: Error Handling — Invalid Credentials ===")
@@ -188,19 +184,10 @@ func main() {
 	fmt.Println("Summary:")
 	fmt.Println("  1. Token acquired via client_credentials or refresh_token grant")
 	fmt.Println("  2. Token validated by calling REST.Accounts().Details()")
-	fmt.Println("  3. ForceRefresh() demonstrates proactive refresh")
+	fmt.Println("  3. The token source refreshes automatically before expiry")
 	fmt.Println("  4. Invalid credentials produce an error on token fetch")
 	fmt.Println("  5. Network errors are surfaced with proper error wrapping")
 	fmt.Println("  6. Refresh token rotation is handled automatically by the token source")
-}
-
-// forceRefreshToken triggers a token refresh regardless of expiry.
-func forceRefreshToken(ctx context.Context, rest *ibkr.RESTSurface) (string, error) {
-	// ForceRefresh is not directly exported on RESTSurface, so we
-	// trigger it by letting the token expire early. In production,
-	// the token source auto-refreshes 30s before expiry.
-	// For demonstration, we call Token() which may return cached.
-	return rest.Token(ctx)
 }
 
 // truncate returns the first n characters of s, appending "..." if truncated.

@@ -4,20 +4,20 @@
 // Command multi-account demonstrates using MultiClient to aggregate portfolio data
 // across multiple IBKR accounts or gateways simultaneously.
 //
-// This example requires paper trading credentials. Set the environment variables
-// before running:
+// It requires one or two running IBKR Client Portal Gateways that you have
+// already authenticated in a browser (there is no username/password login — see
+// docs/GATEWAY-SETUP.md and docs/AUTH.md). Point it at non-default gateways with
+// the optional IBKR_GATEWAY and IBKR_GATEWAY2 variables:
 //
 //	IBKR_GATEWAY=https://localhost:5000 \
-//	IBKR_USERNAME=username1 \
-//	IBKR_PASSWORD=password1 \
-//	IBKR_GATEWAY2=https://localhost:5000 \
-//	IBKR_USERNAME2=username2 \
-//	IBKR_PASSWORD2=password2 \
+//	IBKR_GATEWAY2=https://localhost:5001 \
 //	  go run ./examples/multi-account
 //
-// For a single gateway with multiple linked accounts, MultiClient can be used
-// with clients pointing to the same gateway — each client will receive different
-// accounts via Session.Initialize.
+// IBKR_GATEWAY2 defaults to IBKR_GATEWAY. Each client keeps its own cookie jar,
+// so two clients may target the same gateway to represent separate browser
+// sessions. For a single gateway with multiple linked accounts, MultiClient can
+// be used with clients pointing to the same gateway — each client will receive
+// different accounts via Session.Initialize.
 //
 // All operations are READ-ONLY: no orders are submitted and no positions are modified.
 package main
@@ -36,44 +36,30 @@ import (
 
 func main() {
 	gw1 := os.Getenv("IBKR_GATEWAY")
-	user1 := os.Getenv("IBKR_USERNAME")
-	pass1 := os.Getenv("IBKR_PASSWORD")
-
 	gw2 := os.Getenv("IBKR_GATEWAY2")
-	user2 := os.Getenv("IBKR_USERNAME2")
-	pass2 := os.Getenv("IBKR_PASSWORD2")
-
-	if gw1 == "" || user1 == "" || pass1 == "" {
-		log.Fatal("IBKR_GATEWAY, IBKR_USERNAME, and IBKR_PASSWORD are required")
+	if gw2 == "" {
+		gw2 = gw1
 	}
 
-	gateway2 := gw2
-	username2 := user2
-	password2 := pass2
-	if gateway2 == "" {
-		gateway2 = gw1
-		username2 = user1
-		password2 = pass1
-	}
-
-	makeClient := func(gw, user, pass string) *ibkr.Client {
-		jar, _ := cookiejar.New(nil)
-		httpCli := &http.Client{
-			Jar: jar,
+	makeClient := func(gw string) *ibkr.Client {
+		opts := []ibkr.Option{ibkr.WithTickleInterval(time.Hour)}
+		if gw != "" {
+			// A dedicated cookie jar keeps each client's gateway session separate.
+			jar, _ := cookiejar.New(nil)
+			opts = append(opts,
+				ibkr.WithGatewayURL(gw),
+				ibkr.WithHTTPClient(&http.Client{Jar: jar}),
+			)
 		}
-		cli, err := ibkr.NewClient(
-			ibkr.WithGatewayURL(gw),
-			ibkr.WithHTTPClient(httpCli),
-			ibkr.WithTickleInterval(time.Hour),
-		)
+		cli, err := ibkr.NewClient(opts...)
 		if err != nil {
-			log.Fatalf("NewClient(%s): %v", gw, err)
+			log.Fatalf("NewClient: %v", err)
 		}
 		return cli
 	}
 
-	cli1 := makeClient(gw1, user1, pass1)
-	cli2 := makeClient(gateway2, username2, password2)
+	cli1 := makeClient(gw1)
+	cli2 := makeClient(gw2)
 
 	mc, err := ibkr.NewMultiClient([]*ibkr.Client{cli1, cli2})
 	if err != nil {

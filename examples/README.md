@@ -1,7 +1,8 @@
 # Examples
 
-Runnable examples demonstrating the SDK. There are two groups: **mock** examples that
-need no credentials, and **live** examples that require paper trading credentials.
+Runnable examples demonstrating the SDK. There are two groups: **mock** examples
+that need no gateway, and **live** examples that require a running, authenticated
+IBKR Client Portal Gateway.
 
 ## Mock examples
 
@@ -42,28 +43,30 @@ The mock is served on `:5001` by default. Override with `IBKR_GATEWAY_URL`:
 IBKR_GATEWAY_URL=https://localhost:5000 go run ./examples/mock
 ```
 
-## Live examples (paper trading)
+## Live examples
 
-Live examples require a running IBKR Client Portal Gateway and paper trading
-credentials. Set these environment variables before running any live example:
+Live examples require a running IBKR Client Portal Gateway that you have
+authenticated in a browser. There is no username/password login — the SDK never
+drives the login flow (see [`docs/GATEWAY-SETUP.md`](../docs/GATEWAY-SETUP.md)
+and [`docs/AUTH.md`](../docs/AUTH.md)). The gateway URL is optional and defaults
+to `https://localhost:5000`:
 
 | Variable | Description |
 |----------|-------------|
-| `IBKR_GATEWAY` | Gateway base URL (e.g. `https://localhost:5000`) |
-| `IBKR_USERNAME` | Paper trading username |
-| `IBKR_PASSWORD` | Paper trading password |
+| `IBKR_GATEWAY` | Gateway base URL (default `https://localhost:5000`) |
 
 ```bash
-IBKR_GATEWAY=https://localhost:5000 \
-IBKR_USERNAME=yourpaperusername \
-IBKR_PASSWORD=yourpaperpassword \
-  go run ./examples/live-portfolio
+IBKR_GATEWAY=https://localhost:5000 go run ./examples/live-portfolio
 ```
+
+`live/oauth2-flow.go` is the exception: it targets the hosted IB REST surface and
+needs OAuth2 credentials (`IBKR_CLIENT_ID`, `IBKR_CLIENT_SECRET`, and optionally
+`IBKR_CLIENT_REFRESH_TOKEN`).
 
 All live examples are **read-only** — no orders are submitted, no positions are
 modified, and no transfers are initiated.
 
-### Index (live — paper trading required)
+### Index (live — running gateway required)
 
 - [`live-portfolio/main.go`](./live-portfolio/main.go) — Session.Initialize,
   Account.List, Portfolio.Positions/Ledger/Summary.

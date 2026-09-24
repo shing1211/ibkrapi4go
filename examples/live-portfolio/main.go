@@ -1,16 +1,15 @@
 // Copyright 2026 shing1211
 // SPDX-License-Identifier: Apache-2.0
 
-// Command live-portfolio queries the live portfolio snapshot using paper trading
-// credentials: accounts, positions, ledger, and summary.
+// Command live-portfolio queries the live portfolio snapshot: accounts,
+// positions, ledger, and summary.
 //
-// This example requires a running IBKR Client Portal Gateway and paper trading
-// credentials. Set the environment variables before running:
+// It requires a running IBKR Client Portal Gateway that you have already
+// authenticated in a browser (there is no username/password login — see
+// docs/GATEWAY-SETUP.md and docs/AUTH.md). Point it at a non-default gateway
+// with the optional IBKR_GATEWAY variable:
 //
-//	IBKR_GATEWAY=https://localhost:5000 \
-//	IBKR_USERNAME=yourpaperusername \
-//	IBKR_PASSWORD=yourpaperpassword \
-//	  go run ./examples/live-portfolio
+//	IBKR_GATEWAY=https://localhost:5000 go run ./examples/live-portfolio
 //
 // All operations are READ-ONLY: no orders are submitted, no positions are modified,
 // and no transfers are initiated.
@@ -27,18 +26,12 @@ import (
 )
 
 func main() {
-	gateway := os.Getenv("IBKR_GATEWAY")
-	username := os.Getenv("IBKR_USERNAME")
-	password := os.Getenv("IBKR_PASSWORD")
-
-	if gateway == "" || username == "" || password == "" {
-		log.Fatal("IBKR_GATEWAY, IBKR_USERNAME, and IBKR_PASSWORD are required")
+	opts := []ibkr.Option{ibkr.WithTickleInterval(time.Hour)}
+	if gateway := os.Getenv("IBKR_GATEWAY"); gateway != "" {
+		opts = append(opts, ibkr.WithGatewayURL(gateway))
 	}
 
-	cli, err := ibkr.NewClient(
-		ibkr.WithGatewayURL(gateway),
-		ibkr.WithTickleInterval(time.Hour),
-	)
+	cli, err := ibkr.NewClient(opts...)
 	if err != nil {
 		log.Fatalf("NewClient: %v", err)
 	}
