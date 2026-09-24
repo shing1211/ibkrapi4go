@@ -136,9 +136,10 @@ type wsSub struct {
 
 // WSConn is a single multiplexed WebSocket connection to the gateway.
 type WSConn struct {
-	wsURL string
-	opts  WSOptions
-	ctx   context.Context
+	wsURL  string
+	opts   WSOptions
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	mu   sync.Mutex
 	conn *websocket.Conn
@@ -191,16 +192,20 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 	if opts.Telemetry == nil {
 		opts.Telemetry = NopTelemetry()
 	}
+	wsCtx, cancel := context.WithCancel(ctx)
 	c := &WSConn{
-		wsURL:  wsURL,
-		opts:   opts,
-		ctx:    ctx,
-		subs:   map[*wsSub]struct{}{},
-		out:    make(chan []byte, 64),
-		stopCh: make(chan struct{}),
-		doneCh: make(chan struct{}),
+		wsURL:       wsURL,
+		opts:        opts,
+		ctx:         wsCtx,
+		cancel:      cancel,
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 64),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
 	}
-	if err := c.dial(ctx); err != nil {
+	if err := c.dial(wsCtx); err != nil {
+		cancel()
 		return nil, err
 	}
 	incrCounter(ctx, c.opts.Metrics, MetricWSConnects, 1)
@@ -293,13 +298,17 @@ func (c *WSConn) Close() error {
 	if c.closed.Swap(true) {
 		return nil
 	}
-	c.opts.Telemetry.OnWSDisconnect(c.ctx, WSConnInfo{Event: "disconnect", URL: c.wsURL, Subscriptions: c.ActiveSubscriptions()})
-	close(c.stopCh)
 	c.mu.Lock()
+	subscriptions := len(c.subs)
 	conn := c.conn
 	c.mu.Unlock()
+	c.opts.Telemetry.OnWSDisconnect(c.ctx, WSConnInfo{Event: "disconnect", URL: c.wsURL, Subscriptions: subscriptions})
+	close(c.stopCh)
+	if c.cancel != nil {
+		c.cancel()
+	}
 	if conn != nil {
-		_ = conn.Close(websocket.StatusNormalClosure, "client closing")
+		_ = conn.CloseNow()
 	}
 	select {
 	case <-c.doneCh:
@@ -316,6 +325,11 @@ func (c *WSConn) dial(ctx context.Context) error {
 		return err
 	}
 	c.mu.Lock()
+	if c.closed.Load() {
+		c.mu.Unlock()
+		_ = conn.CloseNow()
+		return ErrClosed
+	}
 	c.conn = conn
 	c.mu.Unlock()
 	return nil
@@ -446,7 +460,7 @@ func (c *WSConn) pingLoop() {
 			if err != nil {
 				c.opts.Logger.Warn("ibkr.ws ping failed", "err", err)
 				incrCounter(c.ctx, c.opts.Metrics, MetricWSHeartbeatFailures, 1)
-				_ = conn.Close(websocket.StatusPolicyViolation, "ping timeout")
+				_ = conn.CloseNow()
 			}
 		case <-c.stopCh:
 			return
@@ -524,15 +538,9 @@ func (c *WSConn) dispatch(data []byte) {
 		var seqNum json.Number
 		if json.Unmarshal(rawUpdated, &seqNum) == nil {
 			newSeq, _ := seqNum.Int64()
-			c.mu.Lock()
-			lastSeq, seen := c.lastUpdated[conid]
-			c.lastUpdated[conid] = newSeq
-			c.mu.Unlock()
-			if seen && newSeq < lastSeq {
-				gap := lastSeq - newSeq
-				if gap > 1 {
-					c.failAll(&WSGapError{Conid: conid, LastSeq: lastSeq, ReceivedSeq: newSeq})
-				}
+			lastSeq, seen, gap := c.recordSequence(conid, newSeq)
+			if seen && gap > 1 {
+				c.failAll(&WSGapError{Conid: conid, LastSeq: lastSeq, ReceivedSeq: newSeq})
 			}
 		}
 	}
@@ -564,6 +572,20 @@ func (c *WSConn) dispatch(data []byte) {
 	if !delivered {
 		incrCounter(c.ctx, c.opts.Metrics, MetricWSDroppedEvents, int64(len(updates)))
 	}
+}
+
+func (c *WSConn) recordSequence(conid int, sequence int64) (last int64, seen bool, gap int64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.lastUpdated == nil {
+		c.lastUpdated = make(map[int]int64)
+	}
+	last, seen = c.lastUpdated[conid]
+	c.lastUpdated[conid] = sequence
+	if seen && sequence < last {
+		gap = last - sequence
+	}
+	return last, seen, gap
 }
 
 func parseSystemFrame(m map[string]json.RawMessage) *WSSystemFrame {
@@ -665,7 +687,7 @@ func subscribeParams(s *wsSub) map[string]any {
 // wsReservedField reports whether a frame key is metadata rather than a field.
 func wsReservedField(k string) bool {
 	switch k {
-	case "conid", "_updated", "server_id", "6119", "topic", "method", "id":
+	case "conid", "_updated", "server_id", "6119", "6509", "topic", "method", "id":
 		return true
 	default:
 		return false

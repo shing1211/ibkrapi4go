@@ -43,9 +43,6 @@ var (
 subscription's `Errors()` channel to signal a dropped connection and a
 subsequent successful reconnect (see [STREAMING.md](./STREAMING.md)).
 
-**Deprecated aliases:** `ErrStreamDisconnected` and `ErrStreamReconnected` are
-still available but deprecated. Use the `ErrWS*` names in new code.
-
 Match with `errors.Is` / `errors.As`:
 
 ```go

@@ -3,7 +3,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
+  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
@@ -56,7 +56,7 @@
 | Métricas + logging | ✅ Implementadas ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (cobertura, pre-commit) | ✅ Implementados |
 | Sitio web de documentación + Discussions | ✅ Implementado ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Lanzamiento | ✅ v1.0.0 (GitHub + Gitee) |
+| Lanzamiento | ✅ v1.0.4 (GitHub + Gitee) |
 
 Este repositorio contiene el **cliente OpenAPI generado**, documentación y
 herramientas de generación de código. Las 185 operaciones de la API están
@@ -65,7 +65,7 @@ de construcción.
 
 ## Las dos API
 
-La especificación OpenAPI de IBKR (v2.39.0) describe en realidad **dos superficies de
+La especificación OpenAPI de IBKR (v2.40.0) describe en realidad **dos superficies de
 API con dos esquemas de autenticación distintos**. No son intercambiables:
 
 | Superficie | Ruta base | Operaciones | Autenticación |

@@ -9,7 +9,7 @@ document records the pipeline and the measured state of generation.
 | Property | Value |
 |----------|-------|
 | URL | `https://api.ibkr.com/gw/api/v3/api-docs` |
-| Title / version | `IB REST API` / `2.39.0` |
+| Title / version | `IB REST API` / `2.40.0` |
 | OpenAPI | `3.0.0` |
 | Downloaded size | ~900 KB |
 | Paths | 171 |
@@ -38,7 +38,7 @@ The build-time toolchain is pinned in `go.mod` (tools) / `Makefile` (`make tools
 ## Spec defects and patches
 
 The published spec does **not** generate cleanly. `patch_spec.py` applies three
-generalized fixes. Measured against v2.39.0:
+generalized fixes. Measured against v2.40.0:
 
 | # | Defect | Occurrences | Fix |
 |---|--------|------------:|-----|

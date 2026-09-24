@@ -3,7 +3,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
+  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
@@ -56,7 +56,7 @@
 | メトリクス + ロギング | ✅ 実装済み（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 品質ゲート（カバレッジ、プレコミット） | ✅ 実装済み |
 | ドキュメントサイト + Discussions | ✅ 実装済み（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| リリース | ✅ v1.0.0（GitHub + Gitee） |
+| リリース | ✅ v1.0.4（GitHub + Gitee） |
 
 現在のリポジトリには**生成済みの OpenAPI クライアント**、ドキュメント、
 コード生成ツールが含まれます。すべての 185 の API オペレーションが実装済みです。
@@ -64,7 +64,7 @@
 
 ## 2 つの API
 
-IBKR OpenAPI 仕様（v2.39.0）は、実際には**異なる認証方式を持つ 2 つの API
+IBKR OpenAPI 仕様（v2.40.0）は、実際には**異なる認証方式を持つ 2 つの API
 サーフェス**を記述しています。両者は互換ではありません。
 
 | サーフェス | ベースパス | オペレーション数 | 認証 |

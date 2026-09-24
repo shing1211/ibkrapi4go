@@ -5,12 +5,14 @@ package internal
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/shing1211/ibkrapi4go/internal/mockgateway"
 	"go.uber.org/goleak"
 )
@@ -96,11 +98,11 @@ func TestWS_HeartbeatTimeout(t *testing.T) {
 	defer cancel()
 
 	conn, err := DialWS(ctx, "http://"+server.Listener.Addr().String(), WSOptions{
-		Logger:        NopLogger(),
-		Metrics:       NopMetrics(),
-		PingInterval:  50 * time.Millisecond,
-		PongTimeout:   50 * time.Millisecond,
-		Reconnect:     true,
+		Logger:       NopLogger(),
+		Metrics:      NopMetrics(),
+		PingInterval: 50 * time.Millisecond,
+		PongTimeout:  50 * time.Millisecond,
+		Reconnect:    true,
 	})
 	if err != nil {
 		t.Fatalf("DialWS: %v", err)
@@ -207,13 +209,77 @@ func TestWS_CancelWriteDuringSend(t *testing.T) {
 	conn.Close()
 
 	select {
-	case <-time.After(500 * time.Millisecond):
 	case <-conn.doneCh:
+	case <-time.After(2 * time.Second):
+		t.Fatal("websocket loops did not stop after context cancellation and Close")
 	}
 
 	if !conn.closed.Load() {
 		t.Errorf("expected connection to be closed after context cancel and Close()")
 	}
+}
+
+func TestWS_CloseUnblocksSilentPeer(t *testing.T) {
+	connected := make(chan struct{})
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	releasePeer := func() {
+		releaseOnce.Do(func() { close(release) })
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		peer, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer peer.CloseNow()
+		close(connected)
+		<-release
+	}))
+	t.Cleanup(func() {
+		releasePeer()
+		server.Close()
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := DialWS(ctx, server.URL, WSOptions{
+		Logger:       NopLogger(),
+		Metrics:      NopMetrics(),
+		PingInterval: time.Hour,
+	})
+	if err != nil {
+		t.Fatalf("DialWS: %v", err)
+	}
+
+	select {
+	case <-connected:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for websocket peer")
+	}
+
+	closed := make(chan error, 1)
+	go func() {
+		closed <- conn.Close()
+	}()
+
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatalf("Close: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Close did not interrupt the blocked reader")
+	}
+
+	select {
+	case <-conn.doneCh:
+	case <-time.After(2 * time.Second):
+		t.Fatal("background websocket loops did not stop")
+	}
+
+	releasePeer()
 }
 
 func TestWS_DuplicateUpdatedSequence(t *testing.T) {

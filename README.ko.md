@@ -3,7 +3,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
+  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
@@ -56,7 +56,7 @@
 | 메트릭 + 로깅 | ✅ 구현됨 ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI 품질 게이트 (커버리지, 프리컴밋) | ✅ 구현됨 |
 | 문서 웹사이트 + Discussions | ✅ 구현됨 ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| 릴리스 | ✅ v1.0.0 (GitHub + Gitee) |
+| 릴리스 | ✅ v1.0.4 (GitHub + Gitee) |
 
 현재 저장소에는 **생성된 OpenAPI 클라이언트**, 문서, 코드 생성 도구가 포함되어
 있습니다. 모든 185개 API 오퍼레이션이 구현되었습니다. 계획은
@@ -64,7 +64,7 @@
 
 ## 두 개의 API
 
-IBKR OpenAPI 명세(v2.39.0)는 실제로 **서로 다른 인증 방식을 가진 두 개의 API
+IBKR OpenAPI 명세(v2.40.0)는 실제로 **서로 다른 인증 방식을 가진 두 개의 API
 표면**을 기술합니다. 두 표면은 호환되지 않습니다.
 
 | 표면 | 기본 경로 | 오퍼레이션 수 | 인증 |

@@ -1,7 +1,7 @@
 # SPEC.md — IBKR OpenAPI Specification Reference
 
 > Source: `https://api.ibkr.com/gw/api/v3/api-docs`
-> Title: IB REST API | Version: 2.39.0 | OpenAPI: 3.0.0
+> Title: IB REST API | Version: 2.40.0 | OpenAPI: 3.0.0
 > Endpoints: 185 | Schemas: 443 | Tags: 27 | Generated: 2026-09-21
 
 > **Canonical counts.** All endpoint/schema numbers in this repository

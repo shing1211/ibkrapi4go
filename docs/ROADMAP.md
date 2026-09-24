@@ -253,7 +253,7 @@ Exit criteria:
 The feature roadmap is complete: all 185 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.0.3`**.
+**`v1.0.4`**.
 
 A follow-up hardening run (2026-09-23) tightened correctness/security, made the
 CI gates real, and closed the remaining feature gaps — order state machine,
@@ -268,13 +268,14 @@ nil-`interface{}` panic class, which is now fixed at the spec level
 
 ## Backlog (not scheduled)
 
-No public feature items are pending. Candidate forward-looking work (fixing the
-Windows WebSocket `Close` deadlock, tightening `check_money.py`, a public
-OAuth2 token-refresh API, a unified streaming event API, spec drift watch) is
-proposed in the latest
-[`next-phase.md`](./runs/2026-09-23-blueprint-hardening/next-phase.md). See
+No public feature items are pending. Candidate forward-looking work (a public
+OAuth2 token-refresh API, a unified streaming event API, and spec drift watch)
+is proposed in the latest
+[`next-phase.md`](./runs/2026-09-24-ws-shutdown/next-phase.md). The WebSocket
+shutdown regression and the `money-check` scope cleanup shipped in `v1.0.4`;
+see the [`ws-shutdown` run](./runs/2026-09-24-ws-shutdown/report.md). See
 individual run reports in [docs/runs/](./runs/index.md) (current) and the
-archived [runs index](./archive/runs/index.md).
+archived [`runs index`](./archive/runs/index.md).
 
 ---
 

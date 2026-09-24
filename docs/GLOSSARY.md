@@ -7,7 +7,7 @@ the original planning docs conflated several of them.
 
 **Client Portal API (CPAPI)**
 The legacy `/v1/api/*` surface served by the locally-run Client Portal Gateway.
-Authenticated with `ssoBearer`. 115 operations in spec v2.39.0. Implemented in
+Authenticated with `ssoBearer`. 115 operations in spec v2.40.0. Implemented in
 full.
 
 **IB REST API**
@@ -66,7 +66,7 @@ IBKR quotes fields by numeric code, e.g. `31` = last, `84` = bid, `86` = ask,
 
 **spec**
 The OpenAPI 3.0.0 document at `https://api.ibkr.com/gw/api/v3/api-docs`
-(title "IB REST API", version 2.39.0). Cached under `specs/` (gitignored).
+(title "IB REST API", version 2.40.0). Cached under `specs/` (gitignored).
 
 **generated code**
 `client/*.gen.go`, produced by `oapi-codegen`. Never edited by hand.

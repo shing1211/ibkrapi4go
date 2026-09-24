@@ -34,7 +34,8 @@ Every test that starts goroutines runs `goleak` to assert none survive `Close`.
 
 - Every public method takes `context.Context` first.
 - Cancellation aborts in-flight I/O and pending rate-limit waits.
-- `Client.Close` cancels a root context that all background work derives from.
+- `Client.Close` cancels the WebSocket's owned I/O context and signals session
+  shutdown; background work must not retain a live socket reader.
 
 ## Secrets
 

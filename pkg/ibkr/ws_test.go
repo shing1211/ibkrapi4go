@@ -65,6 +65,38 @@ func TestWS_SubscribeReceiveClose(t *testing.T) {
 	}
 }
 
+func TestWS_ClientCloseCompletesWhileSubscribed(t *testing.T) {
+	srv := newWSServer(t, nil)
+	cli, err := NewClient(WithGatewayURL(srv.URL))
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	sub, err := cli.MarketData().Subscribe(context.Background(), []ConID{265598}, []Field{FieldLastPrice})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	defer sub.Close()
+
+	if _, ok := recvUpdate(sub, 2*time.Second); !ok {
+		t.Fatal("no update received")
+	}
+
+	closed := make(chan error, 1)
+	go func() {
+		closed <- cli.Close()
+	}()
+
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatalf("Client.Close: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Client.Close did not complete with an active subscription")
+	}
+}
+
 func TestWS_ReconnectResubscribes(t *testing.T) {
 	srv := newWSServer(t, &mockgateway.StreamScript{DropFirstConnection: true})
 	cli, err := NewClient(

@@ -60,9 +60,9 @@ Statuses: `todo` · `doing` · `blocked` · `review` · `done`
 
 | ID | Task | Role | Status | Depends On | Size | Acceptance |
 |----|------|------|--------|-----------|------|-----------|
-| E1 | Fix version/spec drift (doc.go, README×6, SPEC, ROADMAP) | docs | done | — | S | v1.0.1 / spec v2.40.0 |
+| E1 | Fix version/spec drift (doc.go, README×6, SPEC, ROADMAP) | docs | done | — | S | current release / spec v2.40.0 |
 | E2 | Fix wrong error docs | docs | done | — | S | ERRORS.md matches code |
-| E3 | Fix `scripts/check_design/main.go` | backend | done | — | S/M | fails on real drift |
+| E3 | Fix `scripts/check_design/main.go` | backend | review | — | S/M | fails on real drift |
 | E4 | Remove leaking `CreateSessionRaw` | backend | done | — | S | no generated type in public sig |
 | E5 | Add `docs/GATEWAY-SETUP.md` + `docs/PERMISSIONS.md` | docs | done | — | S | linked from README |
 | E6 | Fix misleading live examples | docs | done | — | S | examples accurate |

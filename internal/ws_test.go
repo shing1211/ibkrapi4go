@@ -497,7 +497,7 @@ func TestWS_ConcurrentSubscribeClose(t *testing.T) {
 	defer conn.Close()
 
 	var wg sync.WaitGroup
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 20)
 
 	for i := 0; i < 20; i++ {
 		wg.Add(1)
@@ -518,6 +518,25 @@ func TestWS_ConcurrentSubscribeClose(t *testing.T) {
 
 	for err := range errCh {
 		t.Errorf("concurrent error: %v", err)
+	}
+}
+
+func TestWS_RecordSequence(t *testing.T) {
+	conn := &WSConn{}
+
+	last, seen, gap := conn.recordSequence(123, 100)
+	if last != 0 || seen || gap != 0 {
+		t.Fatalf("first sequence = (%d, %v, %d), want (0, false, 0)", last, seen, gap)
+	}
+
+	last, seen, gap = conn.recordSequence(123, 100)
+	if last != 100 || !seen || gap != 0 {
+		t.Fatalf("duplicate sequence = (%d, %v, %d), want (100, true, 0)", last, seen, gap)
+	}
+
+	last, seen, gap = conn.recordSequence(123, 98)
+	if last != 100 || !seen || gap != 2 {
+		t.Fatalf("out-of-order sequence = (%d, %v, %d), want (100, true, 2)", last, seen, gap)
 	}
 }
 

@@ -3,7 +3,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
+  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
@@ -55,14 +55,14 @@
 | 指標 + 日誌 | ✅ 已實作（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 品質閘道（覆蓋率、預提交） | ✅ 已實作 |
 | 文件網站 + Discussions | ✅ 已實作（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| 發佈 | ✅ v1.0.0（GitHub + Gitee） |
+| 發佈 | ✅ v1.0.4（GitHub + Gitee） |
 
 目前倉庫包含**產生的 OpenAPI 用戶端**、文件與程式碼產生工具。全部 185 個 API
 操作已實作。建置計畫見 [docs/ROADMAP.md](./docs/ROADMAP.md)。
 
 ## 兩套 API
 
-IBKR OpenAPI 規範（v2.39.0）實際上描述了**兩套 API 表面，使用兩種不同的認證方式**，
+IBKR OpenAPI 規範（v2.40.0）實際上描述了**兩套 API 表面，使用兩種不同的認證方式**，
 兩者不可互換：
 
 | 表面 | 路徑前綴 | 介面數 | 認證 |

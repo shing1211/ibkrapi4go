@@ -129,6 +129,8 @@ account/portfolio channels.
 - A reader goroutine dispatches frames to per-subscription channels; a writer
   goroutine serializes outbound frames (avoids concurrent-write issues).
 - Heartbeat: ping every 30s; pong deadline 10s.
+- `Client.Close` cancels the connection's owned I/O context and force-closes the
+  socket, so shutdown does not wait on a blocked read or close handshake.
 
 ## Reconnect
 

@@ -20,8 +20,8 @@ architecture diagram, accurate examples, streaming docs). See `report.md`.
 
 | Item | Severity | Notes |
 |------|----------|-------|
-| Windows WS `Close` deadlock | Medium | `internal.WSConn.Close` can block on `WSConn.mu` (contended with `readLoop`/`writeLoop`/`pingLoop`) on Windows. Pre-existing; reproduces on the base commit. CI (Linux) passes. Blocks reliable local Windows test runs. |
-| `check_money.py` false positives | Medium | Flags exported fields on **unexported** adapter structs (e.g. `taxVoucherRaw.DivAmount *float32`, `rest_banking` raw structs) and function bodies containing `{`. `make money-check` is not green although public money types are strings (ADR 0008). |
+| Windows WS `Close` deadlock | Resolved in v1.0.4 | D4 left `lastUpdated` nil; the first sequence frame panicked while holding `WSConn.mu`, and close then blocked. Sequence tracking, owned I/O cancellation, force-close, and late-reconnect cleanup were added. |
+| `check_money.py` false positives | Resolved in v1.0.4 | The scanner now checks exported fields on exported structs in hand-written code and ignores generated code, unexported adapters, and function bodies. |
 | Spec drift watch | Low | Spec pinned at v2.40.0; no scheduled check for v2.41.0+. |
 | No public token-refresh API | Low | `internal.TokenSource.ForceRefresh` is not exposed on `RESTSurface`; the OAuth2 example can only describe automatic refresh. |
 | `docs/runs/` vs `docs/archive/runs/` | Low | New runs live in `docs/runs/`; older runs are archived. Confirm the long-term location and index ownership. |
@@ -39,14 +39,12 @@ Windows contributors.
 intact and pass `-race` on all three OSes.
 
 ### P2 — Make `money-check` precise and green
-**Objective:** Restrict `scripts/check_money.py` to exported struct fields of
-exported types (skip unexported adapter structs and function bodies), then clear
-any genuine remaining float money fields.
-**Why now:** `make check` includes `money-check`; a noisy gate erodes trust and
-masks real ADR 0008 violations.
-**Effort:** S
-**Dependencies:** A2/A3 (already done).
-**Risks:** Must still fail on a seeded `Money float64` export (keep the A2 test).
+
+**Status:** Done in `v1.0.4`. The scanner now checks exported fields on
+exported structs in hand-written `pkg/ibkr` and `internal`, skips generated
+client code, unexported adapters, and function bodies, and keeps explicit
+non-money exceptions for observability aggregates and the legacy bank
+instruction ID. `python scripts/check_money.py` passes.
 
 ### P3 — Public OAuth2 token-refresh surface
 **Objective:** Expose an explicit `ForceRefresh`/`Invalidate` on `RESTSurface`
@@ -68,23 +66,14 @@ more ergonomic for event-driven consumers.
 **Dependencies:** D3, D7.
 **Risks:** Additive; must preserve existing per-channel behavior.
 
-## 4. Recommended Next Phase
+## 4. Completed Follow-Up
 
-**Recommended: P1 (fix the Windows WebSocket `Close` deadlock).**
+P1 was completed in the `2026-09-24-ws-shutdown` run. The confirmed failure was
+a D4 regression rather than a base-commit lock-ordering defect. The follow-up
+fixed sequence-map initialization, made close interrupt active I/O, prevented
+late reconnect publication, and added Windows-oriented regression tests.
 
-It is the only item that currently blocks a core verification command for a
-supported OS. Fixing it restores confidence in `go test ./...` everywhere and
-costs little, whereas P2–P4 are quality-of-life improvements that do not block
-day-to-day work.
-
-**Draft task breakdown:**
-
-| ID | Objective | Role | Depends | Acceptance |
-|----|-----------|------|---------|-----------|
-| W1 | Reproduce the `Close`/`currentConn` lock cycle deterministically | tester | — | failing test on Windows |
-| W2 | Fix lock ordering (pass the conn in, or snapshot under lock without re-locking) | backend | W1 | `go test -race ./...` stable on Windows |
-| W3 | Run the full matrix locally (or in CI) | qa | W2 | Linux/macOS/Windows green |
-| W4 | Docs/CHANGELOG sync + release | docs/release | W3 | both remotes synced |
+The next recommended work is P2: make `money-check` precise and green.
 
 ## 5. Open Questions
 

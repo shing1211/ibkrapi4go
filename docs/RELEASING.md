@@ -73,4 +73,4 @@ in English except the translated READMEs (`README.<locale>.md`); see
 |------|-----------|
 | Go | latest two minor releases (currently 1.26+) |
 | OS | Linux, macOS, Windows |
-| Gateway | current Client Portal Gateway (spec v2.39.0) |
+| Gateway | current Client Portal Gateway (spec v2.40.0) |

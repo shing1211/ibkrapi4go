@@ -3,7 +3,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
+  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
   <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
   <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
@@ -53,7 +53,7 @@
 | Metrics + logging | ✅ Shipped ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (coverage, pre-commit) | ✅ Shipped |
 | Docs website + Discussions | ✅ Shipped ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Release | ✅ v1.0.0 (GitHub + Gitee) |
+| Release | ✅ v1.0.4 (GitHub + Gitee) |
 
 This repository contains the **generated OpenAPI client**, documentation, and
 codegen tooling. All 185 API operations are implemented across both CPAPI and IB REST
@@ -61,7 +61,7 @@ surfaces. See [docs/ROADMAP.md](./docs/ROADMAP.md) for the build plan.
 
 ## The Two APIs
 
-The IBKR OpenAPI spec (v2.39.0) actually describes **two API surfaces with two
+The IBKR OpenAPI spec (v2.40.0) actually describes **two API surfaces with two
 different authentication schemes**. They are not interchangeable:
 
 | Surface | Base path | Operations | Auth |

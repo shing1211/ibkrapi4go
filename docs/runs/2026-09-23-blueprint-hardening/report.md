@@ -10,9 +10,11 @@
 ## Summary
 
 Hardened the SDK against the production-grade blueprint and closed the feature
-gaps. All four phases (A–E) shipped: correctness/security fixes, real CI gates,
-reliability/observability, the Phase D feature gaps (including account/portfolio
-streaming), and the Phase E docs/DX work.
+gaps. All four phases (A–E) shipped their primary work: correctness/security
+fixes, real CI gates, reliability/observability, the Phase D feature gaps
+(including account/portfolio streaming), and the Phase E docs/DX work. E3's
+design-doc checker remains under review because its code-vs-document comparison
+is incomplete.
 
 ## Shipped
 
@@ -28,7 +30,8 @@ streaming), and the Phase E docs/DX work.
 | D5 | Delayed-data flags (`MarketDataStatus` on `Snapshot`/`Update`) | done |
 | D6 | `ClientOrderID` round-trip on `Order`/`OrderStatus` | done |
 | D7 | Account/portfolio streaming (`SubscribeAccount`/`SubscribePortfolio`) | done |
-| E1–E3 | Version/spec drift, error docs, `check_design` | done |
+| E1–E2 | Version/spec drift and error docs | done |
+| E3 | `check_design` accuracy work | review |
 | E4 | Removed leaking `CreateSessionRaw` | done |
 | E5 | `docs/GATEWAY-SETUP.md` + `docs/PERMISSIONS.md` | done |
 | E6 | Corrected misleading live examples | done |
@@ -63,14 +66,15 @@ streaming), and the Phase E docs/DX work.
 - `go build ./...` + `go run` for both new examples against the mock gateway —
   pass
 
-### Known environment caveat
+### Follow-up WebSocket shutdown fix
 
-On Windows, some `pkg/ibkr` WebSocket integration tests (`TestWS_SystemUpdates`
-with `-count>1`, `TestWS_ReconnectResubscribes`) can deadlock in
-`internal.WSConn.Close` waiting on `WSConn.mu`. This is **pre-existing** and
-reproduces on the base commit with none of this run's changes applied; CI
-(Linux) is authoritative. The new account/portfolio tests were verified to pass
-under `-race`.
+The Windows WebSocket hang was initially reported as a pre-existing lock-order
+problem. The confirmed regression was introduced by D4: `lastUpdated` was not
+initialized, so the first `_updated` frame panicked while holding `WSConn.mu`.
+The reader recovered from the panic but left the mutex locked. A follow-up
+release also made explicit close cancel the owned I/O context, discard late
+reconnect connections, and force-close the socket without waiting for a graceful
+handshake.
 
 ## Notes
 
