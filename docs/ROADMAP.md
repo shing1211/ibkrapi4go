@@ -253,7 +253,13 @@ Exit criteria:
 The feature roadmap is complete: all 185 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.0.0`**.
+**`v1.0.1`**.
+
+A follow-up hardening run (2026-09-23) tightened correctness/security, made the
+CI gates real, and closed the remaining feature gaps — order state machine,
+bracket/OCA orders, typed WebSocket events, WS gap detection, delayed-data
+flags, `ClientOrderID` round-trip, and account/portfolio streaming. See
+[docs/runs/2026-09-23-blueprint-hardening](./runs/2026-09-23-blueprint-hardening/).
 
 All known correctness defects are closed, including the generated-client
 nil-`interface{}` panic class, which is now fixed at the spec level
@@ -262,11 +268,13 @@ nil-`interface{}` panic class, which is now fixed at the spec level
 
 ## Backlog (not scheduled)
 
-No feature items are pending. Candidate forward-looking work (v1.0.0 readiness
-and API stabilization, upstream spec drift watch, real-world examples, community
-sustainment) is proposed in the latest
-[`next-phase.md`](./archive/runs/2026-09-17-d1-root-cause/next-phase.md). See individual
-run reports in [docs/runs/](./archive/runs/index.md).
+No public feature items are pending. Candidate forward-looking work (fixing the
+Windows WebSocket `Close` deadlock, tightening `check_money.py`, a public
+OAuth2 token-refresh API, a unified streaming event API, spec drift watch) is
+proposed in the latest
+[`next-phase.md`](./runs/2026-09-23-blueprint-hardening/next-phase.md). See
+individual run reports in [docs/runs/](./runs/index.md) (current) and the
+archived [runs index](./archive/runs/index.md).
 
 ---
 

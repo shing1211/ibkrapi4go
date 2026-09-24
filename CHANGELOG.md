@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Order state machine + duplicate-submission protection:** `OrderState` with
+  legal transitions and a per-`TradeManager` `ClientOrderID` registry that
+  rejects duplicate submissions (`pkg/ibkr/orderstate.go`).
+- **Bracket / OCA / multi-leg orders:** `OrderRequest.ParentID` and
+  `IsSingleGroup` with builder helpers, plus `TimeInForce` `FOK`/`GTD` values and
+  `OrderRequest.Validate` (`pkg/ibkr/ids.go`, `pkg/ibkr/trade.go`,
+  `pkg/ibkr/builders.go`).
+- **Typed WebSocket events:** `OrderEvent`, `NotificationEvent`, and
+  `UserMessageEvent` are parsed and delivered on `Subscription.SystemUpdates()`
+  (`pkg/ibkr/events.go`).
+- **Account/portfolio streaming:** `AccountManager.SubscribeAccount` and
+  `PortfolioManager.SubscribePortfolio` deliver typed `AccountUpdateEvent`
+  (`acq`) and `PortfolioEvent` (`pos`) values on dedicated channels
+  (`pkg/ibkr/ws.go`). See [docs/STREAMING.md](./docs/STREAMING.md).
+- **Delayed-data / permission surfacing:** `MarketDataStatus` (field `6509`) is
+  exposed on `Snapshot.Status` and `Update.Status`
+  (`pkg/ibkr/marketdata.go`, `pkg/ibkr/ws.go`).
+- **`ClientOrderID` round-trip:** populated on `Order` and `OrderStatus` from
+  broker responses (`pkg/ibkr/trade.go`).
+- **WebSocket gap detection:** `WSGapError` is emitted when the `_updated`
+  sequence jumps backwards (`internal/ws.go`).
+- **Docs:** `docs/GATEWAY-SETUP.md` and `docs/PERMISSIONS.md`; README
+  architecture flow diagram; cancellation and reconciliation examples
+  (`examples/mock/cancel-order`, `examples/mock/reconcile-open-orders`).
+
+### Fixed
+
+- **Misleading live examples:** removed the unused `IBKR_USERNAME` /
+  `IBKR_PASSWORD` requirement (the gateway is browser-authenticated), made
+  `options-chain` use SDK managers, and corrected the OAuth2 "force refresh"
+  example.
+
+### Removed
+
+- **`RESTSSOSessions.CreateSessionRaw`:** removed because it leaked the generated
+  `*client.CreateSsoSessionsResponse` through a public signature
+  (`docs/design/04-generated-wrapping.md`). Use `CreateSession`.
+
 ## [1.0.1] - 2026-09-21
 
 ### Added

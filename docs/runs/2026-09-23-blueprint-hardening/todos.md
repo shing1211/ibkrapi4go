@@ -48,13 +48,13 @@ Statuses: `todo` · `doing` · `blocked` · `review` · `done`
 
 | ID | Task | Role | Status | Depends On | Size | Acceptance |
 |----|------|------|--------|-----------|------|-----------|
-| D1 | Order state machine + duplicate-submission protection | architect | todo | C1 | L | explicit transitions; dup blocked |
-| D2 | Bracket/OCA/conditional/multi-leg + TIF validation | backend | todo | D1 | L | new flows tested; non-breaking |
-| D3 | Typed order/execution/portfolio WS events | backend | todo | C1 | M/L | typed events + tests |
-| D4 | WS sequence/gap detection | backend | todo | D3 | M | gap signal emitted |
-| D5 | Delayed-data flags + market-data permissions | backend | todo | — | M | fields on `Snapshot`/`Update` |
-| D6 | `ClientOrderID` round-trip | backend | todo | — | S | field populated |
-| D7 | Implement account/portfolio streaming (typed WS events) | backend | todo | D3 | M/L | typed account/portfolio events |
+| D1 | Order state machine + duplicate-submission protection | architect | done | C1 | L | explicit transitions; dup blocked |
+| D2 | Bracket/OCA/conditional/multi-leg + TIF validation | backend | done | D1 | L | new flows tested; non-breaking |
+| D3 | Typed order/execution/portfolio WS events | backend | done | C1 | M/L | typed events + tests |
+| D4 | WS sequence/gap detection | backend | done | D3 | M | gap signal emitted |
+| D5 | Delayed-data flags + market-data permissions | backend | done | — | M | fields on `Snapshot`/`Update` |
+| D6 | `ClientOrderID` round-trip | backend | done | — | S | field populated |
+| D7 | Implement account/portfolio streaming (typed WS events) | backend | done | D3 | M/L | typed account/portfolio events |
 
 ## Phase E — Docs/DX
 
@@ -63,17 +63,17 @@ Statuses: `todo` · `doing` · `blocked` · `review` · `done`
 | E1 | Fix version/spec drift (doc.go, README×6, SPEC, ROADMAP) | docs | done | — | S | v1.0.1 / spec v2.40.0 |
 | E2 | Fix wrong error docs | docs | done | — | S | ERRORS.md matches code |
 | E3 | Fix `scripts/check_design/main.go` | backend | done | — | S/M | fails on real drift |
-| E4 | Remove leaking `CreateSessionRaw` | backend | todo | — | S | no generated type in public sig |
-| E5 | Add `docs/GATEWAY-SETUP.md` + `docs/PERMISSIONS.md` | docs | todo | — | S | linked from README |
-| E6 | Fix misleading live examples | docs | todo | — | S | examples accurate |
-| E7 | Add cancellation + reconciliation examples | docs | todo | — | S | entries compile |
-| E8 | Document streaming (incl. account/portfolio from D7) | docs | todo | D7 | S | STREAMING.md covers new capability |
-| E10 | README ASCII architecture diagram | docs | todo | — | S | diagram + translations |
+| E4 | Remove leaking `CreateSessionRaw` | backend | done | — | S | no generated type in public sig |
+| E5 | Add `docs/GATEWAY-SETUP.md` + `docs/PERMISSIONS.md` | docs | done | — | S | linked from README |
+| E6 | Fix misleading live examples | docs | done | — | S | examples accurate |
+| E7 | Add cancellation + reconciliation examples | docs | done | — | S | entries compile |
+| E8 | Document streaming (incl. account/portfolio from D7) | docs | done | D7 | S | STREAMING.md covers new capability |
+| E10 | README ASCII architecture diagram | docs | done | — | S | diagram + translations |
 
 ## Close-out
 
 | ID | Task | Role | Status | Depends On | Acceptance |
 |----|------|------|--------|-----------|-----------|
-| Z1 | Docs sync pass | docs | todo | all waves | docs reflect changes |
-| Z2 | Release (commit + push both remotes; sync gitee) | release | todo | Z1 | both remotes at same commit |
-| Z3 | Run report + index + next-phase | orchestrator | todo | Z2 | artifacts written |
+| Z1 | Docs sync pass | docs | done | all waves | docs reflect changes |
+| Z2 | Release (commit + push both remotes; sync gitee) | release | done | Z1 | both remotes at same commit |
+| Z3 | Run report + index + next-phase | orchestrator | done | Z2 | artifacts written |
