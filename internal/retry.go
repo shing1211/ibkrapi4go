@@ -26,6 +26,8 @@ type RetryPolicy struct {
 	Jitter bool
 	// RetryOnStatus lists the HTTP statuses that trigger a retry.
 	RetryOnStatus []int
+	// Metrics receives retry observations. Nil is a valid default (no-op).
+	Metrics Metrics
 }
 
 // DefaultRetryPolicy is the SDK default: 3 attempts for safe methods.
@@ -83,9 +85,14 @@ func Retry(p RetryPolicy) func(http.RoundTripper) http.RoundTripper {
 			var lastErr error
 			for attempt := 0; attempt < p.MaxAttempts; attempt++ {
 				if attempt > 0 {
-					if err := sleepCtx(req.Context(), p.delayFor(attempt-1, lastResp)); err != nil {
+					d := p.delayFor(attempt-1, lastResp)
+					observeHistogram(req.Context(), p.Metrics, MetricHTTPRetryBackoffMS, float64(d.Nanoseconds())/1e6,
+						Attr{Key: "attempt", Value: strconv.Itoa(attempt)})
+					if err := sleepCtx(req.Context(), d); err != nil {
 						return lastResp, err
 					}
+					incrCounter(req.Context(), p.Metrics, MetricHTTPRetries, 1,
+						Attr{Key: "attempt", Value: strconv.Itoa(attempt)})
 				}
 				resp, err := base.RoundTrip(req)
 				lastResp, lastErr = resp, err

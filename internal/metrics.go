@@ -66,6 +66,23 @@ const (
 	MetricOAuthTokenRefreshes = "ibkr.oauth.token.refreshes"
 	// MetricOAuthTokenFailures counts failed token acquisitions/refreshes.
 	MetricOAuthTokenFailures = "ibkr.oauth.token.failures"
+	// MetricHTTPRetries counts HTTP retry attempts.
+	MetricHTTPRetries = "ibkr.http.retries"
+	// MetricHTTPRetryBackoffMS records the backoff delay before each retry attempt.
+	MetricHTTPRetryBackoffMS = "ibkr.http.retry.backoff_ms"
+	// MetricWSHeartbeatFailures counts WebSocket ping failures.
+	MetricWSHeartbeatFailures = "ibkr.ws.heartbeat.failures"
+	// MetricWSDroppedEvents counts market-data events dropped because no
+	// subscription wanted the conid.
+	MetricWSDroppedEvents = "ibkr.ws.events.dropped"
+	// MetricWSQueueDepth records the current depth of the write channel.
+	MetricWSQueueDepth = "ibkr.ws.queue.depth"
+	// MetricWSActiveSubscriptions records the number of active WS subscriptions.
+	MetricWSActiveSubscriptions = "ibkr.ws.subscriptions.active"
+	// MetricRateLimit429s counts HTTP 429 Too Many Requests responses.
+	MetricRateLimit429s = "ibkr.ratelimit.429s"
+	// MetricOrderLatencyMS records order submission to confirmation latency.
+	MetricOrderLatencyMS = "ibkr.orders.latency_ms"
 )
 
 // nopMetrics discards all observations.
@@ -254,6 +271,14 @@ func Instrument(metrics Metrics) func(http.RoundTripper) http.RoundTripper {
 			metrics.Counter(req.Context(), MetricHTTPRequests, 1, reqAttrs...)
 			metrics.Histogram(req.Context(), MetricHTTPDuration, float64(duration.Nanoseconds())/1e6,
 				Attr{Key: "method", Value: req.Method}, Attr{Key: "path", Value: path})
+			if status == 429 {
+				metrics.Counter(req.Context(), MetricRateLimit429s, 1,
+					Attr{Key: "method", Value: req.Method}, Attr{Key: "path", Value: path})
+			}
+			if strings.HasPrefix(path, "/v1/api/order") {
+				metrics.Histogram(req.Context(), MetricOrderLatencyMS, float64(duration.Nanoseconds())/1e6,
+					Attr{Key: "method", Value: req.Method})
+			}
 			if err != nil || status >= 400 {
 				class := "http"
 				if err != nil {

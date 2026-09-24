@@ -185,6 +185,7 @@ func (c *WSConn) Subscribe(ctx context.Context, sink WSSink, systemSink WSSystem
 	c.mu.Lock()
 	c.subs[s] = struct{}{}
 	c.mu.Unlock()
+	setGauge(c.ctx, c.opts.Metrics, MetricWSActiveSubscriptions, float64(c.ActiveSubscriptions()))
 	if err := c.send(ctx, "subscribe", subscribeParams(s)); err != nil {
 		c.mu.Lock()
 		delete(c.subs, s)
@@ -200,6 +201,7 @@ func (h *WSHandle) Close() error {
 		h.conn.mu.Lock()
 		delete(h.conn.subs, h.sub)
 		h.conn.mu.Unlock()
+		setGauge(h.conn.ctx, h.conn.opts.Metrics, MetricWSActiveSubscriptions, float64(h.conn.ActiveSubscriptions()))
 		_ = h.conn.send(context.Background(), "unsubscribe", map[string]any{"conids": h.sub.conids})
 	})
 	return nil
@@ -329,6 +331,7 @@ func (c *WSConn) resubscribeAll() {
 
 func (c *WSConn) writeLoop() {
 	for {
+		setGauge(c.ctx, c.opts.Metrics, MetricWSQueueDepth, float64(len(c.out)))
 		select {
 		case b := <-c.out:
 			conn := c.currentConn()
@@ -363,6 +366,7 @@ func (c *WSConn) pingLoop() {
 			cancel()
 			if err != nil {
 				c.opts.Logger.Warn("ibkr.ws ping failed", "err", err)
+				incrCounter(c.ctx, c.opts.Metrics, MetricWSHeartbeatFailures, 1)
 				_ = conn.Close(websocket.StatusPolicyViolation, "ping timeout")
 			}
 		case <-c.stopCh:
@@ -449,13 +453,18 @@ func (c *WSConn) dispatch(data []byte) {
 	if len(updates) == 0 {
 		return
 	}
+	delivered := false
 	for _, s := range c.snapshotSubs() {
 		if !s.sink.Wants(conid) {
 			continue
 		}
+		delivered = true
 		for _, u := range updates {
 			s.sink.Deliver(u)
 		}
+	}
+	if !delivered {
+		incrCounter(c.ctx, c.opts.Metrics, MetricWSDroppedEvents, int64(len(updates)))
 	}
 }
 
