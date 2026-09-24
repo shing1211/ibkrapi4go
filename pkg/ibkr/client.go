@@ -479,7 +479,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	c.sessionManager = &SessionManager{client: c}
 	c.accountManager = &AccountManager{client: c}
 	c.portfolioManager = &PortfolioManager{client: c}
-	c.tradeManager = &TradeManager{client: c}
+	c.tradeManager = &TradeManager{client: c, coidRegistry: newCOIDRegistry()}
 	c.marketDataManager = &MarketDataManager{client: c}
 	c.tradingAccountManager = &TradingAccountManager{client: c}
 	c.alertManager = &AlertManager{client: c}

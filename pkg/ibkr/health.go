@@ -12,7 +12,7 @@ import (
 type HealthStatus int
 
 const (
-	HealthUnknown   HealthStatus = iota
+	HealthUnknown HealthStatus = iota
 	HealthHealthy
 	HealthDegraded
 	HealthUnhealthy

@@ -144,6 +144,16 @@ type WhatIfResult struct {
 // create two orders (ADR 0009).
 func (m *TradeManager) Submit(ctx context.Context, account AccountID, req OrderRequest) (*SubmitResult, error) {
 	const op = "Trade.Submit"
+
+	if req.ClientOrderID != "" {
+		if rec := m.coidRegistry.Get(req.ClientOrderID); rec != nil {
+			if rec.OrderID != "" {
+				return &SubmitResult{OrderID: rec.OrderID, Status: rec.State.String()}, nil
+			}
+			return nil, &Error{Op: op, Code: "duplicate", Message: "order submit in progress for cOID " + req.ClientOrderID}
+		}
+	}
+
 	body, err := json.Marshal(ordersSubmissionJSON{Orders: []orderTicketJSON{req.toJSON()}})
 	if err != nil {
 		return nil, &Error{Op: op, Message: "encode request: " + err.Error(), Err: err}
@@ -169,6 +179,19 @@ func (m *TradeManager) Submit(ctx context.Context, account AccountID, req OrderR
 			m.countOrder(ctx, internal.MetricOrdersRejected, 1)
 		}
 		return nil, err
+	}
+	if req.ClientOrderID != "" {
+		state := OrderStateSubmitted
+		if result.Accepted() {
+			state = OrderStateAccepted
+		}
+		m.coidRegistry.Set(req.ClientOrderID, &orderRecord{
+			State:         state,
+			ClientOrderID: req.ClientOrderID,
+			OrderID:       result.OrderID,
+			AccountID:     account,
+			ConID:         req.ConID,
+		})
 	}
 	m.countOrder(ctx, internal.MetricOrdersSubmitted, 1)
 	return result, nil
