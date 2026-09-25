@@ -405,8 +405,8 @@ func (c *WSConn) reconnect(attempt *int) error {
 			continue
 		}
 		*attempt = 0
-		c.notifyReconnect()
 		c.resubscribeAll()
+		c.notifyReconnect()
 		c.opts.Telemetry.OnWSConnect(c.ctx, WSConnInfo{Event: "reconnect", URL: c.wsURL, Subscriptions: c.ActiveSubscriptions()})
 		return nil
 	}

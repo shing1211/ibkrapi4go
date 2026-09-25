@@ -6,11 +6,15 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/coder/websocket"
 
 	"github.com/shing1211/ibkrapi4go/internal/mockgateway"
 )
@@ -547,5 +551,120 @@ func TestWSGapError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "sequence gap") {
 		t.Error("WSGapError.Error() should contain 'sequence gap'")
+	}
+}
+
+type reconnectOrderSink struct {
+	mu       sync.Mutex
+	conn     *WSConn
+	notified bool
+	queued   int
+}
+
+func (s *reconnectOrderSink) Wants(int) bool { return true }
+
+func (s *reconnectOrderSink) Deliver(WSUpdate) {}
+
+func (s *reconnectOrderSink) Fail(err error) {
+	if !errors.Is(err, ErrWSReconnected) {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.notified = true
+	s.queued = len(s.conn.out)
+}
+
+func TestWS_ResubscribePrecedesReconnectNotification(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer server.Close()
+
+	gatewayURL := "http://" + server.Listener.Addr().String()
+	wsURL, err := wsURLFromGateway(gatewayURL)
+	if err != nil {
+		t.Fatalf("wsURLFromGateway: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c := &WSConn{
+		wsURL: wsURL,
+		opts: WSOptions{
+			Logger:        NopLogger(),
+			Metrics:       NopMetrics(),
+			Telemetry:     NopTelemetry(),
+			Clock:         &Clock{},
+			ReconnectBase: time.Millisecond,
+			ReconnectMax:  2 * time.Millisecond,
+			DialWS: func(ctx context.Context, wsURL string, httpClient *http.Client) (*websocket.Conn, error) {
+				dctx, dialCancel := context.WithTimeout(ctx, 10*time.Second)
+				defer dialCancel()
+				conn, _, err := websocket.Dial(dctx, wsURL, &websocket.DialOptions{HTTPClient: httpClient})
+				return conn, err
+			},
+		},
+		ctx:         ctx,
+		cancel:      cancel,
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 64),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+	}
+	if err := c.dial(ctx); err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer func() {
+		c.mu.Lock()
+		conn := c.conn
+		c.mu.Unlock()
+		if conn != nil {
+			_ = conn.CloseNow()
+		}
+	}()
+
+	sink := &reconnectOrderSink{conn: c}
+	c.mu.Lock()
+	c.subs[&wsSub{sink: sink, method: "subscribe", conids: []int{265598}, fields: []string{"31"}}] = struct{}{}
+	c.mu.Unlock()
+
+	attempt := 0
+	if err := c.reconnect(&attempt); err != nil {
+		t.Fatalf("reconnect: %v", err)
+	}
+
+	sink.mu.Lock()
+	notified, queued := sink.notified, sink.queued
+	sink.mu.Unlock()
+
+	if !notified {
+		t.Fatal("ErrWSReconnected was not delivered to the subscription")
+	}
+	if queued == 0 {
+		t.Fatal("outbound queue was empty when ErrWSReconnected was delivered: " +
+			"resubscribe must be issued before the reconnect notification")
+	}
+
+	select {
+	case frame := <-c.out:
+		var got struct {
+			Method string `json:"method"`
+			Params struct {
+				Conids []int `json:"conids"`
+			} `json:"params"`
+		}
+		if err := json.Unmarshal(frame, &got); err != nil {
+			t.Fatalf("unmarshal resubscribe frame: %v", err)
+		}
+		if got.Method != "subscribe" {
+			t.Errorf("resubscribe frame method = %q, want %q", got.Method, "subscribe")
+		}
+		if len(got.Params.Conids) != 1 || got.Params.Conids[0] != 265598 {
+			t.Errorf("resubscribe frame conids = %v, want [265598]", got.Params.Conids)
+		}
+	default:
+		t.Fatal("no frame available on the outbound queue")
 	}
 }
