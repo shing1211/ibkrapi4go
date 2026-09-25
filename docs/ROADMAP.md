@@ -253,7 +253,15 @@ Exit criteria:
 The feature roadmap is complete: all 185 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.0.6`**.
+**`v1.0.7`**.
+
+The `v1.0.7` patch repairs three build/CI defects: the coverage gate, which
+compared an empty parsed value and therefore never enforced anything; the
+`codegen drift` job, which failed on every run because the committed generated
+client used CRLF line endings while Linux CI generates LF; and
+`patch_spec.py`, which crashed on Windows when writing the patched spec. It also
+adds `patch_spec.py` defect 8, which retypes money and quantity fields declared
+inline under `paths`.
 
 A follow-up hardening run (2026-09-23) tightened correctness/security, made the
 CI gates real, and closed the remaining feature gaps — order state machine,

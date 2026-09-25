@@ -4,6 +4,47 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [1.0.7] - 2026-09-25
+
+### Fixed
+
+- **Coverage gate never enforced anything.** `.github/workflows/ci.yml` parsed
+  the total with `awk -F'[.%]' '{print $3}'`, which extracts an empty field from
+  `total: ... 36.8%`. The subsequent `[ "$TOTAL" -lt 60 ]` then errored rather
+  than comparing, so the step passed unconditionally. The parser now reads the
+  last field and strips `%`, and the threshold uses a float comparison instead of
+  `[ -lt ]` (which rejects decimals). Threshold set to 35%, the current measured
+  coverage, as a ratchet baseline.
+- **`codegen drift` CI job failing on every run.** The committed
+  `client/client.gen.go` blob used CRLF line endings and the repository has no
+  `.gitattributes`. `validate_codegen.sh` diffs the committed file against a
+  fresh generation, and on Linux the generator emits LF, so the check failed even
+  though the generated code was otherwise identical. Regenerated with LF; the
+  drift check now passes.
+- **`make codegen` / `make codegen-verify` crashed on Windows.**
+  `patch_spec.py` wrote the patched spec to `sys.stdout`, which defaults to
+  cp1252 on Windows and cannot encode the spec's non-ASCII characters. stdout is
+  now reconfigured to UTF-8.
+
+### Changed
+
+- **`patch_spec.py` defect 8:** money and quantity fields declared inline under
+  `paths` are now retyped from `number` to `string` (ADR 0008). Defect 7 only
+  walked `components.schemas`, so eight fields across three operations still
+  generated as `float32`. The new allowlist is deliberately separate from defect
+  7 so that live banking request schemas (`FopInstruction`, `DwacInstruction`,
+  `ComplexAssetTransferInstruction`, `singleOrderSubmissionRequest`) keep their
+  existing wire format. See `docs/CODEGEN.md`.
+- Regenerated `client/client.gen.go` from the patched v2.40.0 spec. All six
+  money/quantity fields on `SubmitModelPortfolioOrderJSONBody` and both
+  `AmtToInvest` fields are now `*string`.
+
+### Documentation
+
+- `docs/CODEGEN.md` — documented all eight spec defects, added a line-endings
+  section explaining the drift failure, and corrected the measured line count
+  (72,532 → 75,688).
+
 ## [Unreleased]
 
 ## [1.0.6] - 2026-09-24
@@ -525,7 +566,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.7...HEAD
+[1.0.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.3...v1.0.4

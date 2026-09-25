@@ -37,7 +37,7 @@ The build-time toolchain is pinned in `go.mod` (tools) / `Makefile` (`make tools
 
 ## Spec defects and patches
 
-The published spec does **not** generate cleanly. `patch_spec.py` applies three
+The published spec does **not** generate cleanly. `patch_spec.py` applies eight
 generalized fixes. Measured against v2.40.0:
 
 | # | Defect | Occurrences | Fix |
@@ -45,11 +45,28 @@ generalized fixes. Measured against v2.40.0:
 | 1 | Path parameter declared but absent from the path template (or name differs) | 27 endpoints | Reconcile: drop spurious, rename mismatched, add missing |
 | 2 | Duplicate `operationId` (`getTradingSchedule`) | 1 | Append a unique suffix to the later occurrence |
 | 3 | Go type-name collision after normalization (`ErrorResponse`/`errorResponse`, `User`/`user`) | 2 | Assign `x-go-name` to the later occurrence |
-| 4 | Inline query parameter schema omits `type` (OpenAPI `type: null`), e.g. `GetContractInfo`'s `sectype`, `GetConidsByExchange`'s `assetClass` | 22 params | Set `type: string` (the values are plain strings in practice) |
+| 4 | Inline query parameter schema omits `type` (OpenAPI `type: null`), e.g. `GetContractInfo`'s `sectype`, `GetConidsByExchange`'s `assetClass` | 20 params | Set `type: string` (the values are plain strings in practice) |
+| 5 | `type: float` on ID-named fields (`conid`, `clientInstructionId`, …) generates `float32`, losing precision above 2^24 | 41 fields | Set `type: integer` |
+| 6 | Schema `twsInvestDivestResponse` collides with the generated HTTP response wrapper of the same name | 1 | Assign `x-go-name: TwsInvestDivestResponseData` |
+| 7 | `type: number` on money-amount fields in `components.schemas` (ADR 0008) | 16 fields | Set `type: string` |
+| 8 | `type: number` on money/quantity fields in schemas declared **inline under `paths`** | 8 fields | Set `type: string` (see below) |
 
 Reconciliation detail (defect 1): **24** spurious params dropped, **3** renamed,
 **1** added. The notable case is `/gw/api/v1/balances/query`, whose POST
 `$ref`s `clientIdPathParam` even though the path has no `{client-id}` segment.
+
+Defect 8 detail: defect 7 only walks `components.schemas`, so operations that
+declare their bodies inline keep `type: number` and generate as `float32`. In
+v2.40.0 this is exactly eight fields across three operations — `amtToInvest`
+(twice) under `/v1/api/fa/model/invest-divest` and
+`/v1/api/fa/model/tws-invest-divest`, plus `auxPrice`, `cashQty`, `fxQty`,
+`price`, `quantity`, and `trailingAmt` under
+`/v1/api/iserver/account/{modelCode}/orders`. The allowlist is deliberately
+separate from defect 7: the same names also appear on
+`singleOrderSubmissionRequest`, `FopInstruction`, `DwacInstruction`, and
+`ComplexAssetTransferInstruction`, which are live banking request schemas.
+Retyping those would change the wire format of existing transfer operations, so
+they are left as `number` and the public wrappers marshal strings explicitly.
 
 The patch script is idempotent and reports counts to stderr.
 
@@ -64,6 +81,15 @@ nil-safe and needs no guard.
 
 `scripts/patch_gen.py` is retained as a no-op for backward compatibility.
 
+## Line endings
+
+`client/client.gen.go` is committed with **LF** line endings and the repository
+has no `.gitattributes`. This matters: `validate_codegen.sh` diffs the committed
+file against a fresh generation, and on Linux the generator emits LF. A CRLF
+blob therefore fails the drift check on every run even when the generated code
+is otherwise identical. Regenerate on any platform, but verify the output uses
+LF before committing.
+
 ## Measured result
 
 With `oapi-codegen` **v2.8.0** and the patched spec:
@@ -72,8 +98,8 @@ With `oapi-codegen` **v2.8.0** and the patched spec:
 |--------|------:|
 | Generator exit code | `0` |
 | Output | `client/client.gen.go` |
-| Lines | 72,532 |
-| Size | ~2.8 MB |
+| Lines | 75,688 |
+| Size | ~3.0 MB |
 | `go build` | ✅ clean |
 
 > This number replaces an earlier, unverified claim that "184/185 endpoints

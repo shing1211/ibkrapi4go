@@ -23,7 +23,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本書は英語版 [README](./README.md) のコミュニティ翻訳です。**英語版が正式です。**
-> 同期 / Last synced: cdef66b
+> 同期 / Last synced: v1.0.7
 
 ## 目次
 
@@ -56,7 +56,7 @@
 | メトリクス + ロギング | ✅ 実装済み（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 品質ゲート（カバレッジ、プレコミット） | ✅ 実装済み |
 | ドキュメントサイト + Discussions | ✅ 実装済み（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| リリース | ✅ v1.0.6（GitHub + Gitee） |
+| リリース | ✅ v1.0.7（GitHub + Gitee） |
 
 現在のリポジトリには**生成済みの OpenAPI クライアント**、ドキュメント、
 コード生成ツールが含まれます。すべての 185 の API オペレーションが実装済みです。

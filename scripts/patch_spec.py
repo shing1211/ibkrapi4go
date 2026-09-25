@@ -46,6 +46,20 @@ This script applies seven deterministic, idempotent fixes:
         precision loss on large values.  Rate/percentage fields (Weight,
         ExchangeRate, OwnershipPercentage) are left unchanged.
 
+    8. Apply the same money-field retyping to inline request/response schemas
+        declared under `paths`.  Defect 7 only walks `components.schemas`, so
+        operations whose bodies are declared inline keep `type: number` and
+        generate as `float32`.  In v2.40.0 this affects exactly eight fields in
+        three operations: `amtToInvest` (x2) under
+        `/v1/api/fa/model/invest-divest` and `/v1/api/fa/model/tws-invest-divest`,
+        and `auxPrice`, `cashQty`, `fxQty`, `price`, `quantity`, `trailingAmt`
+        under `/v1/api/iserver/account/{modelCode}/orders`.
+        The field allowlist is separate from defect 7 on purpose: the same
+        names also appear on `singleOrderSubmissionRequest`, `FopInstruction`,
+        `DwacInstruction`, and `ComplexAssetTransferInstruction`, which are live
+        banking request schemas, and retyping those would change the wire format
+        of existing transfer operations.  See docs/CODEGEN.md defect 8.
+
 Usage:
     python3 scripts/patch_spec.py specs/ibkr_spec.json > specs/ibkr_patched.json
 
@@ -245,6 +259,39 @@ def patch(spec: dict) -> collections.Counter:
     for schema in schemas.values():
         patch_money_schema(schema)
 
+    # 8. Reapply money retyping to inline schemas declared under `paths`.
+    #    Scoped to a separate allowlist; see the module docstring.
+    INLINE_MONEY_FIELDS = frozenset([
+        "amttoinvest",
+        "auxprice",
+        "cashqty",
+        "fxqty",
+        "price",
+        "quantity",
+        "trailingamt",
+    ])
+
+    def patch_inline_money(node) -> None:
+        if isinstance(node, dict):
+            props = node.get("properties")
+            if isinstance(props, dict):
+                for name, prop in props.items():
+                    if (
+                        isinstance(prop, dict)
+                        and name.lower() in INLINE_MONEY_FIELDS
+                        and prop.get("type") == "number"
+                    ):
+                        prop["type"] = "string"
+                        report["inline_money_patched"] += 1
+            for value in node.values():
+                patch_inline_money(value)
+        elif isinstance(node, list):
+            for value in node:
+                patch_inline_money(value)
+
+    for path_item in spec.get("paths", {}).values():
+        patch_inline_money(path_item)
+
     return report
 
 
@@ -261,6 +308,7 @@ def main() -> None:
         f"patched: " + ", ".join(f"{k}={v}" for k, v in sorted(report.items())),
         file=sys.stderr,
     )
+    sys.stdout.reconfigure(encoding="utf-8")
     json.dump(spec, sys.stdout, ensure_ascii=False)
 
 

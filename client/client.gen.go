@@ -24936,7 +24936,7 @@ type SetAccountinvestmentInModelJSONBody struct {
 		Account *string `json:"account,omitempty"`
 
 		// AmtToInvest Amount of cash to invest in the model from the account.
-		AmtToInvest *float32 `json:"amtToInvest,omitempty"`
+		AmtToInvest *string `json:"amtToInvest,omitempty"`
 	} `json:"accountList,omitempty"`
 
 	// Model Define the model to invest accounts into.
@@ -25199,7 +25199,7 @@ type TwsInvestDivestJSONBody struct {
 		// AmtToInvest Amount of cash to invest into the model. Use a negative value to divest.
 		//
 		// Example: 1000
-		AmtToInvest *float32 `json:"amtToInvest,omitempty"`
+		AmtToInvest *string `json:"amtToInvest,omitempty"`
 
 		// InvestCurrency Currency (ISO 4217) of the invest/divest amount.
 		//
@@ -25433,7 +25433,7 @@ type SubmitModelPortfolioOrderJSONBody struct {
 		AllocationMethod *string `json:"allocationMethod,omitempty"`
 
 		// AuxPrice Stop or trailing price. Required for `STP`, `STOP_LIMIT`, and trailing order types.
-		AuxPrice *float32 `json:"auxPrice,omitempty"`
+		AuxPrice *string `json:"auxPrice,omitempty"`
 
 		// COID Client order identifier. Must be unique per order and can be used to correlate submissions with downstream events.
 		//
@@ -25442,7 +25442,7 @@ type SubmitModelPortfolioOrderJSONBody struct {
 		COID *string `json:"cOID,omitempty"`
 
 		// CashQty Cash-denominated quantity to trade. Mutually exclusive with `quantity`.
-		CashQty *float32 `json:"cashQty,omitempty"`
+		CashQty *string `json:"cashQty,omitempty"`
 
 		// Conid Contract identifier for the instrument to trade.
 		//
@@ -25456,7 +25456,7 @@ type SubmitModelPortfolioOrderJSONBody struct {
 		Conidex *string `json:"conidex,omitempty"`
 
 		// FxQty FX quantity for currency conversion orders.
-		FxQty *float32 `json:"fxQty,omitempty"`
+		FxQty *string `json:"fxQty,omitempty"`
 
 		// IsCcyConv True if the order is a currency conversion order.
 		IsCcyConv *bool `json:"isCcyConv,omitempty"`
@@ -25481,12 +25481,12 @@ type SubmitModelPortfolioOrderJSONBody struct {
 		ParentId *string `json:"parentId,omitempty"`
 
 		// Price Limit price. Required for `LMT` and `STOP_LIMIT` order types.
-		Price *float32 `json:"price,omitempty"`
+		Price *string `json:"price,omitempty"`
 
 		// Quantity Share quantity to trade. Mutually exclusive with `cashQty`.
 		//
 		// Example: 100
-		Quantity *float32 `json:"quantity,omitempty"`
+		Quantity *string `json:"quantity,omitempty"`
 
 		// Referrer Optional referrer identifier used for internal tracking.
 		//
@@ -25520,7 +25520,7 @@ type SubmitModelPortfolioOrderJSONBody struct {
 		Tif *SubmitModelPortfolioOrderJSONBodyOrdersTif `json:"tif,omitempty"`
 
 		// TrailingAmt Trailing amount for `TRAIL` / `TRAILLMT` order types.
-		TrailingAmt *float32 `json:"trailingAmt,omitempty"`
+		TrailingAmt *string `json:"trailingAmt,omitempty"`
 
 		// TrailingType Trailing amount type.
 		TrailingType *SubmitModelPortfolioOrderJSONBodyOrdersTrailingType `json:"trailingType,omitempty"`
