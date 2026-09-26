@@ -26,5 +26,7 @@ live example no longer prints token material.
 
 ## Later backlog
 
-- Add a scheduled upstream spec drift check.
 - Complete E3 design-checker accuracy work; it remains under review.
+
+Note: a scheduled upstream spec drift check was previously listed here. It has
+since shipped as `.github/workflows/spec-drift.yml` (weekly, Monday 09:00 UTC).

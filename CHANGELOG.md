@@ -4,10 +4,51 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [1.0.8] - 2026-09-25
+
+### Fixed
+
+- **Reconnect notification ordering.** `reconnect` called `notifyReconnect`
+  before `resubscribeAll`, so a consumer reacting to `ErrWSReconnected` could
+  read its `Updates` channel before the subscribe frames had been issued and
+  lose the first updates after a reconnect. Resubscribing now precedes the
+  notification, matching the order already documented in
+  [docs/STREAMING.md](./docs/STREAMING.md). Adds a regression test that fails
+  under the previous ordering.
+
+### Changed
+
+- Added `.gitattributes` enforcing `* text=auto eol=lf`. Without it, a Windows
+  checkout can leave CRLF in the working tree, which makes a local
+  `gofmt -s -l .` and `make check` report files that are correctly stored as LF
+  in git. This is the same class of problem that previously shipped CRLF in
+  `client/client.gen.go` and broke the codegen drift check.
+- Aligned `.github/workflows/pre-commit.yml` with `ci.yml`: the gofmt
+  exclusion now matches Windows path separators, and `actions/setup-go` moves
+  from the pinned `@v5` to `@v7` used by every other workflow.
+- Documented the golangci-lint, gofmt-pattern, and Windows line-ending CI
+  fixes that shipped inside the `v1.0.7` range without a changelog entry.
+
 ## [1.0.7] - 2026-09-25
 
 ### Fixed
 
+- **golangci-lint was installed from a non-existent module path.** The lint job
+  ran `go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest`;
+  the v2 module moved that command to `.../golangci-lint/v2/cmd/golangci-lint`,
+  so the install could not succeed. CI steps also gained an explicit
+  `shell: bash` default, and the release workflow was restructured.
+- **`gofmt` exclusion pattern was POSIX-only.** The format check excluded the
+  generated client with `grep -v '^client/'`, which does not match the
+  backslash-separated paths `gofmt` emits on Windows. It now uses
+  `grep -vE '(^|[\\/])client[\\/]'`, matching `ci.yml`.
+- **Windows checkout line endings.** CI now sets `core.autocrlf false` and
+  re-checks out the tree on Windows so formatting checks see consistent
+  endings. This treats the symptom; the underlying cause is addressed by the
+  `.gitattributes` added in `[Unreleased]`.
 - **Coverage gate never enforced anything.** `.github/workflows/ci.yml` parsed
   the total with `awk -F'[.%]' '{print $3}'`, which extracts an empty field from
   `total: ... 36.8%`. The subsequent `[ "$TOTAL" -lt 60 ]` then errored rather
@@ -44,8 +85,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/CODEGEN.md` — documented all eight spec defects, added a line-endings
   section explaining the drift failure, and corrected the measured line count
   (72,532 → 75,688).
-
-## [Unreleased]
 
 ## [1.0.6] - 2026-09-24
 
@@ -566,7 +605,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.7...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.8...HEAD
+[1.0.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.4...v1.0.5

@@ -18,13 +18,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.26'
 
       - name: gofmt
         run: |
-          unformatted="$(gofmt -s -l . | grep -v '^client/' || true)"
+          unformatted="$(gofmt -s -l . | grep -vE '(^|[\\/])client[\\/]' || true)"
           if [ -n "$unformatted" ]; then
             echo "::error::gofmt needed on:"; echo "$unformatted"; exit 1
           fi

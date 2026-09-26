@@ -253,7 +253,12 @@ Exit criteria:
 The feature roadmap is complete: all 185 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.0.7`**.
+**`v1.0.8`**.
+
+The `v1.0.8` patch corrects the reconnect notification order so a resubscribe is
+issued before `ErrWSReconnected` reaches the consumer, and adds a
+`.gitattributes` that keeps line endings LF so a Windows checkout cannot make
+`gofmt` or the codegen drift check report files that are stored correctly.
 
 The `v1.0.7` patch repairs three build/CI defects: the coverage gate, which
 compared an empty parsed value and therefore never enforced anything; the

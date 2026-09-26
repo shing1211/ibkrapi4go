@@ -37,6 +37,10 @@ changed.
 - Focused WebSocket tests with `-count=20` — pass
 - `go vet ./...` — pass
 - `gofmt` and `git diff --check` — pass
+  - Later correction: this was verified on a Windows working tree, where CRLF
+    checkouts made `gofmt -s -l` report files that are stored as LF in git. The
+    committed blobs were always LF, so CI was unaffected. The underlying cause
+    is addressed by the `.gitattributes` added after this run.
 - Local `-race` verification unavailable: Go reports `CGO_ENABLED=0`, and no C
   compiler is installed in the Windows environment.
 

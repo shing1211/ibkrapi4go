@@ -1,0 +1,10 @@
+# Normalize line endings to LF in the repository and on checkout.
+#
+# Rationale: without this, a file committed from Windows can carry CRLF into
+# the blob. `gofmt -s -l` then reports it as unformatted, which fails the CI
+# "Format check" step on every runner, and `validate_codegen.sh` sees a byte
+# mismatch against a fresh LF generation from the generator.
+#
+# This also keeps client/client.gen.go at LF, which is what oapi-codegen
+# emits on Linux, so the codegen drift check compares like for like.
+* text=auto eol=lf
