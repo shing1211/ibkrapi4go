@@ -501,11 +501,6 @@ func (c *WSConn) wgDoneWrapper(fn func()) {
 	fn()
 }
 
-func (c *WSConn) waitForDone() {
-	c.wg.Wait()
-	close(c.doneCh)
-}
-
 func (c *WSConn) dispatch(data []byte) {
 	var m map[string]json.RawMessage
 	if err := json.Unmarshal(data, &m); err != nil {

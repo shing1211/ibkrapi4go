@@ -92,6 +92,14 @@ func (s *Server) Scenario() *Scenario { return s.scenario }
 // Stream returns the WebSocket streaming hub.
 func (s *Server) Stream() *StreamHub { return s.stream }
 
+// Close releases every open stream connection.
+//
+// httptest.Server.Close does not track hijacked connections, so a serveWS
+// handler parked on a blocked Read would otherwise outlive the test that
+// started it. Tests should defer Close alongside the httptest server's own
+// Close.
+func (s *Server) Close() { s.stream.closeAll() }
+
 // PushTick broadcasts a scripted market-data tick to subscribed WebSocket
 // clients and returns the number of connections written to.
 func (s *Server) PushTick(t Tick) int { return s.stream.Push(t) }

@@ -1,4 +1,4 @@
-# Test Hardening - Todos
+﻿# Test Hardening - Todos
 
 | # | Item | Status | Note |
 |---|------|--------|------|
@@ -9,8 +9,8 @@
 | 1 | Restate P2 honestly | done | 2 of 9 design docs verified, not strictness |
 | 1 | Mark the ratchet question answered | done | Decision: ratchet, in slices |
 | 1 | Confirm one canonical floor value | done | `ci.yml:76` only; run records are history, not competing counts |
-| 2 | Reproduce the `TestWS_Resilience` flake | pending | Read the leaked goroutine before choosing a fix |
-| 2 | Fix the cause in `Close`/loop shutdown | pending | Bounded settle only if no real leak exists |
+| 2 | Reproduce the `TestWS_Resilience` flake | done | `go test ./internal/ -count=2` fails reliably; leak is mockgateway serveWS, not WSConn |
+| 2 | Fix the cause | done | StreamHub.closeAll uses CloseNow; Server.Close added; 17 test sites updated |
 | 3 | Per-test goleak: `internal/ws_test.go` | pending | Attribution |
 | 3 | Per-test goleak: `internal/session_test.go` | pending | 0 cleanup sites, highest risk |
 | 3 | Per-test goleak: `pkg/ibkr/ws_test.go` | pending | Attribution |

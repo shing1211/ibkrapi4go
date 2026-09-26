@@ -182,6 +182,26 @@ func (h *StreamHub) remove(sc *streamConn) {
 	h.mu.Unlock()
 }
 
+// closeAll closes every registered stream connection.
+//
+// Closing the socket is what unblocks a handler parked in c.Read: the read
+// context is context.Background, so there is no cancellation path into it.
+// CloseNow returns immediately and the handler unwinds on its own, which is why
+// callers still need a bounded settle after this returns.
+func (h *StreamHub) closeAll() {
+	h.mu.Lock()
+	conns := make([]*streamConn, 0, len(h.conns))
+	for sc := range h.conns {
+		conns = append(conns, sc)
+	}
+	h.mu.Unlock()
+
+	for _, sc := range conns {
+		sc.close()
+		_ = sc.conn.CloseNow()
+	}
+}
+
 // nextUpdated returns a monotonic, seed-derived `_updated` stamp. It is
 // deterministic for a given seed and emission order, unlike wall-clock time.
 func (h *StreamHub) nextUpdated() int64 {

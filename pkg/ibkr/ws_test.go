@@ -23,6 +23,9 @@ func newWSServer(t *testing.T, script *mockgateway.StreamScript) *httptest.Serve
 	srv := mockgateway.New(mockgateway.WithStreamScript(script))
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
+	// Registered last, so it runs first: closing the stream sockets unblocks
+	// the handlers parked in Read before the httptest server stops.
+	t.Cleanup(srv.Close)
 	return ts
 }
 

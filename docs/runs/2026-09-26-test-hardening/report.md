@@ -1,4 +1,4 @@
-# Test Hardening - Report
+﻿# Test Hardening - Report
 
 Status: in progress. Steps 0 and 1 are complete; steps 2 through 4 are open.
 
@@ -40,6 +40,53 @@ is still worth raising, but as a deliberate ratchet rather than a rescue.
 P2 in the inherited `next-phase.md` was rebuilt around the real gap: `check_design`
 reads 2 of the 9 design documents, so the weakness is breadth, not strictness.
 
+## The Flake Was Not a Flake
+
+`TestWS_Resilience` had flaked once and then passed roughly fifteen times,
+including under deliberate CPU oversubscription. The first hypothesis was a
+goroutine-settle race in `WSConn.Close`, which documents a bounded wait and
+signals completion from a goroutine that is still executing.
+
+That hypothesis was wrong. A reliable reproducer turned up instead:
+
+    go test ./internal/ -count=2
+
+failed on every attempt. `-count=1` passed. The leaked goroutine was not
+`WSConn` at all:
+
+    mockgateway.(*Server).serveWS
+      internal/mockgateway/stream.go:328
+    created by net/http.(*Server).Serve
+
+`serveWS` parks on `c.Read(context.Background())` (stream.go:328). That context
+is never cancelled, and `httptest.Server.Close` does not track hijacked
+connections, so the handler outlived the server that started it. The parent
+`TestWS_Resilience` failed because a `serveWS` handler from an earlier subtest
+was still alive when the parent's leak check ran, which is also why the original
+failure named no subtest.
+
+### Fix
+
+`StreamHub.closeAll` closes every registered stream socket with `CloseNow`,
+which is what actually unblocks a read parked on an uncancellable context.
+`Server.Close` exposes it, and the tests now call it:
+
+- `pkg/ibkr/ws_test.go` - one line in `newWSServer`, covering 10 call sites
+- `internal/ws_test.go` and `internal/ws_resilience_test.go` - 16 call sites
+
+`CloseNow` returns before the handler unwinds, so a bounded settle is still
+needed on the test side. `waitForGoroutinesToSettle` polls until the goroutines
+clear, bounded at 2s. A goroutine that is merely winding down exits on its own;
+a real leak never does, so the helper cannot mask one. That property is tested
+in both directions rather than assumed.
+
+The reproducer went from failing to passing, and `-count=3` now passes too.
+
+### Incidental
+
+`WSConn.waitForDone` was dead code with zero callers; the live path inlines the
+same logic. Removed.
+
 ## Two Measurement Traps
 
 Both were hit in this run's first pass and are recorded in `plan.md`:
@@ -57,6 +104,14 @@ Both were hit in this run's first pass and are recorded in `plan.md`:
 - `scripts/check_links.py` - all local markdown links resolve
 - `scripts/check_i18n.py` - 6 languages consistent
 - Coverage total cross-checked against `go tool cover -func`
+- `go build ./...`, `go vet ./...`, `gofmt -s -l .` - clean
+- `go test ./...` - pass
+- `go test -race ./internal/... ./pkg/ibkr/...` - pass, no data races
+- `go test ./internal/ -count=2` - the reproducer, pass (failed before the fix)
+- `go test ./internal/ -count=3` - pass
+- `go test ./pkg/ibkr/ -count=2` - pass
+- `TestWaitForGoroutinesToSettle_*` - prove the settle helper reports a real
+  leak, returns immediately when clean, and tolerates a slow shutdown
 
 ## Known Limitations
 
@@ -64,5 +119,3 @@ Both were hit in this run's first pass and are recorded in `plan.md`:
 - `cmd/ibkr` and `cmd/ibkr-mock-gateway` contribute 318 uncovered statements to
   the denominator. They stay in `-coverpkg` by decision; only their testable
   parts will be covered, and `main()` will remain uncovered.
-- The `TestWS_Resilience` flake cause is still a hypothesis, not a confirmed
-  finding. Reproduction is step 2.

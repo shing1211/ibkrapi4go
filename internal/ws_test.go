@@ -256,6 +256,7 @@ func TestWS_DialAndSubscribe(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -294,6 +295,7 @@ func TestWS_SubscribeDeliversToCorrectSink(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 	hub := srv.Stream()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -351,6 +353,7 @@ func TestWS_SystemFrameDeliversToSystemSink(t *testing.T) {
 	srv := mockgateway.New(mockgateway.WithStreamScript(&helloScript))
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -388,6 +391,7 @@ func TestWS_CloseUnsubscribes(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -422,6 +426,7 @@ func TestWS_CloseIdempotent(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -443,6 +448,7 @@ func TestWS_ActiveSubscriptions(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -491,6 +497,7 @@ func TestWS_ConcurrentSubscribeClose(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -650,6 +657,7 @@ func TestWS_DialDiscardsConnectionAfterClose(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	gatewayURL := "http://" + server.Listener.Addr().String()
 	wsURL, err := wsURLFromGateway(gatewayURL)
@@ -770,6 +778,7 @@ func TestWS_ResubscribePrecedesReconnectNotification(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	gatewayURL := "http://" + server.Listener.Addr().String()
 	wsURL, err := wsURLFromGateway(gatewayURL)

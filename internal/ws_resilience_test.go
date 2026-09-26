@@ -15,7 +15,6 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/shing1211/ibkrapi4go/internal/mockgateway"
-	"go.uber.org/goleak"
 )
 
 func TestWS_Resilience(t *testing.T) {
@@ -29,13 +28,14 @@ func TestWS_Resilience(t *testing.T) {
 }
 
 func TestWS_Reconnect_DropFirstConnection(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	defer settleGoroutines(t)
 
 	srv := mockgateway.New(mockgateway.WithStreamScript(&mockgateway.StreamScript{
 		DropFirstConnection: true,
 	}))
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -89,11 +89,12 @@ done:
 }
 
 func TestWS_HeartbeatTimeout(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	defer settleGoroutines(t)
 
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -176,11 +177,12 @@ func (s *fakeHeartbeatSink) Fail(err error) {
 }
 
 func TestWS_CancelWriteDuringSend(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	defer settleGoroutines(t)
 
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -284,7 +286,7 @@ func TestWS_CloseUnblocksSilentPeer(t *testing.T) {
 }
 
 func TestWS_DuplicateUpdatedSequence(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	defer settleGoroutines(t)
 
 	const conid = 265598
 
@@ -300,6 +302,7 @@ func TestWS_DuplicateUpdatedSequence(t *testing.T) {
 	srv := mockgateway.New(mockgateway.WithStreamScript(&script))
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -334,7 +337,7 @@ func TestWS_DuplicateUpdatedSequence(t *testing.T) {
 }
 
 func TestWS_OutOfOrderSequence(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	defer settleGoroutines(t)
 
 	const conid = 265598
 
@@ -351,6 +354,7 @@ func TestWS_OutOfOrderSequence(t *testing.T) {
 	srv := mockgateway.New(mockgateway.WithStreamScript(&script))
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -418,7 +422,7 @@ func (s *fakeOutOfOrderSink) Fail(err error) {
 }
 
 func TestWS_ReconnectStorm_ThreeDrop(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	defer settleGoroutines(t)
 
 	const conid = 265598
 	const drops = 3
@@ -438,6 +442,7 @@ func TestWS_ReconnectStorm_ThreeDrop(t *testing.T) {
 	srv := mockgateway.New(mockgateway.WithStreamScript(&script))
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -523,12 +528,13 @@ done:
 }
 
 func TestWS_NTFAndSORFrames(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	defer settleGoroutines(t)
 
 	script := mockgateway.StreamScript{Hello: true}
 	srv := mockgateway.New(mockgateway.WithStreamScript(&script))
 	server := httptest.NewServer(srv.Handler())
 	defer server.Close()
+	defer srv.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
