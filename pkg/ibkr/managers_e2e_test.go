@@ -8,6 +8,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/shing1211/ibkrapi4go/internal/mockgateway"
 )
 
 func newTestClient(t *testing.T, gw *gateway) *Client {
@@ -392,13 +394,27 @@ func TestModels_SubmitModelPortfolioOrder(t *testing.T) {
 	cli := newTestClient(t, gw)
 	ctx := context.Background()
 
-	// The mock router cannot serve this operation separately: its path template
-	// normalizes to the same method+path as OpSubmitNewOrder, which is
-	// registered first. So this asserts the request is accepted and routed
-	// without a transport or decode error, but the response shape returned is
-	// the shared Phase-1 fixture, not the broker's snake_case contract. The
-	// snake_case decode in the wrapper is therefore not exercised here and
-	// needs a real gateway (or a dedicated mock route) to be verified.
+	// The mock router cannot tell this operation apart from
+	// Trade.Submit: both produce POST /v1/api/iserver/account/{id}/orders with
+	// the same {"orders":[...]} payload, so they are score-tied and the
+	// first-declared route (submitNewOrder) always wins. See
+	// TestModelOrderRouteCollision in the mockgateway package.
+	//
+	// The decode under test is downstream of routing, so the test installs the
+	// broker's real snake_case response shape on the shared route for the
+	// duration of this call. That exercises the whole wrapper path: request
+	// build, transport chain, generated client, and decode into the public
+	// type. What remains unverified is only that a real gateway dispatches
+	// this operationId, which is server behaviour the mock cannot represent.
+	gw.srv.Fixtures().Set(mockgateway.OpSubmitNewOrder, mockgateway.Fixture{
+		Body: `[{"order_id":"1001","order_status":"PreSubmitted","id":"2","message":["Order submitted"]}]`,
+	})
+	t.Cleanup(func() {
+		gw.srv.Fixtures().Set(mockgateway.OpSubmitNewOrder, mockgateway.Fixture{
+			Body: `[{"order_id":"999","order_status":"PreSubmitted"}]`,
+		})
+	})
+
 	confirmations, err := cli.Model().SubmitModelPortfolioOrder(ctx, "Balanced",
 		[]ModelOrderInstruction{{
 			ConID:         265598,
@@ -413,7 +429,23 @@ func TestModels_SubmitModelPortfolioOrder(t *testing.T) {
 		t.Fatalf("SubmitModelPortfolioOrder: %v", err)
 	}
 	if len(confirmations) != 1 {
-		t.Errorf("confirmations = %+v; want 1 entry from the shared orders route", confirmations)
+		t.Fatalf("confirmations = %+v; want 1", confirmations)
+	}
+	c := confirmations[0]
+	if c.OrderID != "1001" {
+		t.Errorf("OrderID = %q, want %q", c.OrderID, "1001")
+	}
+	if c.OrderStatus != "PreSubmitted" {
+		t.Errorf("OrderStatus = %q, want %q", c.OrderStatus, "PreSubmitted")
+	}
+	if c.ReplyID != "2" {
+		t.Errorf("ReplyID = %q, want %q", c.ReplyID, "2")
+	}
+	if len(c.Messages) != 1 || c.Messages[0] != "Order submitted" {
+		t.Errorf("Messages = %v, want [Order submitted]", c.Messages)
+	}
+	if c.IsSuspended {
+		t.Error("IsSuspended = true, want false")
 	}
 }
 

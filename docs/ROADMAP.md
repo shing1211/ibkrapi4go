@@ -253,7 +253,13 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.1`**.
+**`v1.1.2`**.
+
+The `v1.1.2` patch closes the last verification gap: the model-portfolio order
+response decode is now asserted end to end, and the mock gateway's inability to
+route that operation separately is pinned by a test rather than left as a
+comment. The integration suite stays read-only, so the mutating model endpoints
+remain mock-only.
 
 The `v1.1.1` patch repairs two defects found while closing the test gaps: streamed
 `Update.Status` was unreachable because field `6509` was filtered before delivery,

@@ -31,7 +31,7 @@ is incomplete.
 | D6 | `ClientOrderID` round-trip on `Order`/`OrderStatus` | done |
 | D7 | Account/portfolio streaming (`SubscribeAccount`/`SubscribePortfolio`) | done |
 | E1–E2 | Version/spec drift and error docs | done |
-| E3 | `check_design` accuracy work | review |
+| E3 | `check_design` accuracy work | done |
 | E4 | Removed leaking `CreateSessionRaw` | done |
 | E5 | `docs/GATEWAY-SETUP.md` + `docs/PERMISSIONS.md` | done |
 | E6 | Corrected misleading live examples | done |

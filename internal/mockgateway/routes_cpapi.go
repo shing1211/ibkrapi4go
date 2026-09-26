@@ -76,6 +76,16 @@ const (
 	OpRebalanceToSpecificTargets  = "rebalanceToSpecificTargets"
 	OpTwsInvestDivest             = "twsInvestDivest"
 
+	// OpSubmitModelPortfolioOrder names an operation that has no dedicated
+	// route here. Its path template, POST
+	// /v1/api/iserver/account/{modelCode}/orders, is indistinguishable from the
+	// Phase-1 OpSubmitNewOrder route once placeholders are normalized, and the
+	// SDK sends a byte-identical payload for both, so the first-declared route
+	// always wins. The operation still satisfies the docs/SPEC.md coverage check
+	// because that check compares normalized method and path. See
+	// TestModelOrderRouteCollision and the mkRoute call comment below.
+	OpSubmitModelPortfolioOrder = "submitModelPortfolioOrder"
+
 	// Trading FYIs and notifications.
 	OpGetFyiDelivery        = "getFyiDelivery"
 	OpModifyFyiDelivery     = "modifyFyiDelivery"

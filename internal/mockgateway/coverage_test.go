@@ -163,3 +163,58 @@ func normalizeSegments(segments []string) string {
 	}
 	return "/" + strings.Join(out, "/")
 }
+
+// TestModelOrderRouteCollision pins a known limitation of the path-based mock
+// router. IBKR exposes submitNewOrder
+// (POST /v1/api/iserver/account/{accountId}/orders) and
+// submitModelPortfolioOrder (POST /v1/api/iserver/account/{modelCode}/orders)
+// as separate operations, but once placeholders are normalized the two are
+// indistinguishable: same method, same segment count, same literal count. The
+// router therefore scores them equally and the first-declared route wins.
+//
+// The SDK sends a byte-identical payload for both, so a body predicate cannot
+// separate them either, and submitModelPortfolioOrder is deliberately left
+// unrouted rather than shadowed by a route that could never be selected. The
+// docs/SPEC.md coverage check still passes because it compares normalized
+// method and path. Callers needing the model-portfolio response decoded install
+// the shape on the shared route; see TestModels_SubmitModelPortfolioOrder in
+// pkg/ibkr.
+//
+// This test documents the collision so a future router change that alters which
+// route wins is noticed deliberately rather than by accident.
+func TestModelOrderRouteCollision(t *testing.T) {
+	const modelOrderPath = "/v1/api/iserver/account/U1234567/orders"
+
+	winner, params, ok := matchRoute(defaultRoutes(), "POST", modelOrderPath)
+	if !ok {
+		t.Fatal("no route matched the model order path")
+	}
+	if winner.op != OpSubmitNewOrder {
+		t.Fatalf("winning route = %q, want %q (first-declared wins on a score tie)",
+			winner.op, OpSubmitNewOrder)
+	}
+	if params["accountId"] != "U1234567" {
+		t.Errorf("captured accountId = %q, want %q", params["accountId"], "U1234567")
+	}
+
+	// The model operation is declared for documentation but must not be
+	// registered, because a registered route here could never be selected and
+	// would only add a fixture that is never served.
+	for _, rt := range defaultRoutes() {
+		if rt.op == OpSubmitModelPortfolioOrder {
+			t.Errorf("OpSubmitModelPortfolioOrder is registered at %v but can never be matched",
+				rt.segments)
+		}
+	}
+
+	// Contrast: an operation with a genuinely different path shape still routes
+	// to its own route, so the collision is specific to the shared shape.
+	openOrders, _, ok := matchRoute(defaultRoutes(), "GET", "/v1/api/iserver/account/orders")
+	if !ok {
+		t.Fatal("no route matched the open-orders path")
+	}
+	if openOrders.op != OpGetOpenOrders {
+		t.Errorf("GET /v1/api/iserver/account/orders resolved to %q, want %q",
+			openOrders.op, OpGetOpenOrders)
+	}
+}

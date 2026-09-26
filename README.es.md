@@ -23,7 +23,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > Este documento es una traducción comunitaria del [README](./README.md) en inglés.
-> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: v1.1.1
+> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: v1.1.2
 
 ## Tabla de contenidos
 
@@ -56,7 +56,7 @@
 | Métricas + logging | ✅ Implementadas ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (cobertura, pre-commit) | ✅ Implementados |
 | Sitio web de documentación + Discussions | ✅ Implementado ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Lanzamiento | ✅ v1.1.1 (GitHub + Gitee) |
+| Lanzamiento | ✅ v1.1.2 (GitHub + Gitee) |
 
 Este repositorio contiene el **cliente OpenAPI generado**, documentación y
 herramientas de generación de código. Las 193 operaciones de la API están

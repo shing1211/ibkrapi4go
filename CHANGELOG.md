@@ -5,6 +5,51 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-09-26
+
+### Added
+
+- **`TestModelOrderRouteCollision`** documents a known limitation of the mock
+  gateway's path-based router: `submitNewOrder`
+  (`POST /v1/api/iserver/account/{accountId}/orders`) and
+  `submitModelPortfolioOrder` (`POST /v1/api/iserver/account/{modelCode}/orders`)
+  are identical once placeholders are normalized, and the SDK sends a
+  byte-identical payload for both, so the first-declared route always wins. A body
+  predicate was implemented and then removed after the payloads were found to be
+  identical. `OpSubmitModelPortfolioOrder` is now declared but deliberately left
+  unrouted, since a registered route there could never be selected.
+
+- **`TestModels_SubmitModelPortfolioOrder` now verifies the full response
+  decode.** The test installs the broker's real snake_case response shape on the
+  shared route for the duration of the call, exercising request build, the
+  transport chain, the generated client, and decoding into the public type. It
+  asserts `order_id`, `order_status`, the `id` reply field, and the `message`
+  array. Previously it could only assert that one response entry came back.
+
+### Changed
+
+- `test/integration_test.go` records why the mutating model endpoints are
+  excluded: the suite declares itself read-only, and those operations submit
+  orders or move money. It also gains a read-only `AllocationModels` case that
+  skips when the account lacks financial-advisor entitlement.
+
+### Documentation
+
+- Marks E3 complete in the `blueprint-hardening` todos and report, which had both
+  said `review` after the work shipped in v1.1.1.
+- Rewrites the `ws-shutdown` next-phase document: collapses the two duplicated
+  "Recommended next phase" headings, folds the completed P2, P3, E3, and spec
+  drift items into a single "Completed since this run was written" section, and
+  marks P4 as not started.
+- Adds `docs/runs/2026-09-26-audit-remediation/` with the full artifact set and
+  an index row, so the v1.0.7 through v1.1.2 work has a home.
+
+### Known limitations
+
+- The mock gateway cannot route `SubmitModelPortfolioOrder` separately, and the
+  integration suite stays read-only, so whether a real gateway dispatches that
+  operation correctly is unverified. The response decode itself is covered.
+
 ## [1.1.1] - 2026-09-26
 
 ### Added
@@ -704,7 +749,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.8...v1.1.0
 [1.0.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.7...v1.0.8
