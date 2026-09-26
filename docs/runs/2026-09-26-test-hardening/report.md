@@ -40,6 +40,44 @@ is still worth raising, but as a deliberate ratchet rather than a rescue.
 P2 in the inherited `next-phase.md` was rebuilt around the real gap: `check_design`
 reads 2 of the 9 design documents, so the weakness is breadth, not strictness.
 
+## Slice 1: The Four Uncovered Managers
+
+Baseline 43.3%, result **48.9%**, so **+5.6 points** for 40 new tests. The
+estimate was 8.7 points if fully covered; thin REST wrappers never reach 100%
+because their error branches stay unexercised, so 5.6 is the honest number. All
+49 functions across the four files moved off 0%.
+
+| File | Functions | Before | After |
+|------|-----------|--------|-------|
+| `restrictions.go` | 18 | 0% | all non-zero |
+| `rest_utilities.go` | 9 | 0% | all non-zero |
+| `notifications.go` | 12 | 0% | all non-zero |
+| `trading_accounts.go` | 10 | 0% | all non-zero |
+
+The floor moved from 35% to **48%**, a 0.9-point buffer under the measured
+value. Exactly 48.9% would also be stable, since coverage is deterministic for a
+fixed suite, but the buffer absorbs platform differences between the Linux CI
+runner and the Windows host used here.
+
+### Two false starts worth recording
+
+The routes and fixtures for all four managers already existed. Two intermediate
+conclusions were wrong because a check was file-scoped:
+
+- Comparing the error-wrapping strings (`const op = "Restrictions.Account"`)
+  against route registrations suggested all 35 operations were unrouted. They
+  are keyed by constants like `OpGetAccountOwners` instead, and every one is
+  routed.
+- Checking fixtures only in `routes_rest.go` suggested most had none. They live
+  in `routes_cpapi.go`. A test asserting `BrokerageAccounts` was unrouted failed
+  immediately and proved the opposite.
+
+`cli.REST()` also requires OAuth2 to be configured, so the surface tests needed
+a client wired with `WithOAuth2ClientCredentials` against the gateway's own
+`/oauth2/api/v1/token` route. The existing `rest_accounts_test.go` convention
+builds a hand-written `httptest` handler; the new helper reuses the gateway
+fixtures instead, so assertions run against realistic bodies.
+
 ## Per-Test Leak Attribution
 
 Both goroutine-owning packages already leak-check from `TestMain`, so nothing was
