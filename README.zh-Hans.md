@@ -22,7 +22,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本文件是英文 [README](./README.md) 的社区翻译。**英文版本为准。**
-> 同步于 / Last synced: v1.1.2
+> 同步于 / Last synced: v1.1.3
 
 ## 目录
 
@@ -55,7 +55,7 @@
 | 指标 + 日志 | ✅ 已实现（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 质量门禁（覆盖率、预提交） | ✅ 已实现 |
 | 文档网站 + Discussions | ✅ 已实现（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| 发布 | ✅ v1.1.2（GitHub + Gitee） |
+| 发布 | ✅ v1.1.3（GitHub + Gitee） |
 
 当前仓库包含**生成的 OpenAPI 客户端**、文档与代码生成工具。全部 193 个 API
 操作已实现。构建计划见 [docs/ROADMAP.md](./docs/ROADMAP.md)。

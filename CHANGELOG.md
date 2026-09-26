@@ -5,6 +5,42 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-09-26
+
+### Fixed
+
+- **The mock gateway leaked a goroutine per parked WebSocket handler.**
+  `serveWS` blocked on `c.Read(context.Background())`, a context that is never
+  cancelled, and `httptest.Server.Close` does not track hijacked connections, so
+  a handler outlived the server that started it. This surfaced as an
+  intermittent `TestWS_Resilience` failure that named no subtest: the parent
+  failed because a handler from an earlier subtest was still alive when its leak
+  check ran. `go test ./internal/ -count=2` reproduced it reliably.
+  `StreamHub.closeAll` now closes every registered stream socket with
+  `CloseNow`, which is what actually unblocks a read parked on an
+  uncancellable context, and `Server.Close` exposes it.
+
+- **`WSConn.waitForDone` was dead code** with zero callers; the live path inlines
+  the same logic. Removed.
+
+### Added
+
+- **`waitForGoroutinesToSettle`** gives the WebSocket tests a bounded settle
+  before their goroutine-leak assertion, and is tested in both directions to
+  prove it reports a real leak rather than tolerating one.
+
+### Changed
+
+- **Four inaccurate claims in the run records are corrected.** The `ws-shutdown`
+  report's `-race` note described an environment property rather than a project
+  limitation. The `audit-remediation` run recorded coverage as 37.5% against a
+  35% floor and called the margin thin; that figure came from a profile two days
+  older than the tests that produced it, and a fresh measurement gives 43.3%, an
+  8.3-point margin. Its claim that the coverage gate "cannot detect a
+  replacement" was misattributed and false, since `check_design` verifies both
+  presence and order. Its "goleak in 4 of 42 test files" note understated what
+  exists, since both goroutine-owning packages already leak-check from `TestMain`.
+
 ## [1.1.2] - 2026-09-26
 
 ### Added
@@ -749,7 +785,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.8...v1.1.0

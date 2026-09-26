@@ -253,9 +253,17 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.2`**.
+**`v1.1.3`**.
 
-The `v1.1.2` patch closes the last verification gap: the model-portfolio order
+The `v1.1.3` patch fixes a real goroutine leak in the mock gateway. Each parked
+WebSocket handler blocked on a read that no context could cancel, so handlers
+outlived the test server that started them; `go test ./internal/ -count=2`
+reproduced it reliably, where `-count=1` passed. Closing a parked handler
+required closing its socket, which is now what `Server.Close` does. The same
+patch corrects four inaccurate claims in the run records, including a coverage
+figure taken from a two-day-stale profile.
+
+The `v1.1.2` patch closed the last verification gap: the model-portfolio order
 response decode is now asserted end to end, and the mock gateway's inability to
 route that operation separately is pinned by a test rather than left as a
 comment. The integration suite stays read-only, so the mutating model endpoints

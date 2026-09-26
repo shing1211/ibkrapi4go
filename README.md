@@ -53,7 +53,7 @@
 | Metrics + logging | ✅ Shipped ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (coverage, pre-commit) | ✅ Shipped |
 | Docs website + Discussions | ✅ Shipped ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Release | ✅ v1.1.2 (GitHub + Gitee) |
+| Release | ✅ v1.1.3 (GitHub + Gitee) |
 
 This repository contains the **generated OpenAPI client**, documentation, and
 codegen tooling. All 193 API operations are implemented across both CPAPI and IB REST

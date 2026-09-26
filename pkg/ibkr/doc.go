@@ -44,7 +44,7 @@ package ibkr
 import "runtime"
 
 // Version is the SDK version.
-const Version = "v1.1.2"
+const Version = "v1.1.3"
 
 // GoVersion is the Go runtime version the SDK was built with.
 var GoVersion = runtime.Version()
