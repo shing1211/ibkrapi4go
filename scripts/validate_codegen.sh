@@ -36,8 +36,21 @@ fi
 python3 "$SCRIPT_DIR/patch_spec.py" "$SPEC_FILE" > "$PATCHED_FILE"
 
 # Generate into a temp dir using a temp config that redirects output.
-sed "s#^output:.*#output: $TMP_DIR/raw.gen.go#" "$CONFIG_FILE" > "$TMP_DIR/oapi-codegen.yaml"
-oapi-codegen -config "$TMP_DIR/oapi-codegen.yaml" "$PATCHED_FILE"
+# oapi-codegen is a native binary, so paths handed to it must be in native
+# form. On Windows under Git Bash, mktemp yields an MSYS path such as
+# /tmp/tmp.XXXX, which the native binary cannot resolve. cygpath -m emits a
+# Windows path with forward slashes, which oapi-codegen accepts and which does
+# not need escaping inside the YAML config.
+win_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -m "$1"
+  else
+    printf '%s' "$1"
+  fi
+}
+RAW_GEN="$TMP_DIR/raw.gen.go"
+sed "s#^output:.*#output: $(win_path "$RAW_GEN")#" "$CONFIG_FILE" > "$TMP_DIR/oapi-codegen.yaml"
+oapi-codegen -config "$(win_path "$TMP_DIR/oapi-codegen.yaml")" "$(win_path "$PATCHED_FILE")"
 
 {
     printf '// Copyright 2026 shing1211\n'

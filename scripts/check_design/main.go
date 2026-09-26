@@ -67,57 +67,66 @@ func checkTransportChain(repoRoot string) error {
 	}
 
 	var actualOrder []string
+	var transportFn *ast.FuncDecl
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Name.Name != "NewClientTransport" {
 			continue
 		}
-		// Walk the function body to find the if blocks in order
-		ast.Inspect(fn.Body, func(n ast.Node) bool {
-			ifBranch, ok := n.(*ast.IfStmt)
-			if !ok {
+		transportFn = fn
+	}
+
+	// Collect the middleware names in assembly order. Walking the
+	// `ms = append(ms, Name(...))` calls directly is deliberate: the guards are
+	// a mix of `cfg.Field != nil`, `cfg.Field != ""`, and method calls such as
+	// `cfg.Retry.enabled()`, so matching on the condition shape is brittle.
+	// Reading the appends covers guarded and unconditional layers alike.
+	appendName := map[string]string{
+		"RequestID":      "requestID",
+		"UserAgent":      "userAgent",
+		"Auth":           "auth",
+		"Logging":        "logging/telemetry",
+		"Instrument":     "Instrument",
+		"CircuitBreaker": "circuitBreaker",
+		"Retry":          "retry",
+		"RateLimit":      "rateLimit",
+		"Timeout":        "timeout",
+		"MaxBytes":       "MaxBytes",
+		"ErrorDecode":    "ErrorDecode",
+	}
+	if transportFn != nil {
+		ast.Inspect(transportFn.Body, func(n ast.Node) bool {
+			assign, ok := n.(*ast.AssignStmt)
+			if !ok || len(assign.Rhs) != 1 {
 				return true
 			}
-			// Check if the condition is a simple call checking a cfg field
-			cond := ifBranch.Cond
-			if binExpr, ok := cond.(*ast.BinaryExpr); ok {
-				if ident, ok := binExpr.X.(*ast.Ident); ok {
-					// e.g. cfg.Metrics != nil, cfg.RequestID != nil, etc.
-					fieldName := ident.Name
-					switch fieldName {
-					case "RequestID":
-						actualOrder = append(actualOrder, "requestID")
-					case "UserAgent":
-						actualOrder = append(actualOrder, "userAgent")
-					case "AuthHeader", "Token":
-						if len(actualOrder) == 0 || actualOrder[len(actualOrder)-1] != "auth" {
-							actualOrder = append(actualOrder, "auth")
-						}
-					case "Logger", "Telemetry":
-						if len(actualOrder) == 0 || actualOrder[len(actualOrder)-1] != "logging/telemetry" {
-							actualOrder = append(actualOrder, "logging/telemetry")
-						}
-					case "Metrics":
-						actualOrder = append(actualOrder, "Instrument")
-					case "Breaker":
-						actualOrder = append(actualOrder, "circuitBreaker")
-					case "Retry":
-						actualOrder = append(actualOrder, "retry")
-					case "Limiter":
-						actualOrder = append(actualOrder, "rateLimit")
-					case "Timeout":
-						actualOrder = append(actualOrder, "timeout")
-					case "UserMiddleware":
-						actualOrder = append(actualOrder, "UserMiddleware")
-					}
+			call, ok := assign.Rhs[0].(*ast.CallExpr)
+			if !ok || len(call.Args) < 2 {
+				return true
+			}
+			// ms = append(ms, X) -> Args[1] is either a middleware call or, for
+			// the variadic user slice, a bare selector.
+			switch arg := call.Args[1].(type) {
+			case *ast.SelectorExpr:
+				if id, ok := arg.X.(*ast.Ident); ok && id.Name == "cfg" && arg.Sel.Name == "UserMiddleware" {
+					actualOrder = append(actualOrder, "UserMiddleware")
+				}
+			case *ast.CallExpr:
+				ident, ok := arg.Fun.(*ast.Ident)
+				if !ok {
+					return true
+				}
+				if mapped, ok := appendName[ident.Name]; ok {
+					actualOrder = append(actualOrder, mapped)
 				}
 			}
 			return true
 		})
 	}
+	if len(actualOrder) == 0 {
+		return fmt.Errorf("internal/transport.go: no middleware appends found in NewClientTransport; the order check cannot run")
+	}
 
-	// Remove duplicate consecutive entries (auth and logging/telemetry are handled by
-	// single if blocks covering both conditions)
 	var deduped []string
 	for _, m := range actualOrder {
 		if len(deduped) == 0 || deduped[len(deduped)-1] != m {
@@ -187,6 +196,7 @@ func checkTransportChain(repoRoot string) error {
 		"retry":             "retry",
 		"rateLimit":         "rateLimit",
 		"timeout":           "timeout",
+		"maxBytes":          "MaxBytes",
 		"errorDecode":       "ErrorDecode",
 		"UserMiddleware":    "UserMiddleware",
 		"requestID":         "requestID",
@@ -207,22 +217,18 @@ func checkTransportChain(repoRoot string) error {
 		}
 	}
 
-	// More precise check: build a simplified version of the doc chain
-	// Doc chain simplified (outermost to innermost):
-	// requestID → userAgent → auth → logging/telemetry → Instrument →
-	// circuitBreaker → retry → rateLimit → timeout → errorDecode → UserMiddleware
-
+	// Keep the doc's own internal ordering check: every layer the chain diagram
+	// claims must appear, and in the documented sequence.
 	expectedKeywords := []string{
 		"requestID", "userAgent", "auth", "logging/telemetry", "Instrument",
-		"circuitBreaker", "retry", "rateLimit", "timeout", "errorDecode", "UserMiddleware",
+		"circuitBreaker", "retry", "rateLimit", "timeout", "maxBytes",
+		"errorDecode", "UserMiddleware",
 	}
-
-	// Verify each keyword appears in the doc in the right relative order
 	lastIdx := -1
 	for _, kw := range expectedKeywords {
 		idx := -1
 		for j, d := range docOrder {
-			if d == kw || (kw == "errorDecode" && d == "errorDecode") {
+			if d == kw {
 				idx = j
 				break
 			}
@@ -237,6 +243,53 @@ func checkTransportChain(repoRoot string) error {
 			return fmt.Errorf("docs/design/01-transport.md: %q appears before its predecessor in the chain (order: %v)", kw, docOrder)
 		}
 		lastIdx = idx
+	}
+
+	// Now compare the documented chain against the middleware that
+	// NewClientTransport actually assembles. Without this, the diagram can
+	// drift from the code and the checker still passes.
+	docSet := make(map[string]int, len(docMapped))
+	for i, d := range docMapped {
+		docSet[d] = i
+	}
+
+	codeSet := make(map[string]bool, len(deduped))
+	for _, c := range deduped {
+		codeSet[c] = true
+	}
+
+	// Every layer the code assembles must be named in the diagram.
+	for _, c := range deduped {
+		if _, ok := docSet[c]; !ok {
+			return fmt.Errorf(
+				"transport drift: NewClientTransport assembles %q but docs/design/01-transport.md does not list it (code: %v, doc: %v)",
+				c, deduped, docMapped)
+		}
+	}
+
+	// The relative order of the shared layers must match.
+	var codeShared, docShared []string
+	for _, c := range deduped {
+		if _, ok := docSet[c]; ok {
+			codeShared = append(codeShared, c)
+		}
+	}
+	for _, d := range docMapped {
+		if codeSet[d] {
+			docShared = append(docShared, d)
+		}
+	}
+	if len(codeShared) != len(docShared) {
+		return fmt.Errorf(
+			"transport drift: code and document disagree on which layers are present (code: %v, doc: %v)",
+			codeShared, docShared)
+	}
+	for i := range codeShared {
+		if codeShared[i] != docShared[i] {
+			return fmt.Errorf(
+				"transport drift: middleware order differs. code: %v, docs/design/01-transport.md: %v",
+				codeShared, docShared)
+		}
 	}
 
 	return nil

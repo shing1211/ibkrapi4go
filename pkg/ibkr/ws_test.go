@@ -580,3 +580,43 @@ func TestSubscription_DeliverSystemPortfolio(t *testing.T) {
 		t.Errorf("events = %+v; unexpected", got)
 	}
 }
+
+func TestSubscription_DeliverPopulatesMarketDataStatus(t *testing.T) {
+	s := &Subscription{updates: make(chan Update, 8), errs: make(chan error, 4)}
+
+	// The code is three characters: availability, consolidated, book. "D"
+	// availability means delayed.
+	s.Deliver(internal.WSUpdate{ConID: 265598, Field: "31", Value: "150.00"})
+	s.Deliver(internal.WSUpdate{ConID: 265598, Field: "6509", Value: "DAN"})
+
+	var status *MarketDataStatus
+	for i := 0; i < 2; i++ {
+		select {
+		case u := <-s.updates:
+			if u.Field == "6509" {
+				status = u.Status
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("timed out waiting for update %d", i)
+		}
+	}
+
+	if status == nil {
+		t.Fatal("Update.Status was nil for field 6509")
+	}
+	if status.Availability != "D" {
+		t.Errorf("Availability = %q, want %q", status.Availability, "D")
+	}
+	if status.Consolidated != "A" {
+		t.Errorf("Consolidated = %q, want %q", status.Consolidated, "A")
+	}
+	if status.Book != "N" {
+		t.Errorf("Book = %q, want %q", status.Book, "N")
+	}
+	if !status.IsDelayed {
+		t.Error("IsDelayed = false, want true for availability D")
+	}
+	if status.IsFrozen || status.IsNotSubscribed {
+		t.Errorf("IsFrozen/IsNotSubscribed = %v/%v, want false/false", status.IsFrozen, status.IsNotSubscribed)
+	}
+}

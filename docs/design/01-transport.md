@@ -9,7 +9,7 @@ The transport is the single path through which every HTTP request flows. It is a
 request
   └─ requestID → userAgent → auth → logging/telemetry → Instrument
        → circuitBreaker → retry (safe methods only) → rateLimit
-       → timeout → errorDecode → UserMiddleware → http.Transport.Do
+       → timeout → maxBytes → errorDecode → UserMiddleware → http.Transport.Do
 response / *ibkr.Error
 ```
 

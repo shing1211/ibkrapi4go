@@ -9,8 +9,10 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -118,14 +120,16 @@ func TestWsScalarString(t *testing.T) {
 }
 
 func TestWsReservedField(t *testing.T) {
-	reserved := []string{"conid", "_updated", "server_id", "6119", "6509", "topic", "method", "id"}
+	// 6509 is deliberately absent: it carries the market-data status code and
+	// must reach pkg/ibkr so Update.Status can be populated.
+	reserved := []string{"conid", "_updated", "server_id", "6119", "topic", "method", "id"}
 	for _, k := range reserved {
 		if !wsReservedField(k) {
 			t.Errorf("wsReservedField(%q) = false, want true", k)
 		}
 	}
 
-	notReserved := []string{"31", "55", "field_name", "something_else", "CONID", "Conid"}
+	notReserved := []string{"31", "55", "6509", "field_name", "something_else", "CONID", "Conid"}
 	for _, k := range notReserved {
 		if wsReservedField(k) {
 			t.Errorf("wsReservedField(%q) = true, want false", k)
@@ -541,6 +545,193 @@ func TestWS_RecordSequence(t *testing.T) {
 	last, seen, gap = conn.recordSequence(123, 98)
 	if last != 100 || !seen || gap != 2 {
 		t.Fatalf("out-of-order sequence = (%d, %v, %d), want (100, true, 2)", last, seen, gap)
+	}
+}
+
+func TestWS_DispatchDetectsSequenceGap(t *testing.T) {
+	sink := &fakeSink{conids: map[int]bool{265598: true}}
+	c := &WSConn{
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 8),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+		ctx:         context.Background(),
+		opts:        WSOptions{Logger: NopLogger(), Metrics: NopMetrics(), Telemetry: NopTelemetry(), Clock: &Clock{}},
+	}
+	c.subs[&wsSub{sink: sink, method: "subscribe", conids: []int{265598}, fields: []string{"31"}}] = struct{}{}
+
+	frame := func(seq int) []byte {
+		return []byte(`{"conid":265598,"31":"150.00","_updated":"` + strconv.Itoa(seq) + `"}`)
+	}
+
+	// First frame establishes the baseline; no gap may be reported.
+	c.dispatch(frame(100))
+	sink.mu.Lock()
+	errsAfterFirst := len(sink.errs)
+	sink.mu.Unlock()
+	if errsAfterFirst != 0 {
+		t.Fatalf("first frame reported %d errors, want 0", errsAfterFirst)
+	}
+
+	// Advancing is contiguous, so still no gap.
+	c.dispatch(frame(101))
+	sink.mu.Lock()
+	errsAfterSecond := len(sink.errs)
+	sink.mu.Unlock()
+	if errsAfterSecond != 0 {
+		t.Fatalf("contiguous frame reported %d errors, want 0", errsAfterSecond)
+	}
+
+	// A lower sequence is a gap of 2 and must surface as *WSGapError.
+	c.dispatch(frame(99))
+	sink.mu.Lock()
+	errs := append([]error(nil), sink.errs...)
+	sink.mu.Unlock()
+	if len(errs) != 1 {
+		t.Fatalf("gap frame reported %d errors, want exactly 1: %v", len(errs), errs)
+	}
+	var gap *WSGapError
+	if !errors.As(errs[0], &gap) {
+		t.Fatalf("error = %T (%v), want *WSGapError", errs[0], errs[0])
+	}
+	if gap.Conid != 265598 || gap.LastSeq != 101 || gap.ReceivedSeq != 99 {
+		t.Errorf("gap = %+v; want Conid 265598 LastSeq 101 ReceivedSeq 99", gap)
+	}
+
+	// The tick itself is still delivered: a gap is a warning, not a drop.
+	sink.mu.Lock()
+	updates := len(sink.updates)
+	sink.mu.Unlock()
+	if updates < 3 {
+		t.Errorf("delivered %d updates, want at least 3 including the gapped frame", updates)
+	}
+}
+
+func TestWS_DispatchDeliversMarketDataStatusField(t *testing.T) {
+	sink := &fakeSink{conids: map[int]bool{265598: true}}
+	c := &WSConn{
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 8),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+		ctx:         context.Background(),
+		opts:        WSOptions{Logger: NopLogger(), Metrics: NopMetrics(), Telemetry: NopTelemetry(), Clock: &Clock{}},
+	}
+	c.subs[&wsSub{sink: sink, method: "subscribe", conids: []int{265598}, fields: []string{"31", "6509"}}] = struct{}{}
+
+	// A delayed quote carries a three-character status code: availability,
+	// consolidated, book. "BD" + " " + "N" means delayed, not consolidated.
+	c.dispatch([]byte(`{"conid":265598,"31":"150.00","6509":"BD N","_updated":"1"}`))
+
+	sink.mu.Lock()
+	updates := append([]WSUpdate(nil), sink.updates...)
+	sink.mu.Unlock()
+
+	var status *WSUpdate
+	for i := range updates {
+		if updates[i].Field == "6509" {
+			status = &updates[i]
+		}
+	}
+	if status == nil {
+		t.Fatalf("field 6509 was not delivered; got fields %+v", updates)
+	}
+	if status.Value == "" {
+		t.Error("field 6509 delivered with an empty value")
+	}
+	if len(updates) < 2 {
+		t.Errorf("delivered %d updates, want the quote and the 6509 status", len(updates))
+	}
+}
+
+func TestWS_DialDiscardsConnectionAfterClose(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer server.Close()
+
+	gatewayURL := "http://" + server.Listener.Addr().String()
+	wsURL, err := wsURLFromGateway(gatewayURL)
+	if err != nil {
+		t.Fatalf("wsURLFromGateway: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	dialing := make(chan struct{})
+	release := make(chan struct{})
+	var dialed atomic.Pointer[websocket.Conn]
+
+	c := &WSConn{
+		wsURL: wsURL,
+		opts: WSOptions{
+			Logger:        NopLogger(),
+			Metrics:       NopMetrics(),
+			Telemetry:     NopTelemetry(),
+			Clock:         &Clock{},
+			ReconnectBase: time.Millisecond,
+			ReconnectMax:  2 * time.Millisecond,
+			DialWS: func(ctx context.Context, wsURL string, httpClient *http.Client) (*websocket.Conn, error) {
+				close(dialing)
+				<-release
+				// Dial on a context detached from c.ctx: Close cancels c.ctx, which
+				// would abort the handshake first. Using a fresh context models the
+				// race where the handshake completes just as shutdown begins, which
+				// is exactly the window the closed check in dial guards.
+				dctx, dialCancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer dialCancel()
+				conn, _, err := websocket.Dial(dctx, wsURL, &websocket.DialOptions{HTTPClient: httpClient})
+				if err == nil {
+					dialed.Store(conn)
+				}
+				return conn, err
+			},
+		},
+		ctx:         ctx,
+		cancel:      cancel,
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 64),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+	}
+
+	dialErr := make(chan error, 1)
+	go func() { dialErr <- c.dial(ctx) }()
+
+	<-dialing
+	if err := c.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	close(release)
+
+	select {
+	case err := <-dialErr:
+		if !errors.Is(err, ErrClosed) {
+			t.Fatalf("dial after close = %v, want ErrClosed", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("dial did not return after close")
+	}
+
+	conn := dialed.Load()
+	if conn == nil {
+		t.Fatal("expected the dial to have produced a connection")
+	}
+
+	c.mu.Lock()
+	stored := c.conn
+	c.mu.Unlock()
+	if stored != nil {
+		t.Error("a connection was published after shutdown began")
+	}
+
+	readCtx, readCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer readCancel()
+	if _, _, err := conn.Read(readCtx); err == nil {
+		t.Error("the discarded connection is still open; it should be force-closed")
 	}
 }
 

@@ -148,6 +148,11 @@ func TestRESTSurface_ForceRefreshAndInvalidate(t *testing.T) {
 	if err := rest.ForceRefresh(context.Background()); !errors.Is(err, ErrClosed) {
 		t.Errorf("ForceRefresh after Close = %v; want ErrClosed", err)
 	}
+
+	// Invalidate has no error return by design: dropping a local cache entry
+	// cannot fail, so it stays safe on a closed client. Calling it repeatedly
+	// must be a no-op rather than a panic.
+	rest.Invalidate()
 	rest.Invalidate()
 }
 

@@ -68,7 +68,9 @@ Design rules:
 - `Subscribe` returns a `*Subscription` with `Updates()` and `Errors()` channels.
 - One `Update` is emitted per field code in a frame; a conid's updates are
   delivered to every subscription that requested it.
-- Channels are closed (not just abandoned) on close/error.
+- Channels are closed when the subscription is closed. On error the SDK does
+  **not** close them; it delivers the error on `Errors()` and keeps streaming, so
+  a caller that handles a reconnect or a gap can keep reading.
 - `Subscription.Close()` is idempotent and unsubscribes server-side.
 - `ctx` cancellation closes the subscription.
 - `Subscription.Dropped()` reports updates dropped under backpressure.
@@ -165,8 +167,12 @@ Exact IBKR ceilings are account/entitlement dependent.
 
 Per-subscription channels are buffered (default 256). On overflow the SDK:
 
-1. Logs a warning and increments a dropped-update counter, then
+1. Increments a dropped-update counter (see `Dropped()`), then
 2. Drops the **oldest** update (keeps the connection alive).
+
+`SystemUpdates()`, `AccountUpdates()`, and `PortfolioUpdates()` are also
+buffered, but on overflow they drop the **newest** event and do not log or count
+it.
 
 This is a deliberate choice: dropping stale quotes is preferable to blocking the
 reader and stalling all subscriptions. Callers needing every tick should use a
@@ -178,5 +184,6 @@ larger buffer or persist server-side.
   receive → unsubscribe for market data, account (`acq`), and portfolio (`pos`).
 - Reconnect test with a server that drops the connection once (market data and
   account streams).
-- Buffer-overflow test asserts the drop policy and counter.
+- Buffer-overflow test asserts that `Dropped()` becomes non-zero. It does not
+  assert which value was retained or the ordering of the survivors.
 - `goleak` asserts no goroutines survive `Close()`.

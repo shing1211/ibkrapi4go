@@ -88,6 +88,11 @@ func (s *RESTSurface) ForceRefresh(ctx context.Context) error {
 }
 
 // Invalidate clears the cached OAuth2 access token while preserving its refresh token.
+//
+// Unlike ForceRefresh it returns no error and is safe to call on a closed
+// client: dropping a local cache entry cannot fail, so there is nothing to
+// report. The refresh token is retained, so the next Token call on a live
+// client re-acquires an access token without a full re-authentication.
 func (s *RESTSurface) Invalidate() {
 	s.owner.cfg.tokenSource.Invalidate()
 }

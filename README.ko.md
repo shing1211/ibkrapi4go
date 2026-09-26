@@ -11,7 +11,7 @@
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
 
-> **⚠️ 비공식 & 프리알파.** ibkrapi4go는 Interactive Brokers Web API를 위한
+> **⚠️ 비공식.** ibkrapi4go는 Interactive Brokers Web API를 위한
 > 커뮤니티 Go SDK입니다. **Interactive Brokers와 아무런 제휴 관계가 없습니다.**
 > 모든 185개 API 오퍼레이션이 구현되었습니다 (123 CPAPI + 70 IB REST).
 > [DISCLAIMER.md](./DISCLAIMER.md)와 [docs/ROADMAP.md](./docs/ROADMAP.md)를 참고하세요.
@@ -23,7 +23,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 이 문서는 영어 [README](./README.md)의 커뮤니티 번역입니다. **영어판이 정본입니다.**
-> 동기화 / Last synced: v1.1.0
+> 동기화 / Last synced: v1.1.1
 
 ## 목차
 
@@ -56,7 +56,7 @@
 | 메트릭 + 로깅 | ✅ 구현됨 ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI 품질 게이트 (커버리지, 프리컴밋) | ✅ 구현됨 |
 | 문서 웹사이트 + Discussions | ✅ 구현됨 ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| 릴리스 | ✅ v1.1.0 (GitHub + Gitee) |
+| 릴리스 | ✅ v1.1.1 (GitHub + Gitee) |
 
 현재 저장소에는 **생성된 OpenAPI 클라이언트**, 문서, 코드 생성 도구가 포함되어
 있습니다. 모든 185개 API 오퍼레이션이 구현되었습니다. 계획은

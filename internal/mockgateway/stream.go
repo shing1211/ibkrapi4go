@@ -51,6 +51,11 @@ type StreamScript struct {
 	// it sends its first subscribe frame, exercising the client's reconnect
 	// path.
 	DropFirstConnection bool
+	// DropConnections closes the first N accepted connections immediately after
+	// they send their first subscribe frame, so a client can be driven through
+	// several consecutive reconnects. Takes precedence over
+	// DropFirstConnection when greater than zero.
+	DropConnections int
 	// OnSubscribe, when set, returns the ticks to emit for a subscribe frame.
 	// It is called synchronously from the connection's read loop, so it must not
 	// block. When nil the default script is used.
@@ -66,6 +71,15 @@ type StreamScript struct {
 	// notice on subscribe. The pkg/ibkr client ignores these frames; they are
 	// provided for protocol fidelity and for callers that inspect raw frames.
 	Hello bool
+}
+
+// drops reports whether the connection with the given ordinal should be dropped
+// after its first subscribe frame.
+func (s StreamScript) drops(ordinal int) bool {
+	if s.DropConnections > 0 {
+		return ordinal <= s.DropConnections
+	}
+	return s.DropFirstConnection && ordinal == 1
 }
 
 // StreamHub coordinates the scripted WebSocket connections of a Server. It is
@@ -101,6 +115,13 @@ func (h *StreamHub) Subscribers() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return len(h.conns)
+}
+
+// AcceptedConnections returns the total number of WebSocket connections the
+// hub has accepted, including ones that were later dropped. It is the
+// connection ordinal of the most recent connection.
+func (h *StreamHub) AcceptedConnections() int {
+	return int(h.accepted.Load())
 }
 
 // Push broadcasts a tick to every connection subscribed to its conid and returns
@@ -314,7 +335,7 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 			if len(conids) == 0 {
 				continue
 			}
-			if s.stream.script.DropFirstConnection && sc.ordinal == 1 {
+			if s.stream.script.drops(sc.ordinal) {
 				return
 			}
 			if !s.handleSubscribe(sc, conids, fields) {
@@ -323,12 +344,12 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 		case streamOpUnsubscribe:
 			sc.unsubscribe(conids)
 		case streamOpAccount:
-			if s.stream.script.DropFirstConnection && sc.ordinal == 1 {
+			if s.stream.script.drops(sc.ordinal) {
 				return
 			}
 			s.handleAccountSubscribe(sc, fields)
 		case streamOpPortfolio:
-			if s.stream.script.DropFirstConnection && sc.ordinal == 1 {
+			if s.stream.script.drops(sc.ordinal) {
 				return
 			}
 			s.handlePortfolioSubscribe(sc, fields)

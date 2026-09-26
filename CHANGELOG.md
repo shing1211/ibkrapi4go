@@ -5,7 +5,73 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.1] - 2026-09-26
+
+### Added
+
+- **Multi-drop reconnect scripting in the mock gateway.** `StreamScript` gains
+  `DropConnections int`, which closes the first N accepted connections after
+  their first subscribe frame. `DropFirstConnection` still works and is
+  equivalent to `DropConnections: 1`. `StreamHub.AcceptedConnections` exposes the
+  running connection count so a test can assert how many reconnects happened.
+
+- **Coverage for previously untested paths:**
+  - late-dial discard, so a connection dialled as shutdown begins is force-closed
+    and never published;
+  - dispatch-level sequence-gap detection, asserting a lower `_updated` value
+    surfaces exactly one `*WSGapError` while still delivering the tick;
+  - `ForceRefresh` joining an in-flight fetch instead of starting a second one,
+    and honouring context cancellation while waiting on it;
+  - `RESTSurface.Invalidate` being safe and idempotent on a closed client;
+  - the OAuth2 example's `isAuthError`, `handleAuthError`, and
+    `httpStatusCheck` helpers.
+
+### Fixed
+
+- **Streamed `Update.Status` was unreachable.** Field `6509` was listed in
+  `wsReservedField`, so `dispatch` dropped it before delivery and the
+  `Subscription.Deliver` branch that populates `Update.Status` could never run.
+  The status code is now delivered, so delayed, frozen, and not-subscribed states
+  are visible on streamed updates as documented.
+
+- **`check_design` never compared anything.** Its middleware-order extraction
+  matched `*ast.Ident` against `cfg.Field` conditions, but those parse as
+  `*ast.SelectorExpr`, and `cfg.Retry.enabled()` as a `*ast.CallExpr`, so the
+  extracted order was always empty and the code-versus-document comparison was
+  vacuous. Extraction now walks the `ms = append(ms, ...)` calls directly, fails
+  loudly if it finds nothing, and diffs the assembled order against the
+  documented chain. Reordering or adding middleware in the code without updating
+  `docs/design/01-transport.md` now fails the check.
+
+- **`make codegen` and `make codegen-verify` failed on Windows.** Both scripts
+  embedded the `mktemp -d` path into the oapi-codegen config, but that path is an
+  MSYS path which the native Windows binary cannot resolve. They now convert it
+  with `cygpath -m`, which yields a forward-slash Windows path that needs no YAML
+  escaping.
+
+- **`make docs-spec` crashed on Windows.** `gen_spec_index.py` read the spec
+  without an explicit encoding, and Windows defaults to cp1252, which cannot
+  decode the spec's non-ASCII characters. Both the read and the write now pin
+  UTF-8, matching the earlier `patch_spec.py` fix.
+
+### Changed
+
+- `docs/design/01-transport.md` now lists the `maxBytes` layer, which the code
+  has always assembled but the diagram omitted.
+- Corrected inaccurate claims in `docs/TESTING.md` (fixture location, goleak
+  scope, `TestMain` behaviour, race invocation, codegen scheduling) and
+  `docs/STREAMING.md` (channel closure on error, per-channel overflow policy,
+  what the overflow test actually asserts).
+- Corrected `CHANGELOG.md` history: 53 fuzz functions rather than 47, the shape
+  test is a structural check rather than 180 per-operation comparisons, the
+  migration guide is 219 lines, and fuzz corpora are not stored under
+  `testdata/`.
+- Dropped the pre-alpha wording from the Japanese, Korean, and Spanish READMEs;
+  the project is stable and unofficial, matching the English README.
+- Corrected the README lifecycle and transport-chain diagrams to match the code,
+  including that `Client.Close` closes the WebSocket before session release.
+
+## [1.1.0] - 2026-09-26
 
 ### Added
 
@@ -284,7 +350,7 @@ automated codemod are provided.
 
 - **CLI tool (E1):** `cmd/ibkr/` binary with `accounts`, `positions`, `orders`,
   `stream`, `portfolio`, `config`, and `completion` subcommands.
-- **Migration guide (E2):** `docs/MIGRATION.md` (173 lines) and `scripts/codemod.sh`
+- **Migration guide (E2):** `docs/MIGRATION.md` and `scripts/codemod.sh`
   (74 rename rules) covering all v0.x → v1.0 breaking changes.
 - **API reference site (E3):** `docs/api.html`, `docs/architecture.html`,
   `docs/decisions.html` with CSS/JS assets.
@@ -462,9 +528,10 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
 - **Integration test scaffold:** `test/integration_test.go` with
   `//go:build integration` gate and env-gated skip; `make test-integration`
   target.
-- **Shape conformance guard:** `TestFixtureShapeConformance` (180 passing
-  tests) in `pkg/ibkr/fixture_shape_conformance_test.go` using
-  `fixtures.go` `All()` method.
+- **Shape conformance guard:** `TestFixtureShapeConformance` in
+  `internal/mockgateway/shape_test.go`, which walks every default fixture and
+  validates the first JSON value parses. It is a structural check, not a
+  per-operation shape comparison.
 - **Spec drift detection:** `.github/workflows/spec-drift.yml` (daily cron +
   workflow_dispatch) with `scripts/check_spec_version.py`.
 - **`docs/STABILITY.md`:** user-facing stability contract derived from ADR 0015.
@@ -565,10 +632,11 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   HTTP round-trip latency (mock gateway), WebSocket subscribe/unsubscribe, and
   session init. Baseline stored in `benchmark.baseline`. See
   [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md).
-- **Fuzz tests (`pkg/ibkr/fuzz_test.go`, `internal/fuzz_test.go`):** 47 `testing.F`
+- **Fuzz tests (`pkg/ibkr/fuzz_test.go`, `internal/fuzz_test.go`):** 53 `testing.F`
   fuzz functions covering all major public JSON decode types, plus response decode
-  fuzzing across all 185 op response shapes using mock gateway fixtures. No
-  panics found; corpus generated in `testdata/fuzz/`.
+  fuzzing across all op response shapes using mock gateway fixtures. No
+  panics found. Fuzz corpora are generated on demand by `make fuzz` into the Go
+  build cache, not committed under `testdata/`.
 - **Benchmark CI gate (`.github/workflows/ci.yml`):** `benchmarks` job compares
   current results against `benchmark.baseline`; fails on >10% regression in
   ns/op. `scripts/bench_compare.go` is pure stdlib.
@@ -636,7 +704,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.8...v1.1.0
 [1.0.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.6...v1.0.7

@@ -49,7 +49,20 @@ tmp_gen="$tmp_dir/client.gen.go"
 sed "s#^output:.*#output: $tmp_gen#" "$CONFIG_FILE" > "$tmp_dir/oapi-codegen.yaml"
 
 echo "generating..."
-oapi-codegen -config "$tmp_dir/oapi-codegen.yaml" "$PATCHED_FILE"
+# oapi-codegen is a native binary, so the path written into the config must be
+# in native form. On Windows under Git Bash, mktemp yields an MSYS path such as
+# /tmp/tmp.XXXX, which the native binary cannot resolve. cygpath -m emits a
+# Windows path with forward slashes, which oapi-codegen accepts and which does
+# not need escaping inside the YAML config.
+win_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -m "$1"
+  else
+    printf '%s' "$1"
+  fi
+}
+sed "s#^output:.*#output: $(win_path "$tmp_gen")#" "$CONFIG_FILE" > "$tmp_dir/oapi-codegen.yaml"
+oapi-codegen -config "$(win_path "$tmp_dir/oapi-codegen.yaml")" "$(win_path "$PATCHED_FILE")"
 
 mkdir -p "$(dirname "$OUTPUT")"
 {

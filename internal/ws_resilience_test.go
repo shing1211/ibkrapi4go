@@ -5,6 +5,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -420,10 +421,11 @@ func TestWS_ReconnectStorm_ThreeDrop(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
 	const conid = 265598
+	const drops = 3
 	tickCount := atomic.Int64{}
 
 	script := mockgateway.StreamScript{
-		DropFirstConnection: true,
+		DropConnections: drops,
 		OnSubscribe: func(conids []int, fields []string) []mockgateway.Tick {
 			tickCount.Add(1)
 			return []mockgateway.Tick{
@@ -460,12 +462,28 @@ func TestWS_ReconnectStorm_ThreeDrop(t *testing.T) {
 		t.Fatalf("Subscribe: %v", err)
 	}
 
-	deadline := time.After(5 * time.Second)
+	// The mock drops the first `drops` connections after their first subscribe
+	// frame, so the client must reconnect `drops` times before reaching a
+	// connection that survives.
+	deadline := time.After(15 * time.Second)
 	for {
+		if srv.Stream().AcceptedConnections() >= drops+1 {
+			break
+		}
 		select {
 		case <-deadline:
-			t.Fatalf("timeout waiting for ticks after reconnect, tickCount=%d", tickCount.Load())
-		case <-time.After(200 * time.Millisecond):
+			t.Fatalf("accepted connections = %d, want at least %d after %d drops",
+				srv.Stream().AcceptedConnections(), drops+1, drops)
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
+
+	deadline2 := time.After(5 * time.Second)
+	for {
+		select {
+		case <-deadline2:
+			t.Fatalf("timeout waiting for ticks after reconnects, got %d updates", len(sink.updates))
+		case <-time.After(100 * time.Millisecond):
 			sink.mu.Lock()
 			got := len(sink.updates)
 			sink.mu.Unlock()
@@ -479,12 +497,28 @@ done:
 	if n := conn.ActiveSubscriptions(); n != 1 {
 		t.Fatalf("ActiveSubscriptions = %d, want 1", n)
 	}
+	if got := srv.Stream().AcceptedConnections(); got < drops+1 {
+		t.Errorf("accepted connections = %d, want at least %d", got, drops+1)
+	}
+
+	// Each successful reconnect must also be signalled to the subscriber.
+	sink.mu.Lock()
+	reconnects := 0
+	for _, err := range sink.errs {
+		if errors.Is(err, ErrWSReconnected) {
+			reconnects++
+		}
+	}
+	sink.mu.Unlock()
+	if reconnects < drops {
+		t.Errorf("ErrWSReconnected signals = %d, want at least %d", reconnects, drops)
+	}
 
 	sink.mu.Lock()
 	got := len(sink.updates)
 	sink.mu.Unlock()
 	if got < 2 {
-		t.Errorf("expected at least 2 updates after reconnect, got %d, tickCount=%d", got, tickCount.Load())
+		t.Errorf("expected at least 2 updates after reconnects, got %d, tickCount=%d", got, tickCount.Load())
 	}
 }
 

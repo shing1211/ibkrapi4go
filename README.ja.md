@@ -11,7 +11,7 @@
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
 
-> **⚠️ 非公式 & プレアルファ版。** ibkrapi4go は Interactive Brokers Web API 向けの
+> **⚠️ 非公式。** ibkrapi4go は Interactive Brokers Web API 向けの
 > コミュニティ製 Go SDK です。**Interactive Brokers とは一切関係ありません。**
 > すべての 193 の API オペレーションが実装済みです（123 CPAPI + 70 IB REST）。
 > [DISCLAIMER.md](./DISCLAIMER.md) と [docs/ROADMAP.md](./docs/ROADMAP.md) をご覧ください。
@@ -23,7 +23,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本書は英語版 [README](./README.md) のコミュニティ翻訳です。**英語版が正式です。**
-> 同期 / Last synced: v1.1.0
+> 同期 / Last synced: v1.1.1
 
 ## 目次
 
@@ -56,7 +56,7 @@
 | メトリクス + ロギング | ✅ 実装済み（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 品質ゲート（カバレッジ、プレコミット） | ✅ 実装済み |
 | ドキュメントサイト + Discussions | ✅ 実装済み（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| リリース | ✅ v1.1.0（GitHub + Gitee） |
+| リリース | ✅ v1.1.1（GitHub + Gitee） |
 
 現在のリポジトリには**生成済みの OpenAPI クライアント**、ドキュメント、
 コード生成ツールが含まれます。すべての 193 の API オペレーションが実装済みです。

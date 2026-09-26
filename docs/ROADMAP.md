@@ -253,9 +253,15 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.0`**.
+**`v1.1.1`**.
 
-The `v1.1.0` release closes the last coverage gap: eight model-portfolio and
+The `v1.1.1` patch repairs two defects found while closing the test gaps: streamed
+`Update.Status` was unreachable because field `6509` was filtered before delivery,
+and `check_design` compared an always-empty middleware order, so it could not
+detect drift between the code and the transport diagram. It also makes
+`make codegen` and `make codegen-verify` work on Windows.
+
+The `v1.1.0` release closed the last coverage gap: eight model-portfolio and
 allocation operations that existed in the v2.40 spec but had no public wrapper
 or mock route are now implemented, bringing the documented surface to 193
 operations and 451 schemas.

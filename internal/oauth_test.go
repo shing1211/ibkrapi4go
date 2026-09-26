@@ -11,6 +11,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -251,6 +252,121 @@ func TestTokenSource_InvalidateDuringFetch(t *testing.T) {
 	}
 	if got := calls.Load(); got != 2 {
 		t.Errorf("token requests = %d; want 2", got)
+	}
+}
+
+func TestTokenSource_ForceRefreshJoinsInflightFetch(t *testing.T) {
+	var calls atomic.Int32
+	started := make(chan struct{})
+	release := make(chan struct{})
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		if n == 1 {
+			close(started)
+			<-release
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"access_token":"tok-%d","expires_in":3600}`, n)
+	}))
+	defer srv.Close()
+
+	ts := NewTokenSource(OAuthConfig{TokenURL: srv.URL, ClientID: "cid"})
+	ctx := context.Background()
+
+	firstDone := make(chan string, 1)
+	go func() {
+		token, err := ts.Token(ctx)
+		if err != nil {
+			firstDone <- ""
+			return
+		}
+		firstDone <- token
+	}()
+
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("first token request did not start")
+	}
+
+	// A ForceRefresh issued while a matching-generation flight is in progress
+	// must join that flight rather than invalidate it and start a second fetch.
+	joined := make(chan string, 1)
+	go func() {
+		token, err := ts.ForceRefresh(ctx)
+		if err != nil {
+			joined <- ""
+			return
+		}
+		joined <- token
+	}()
+
+	select {
+	case token := <-joined:
+		t.Fatalf("ForceRefresh returned %q before the in-flight fetch completed", token)
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	close(release)
+
+	if got := <-firstDone; got != "tok-1" {
+		t.Fatalf("first Token = %q; want tok-1", got)
+	}
+	if got := <-joined; got != "tok-1" {
+		t.Errorf("ForceRefresh = %q; want tok-1 from the joined flight", got)
+	}
+	if got := calls.Load(); got != 1 {
+		t.Errorf("token requests = %d; want 1 (ForceRefresh must not refetch)", got)
+	}
+}
+
+func TestTokenSource_ForceRefreshInflightHonoursContext(t *testing.T) {
+	var calls atomic.Int32
+	started := make(chan struct{})
+	release := make(chan struct{})
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		close(started)
+		<-release
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"access_token":"tok-1","expires_in":3600}`)
+	}))
+	// Release the blocked handler before closing, otherwise srv.Close waits on
+	// the outstanding request.
+	defer func() {
+		close(release)
+		srv.Close()
+	}()
+
+	ts := NewTokenSource(OAuthConfig{TokenURL: srv.URL, ClientID: "cid"})
+
+	go func() {
+		_, _ = ts.Token(context.Background())
+	}()
+
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("token request did not start")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		_, err := ts.ForceRefresh(ctx)
+		done <- err
+	}()
+
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("ForceRefresh error = %v; want context.Canceled", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("ForceRefresh did not return after context cancellation")
 	}
 }
 

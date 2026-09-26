@@ -53,7 +53,7 @@
 | Metrics + logging | ✅ Shipped ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (coverage, pre-commit) | ✅ Shipped |
 | Docs website + Discussions | ✅ Shipped ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Release | ✅ v1.1.0 (GitHub + Gitee) |
+| Release | ✅ v1.1.1 (GitHub + Gitee) |
 
 This repository contains the **generated OpenAPI client**, documentation, and
 codegen tooling. All 193 API operations are implemented across both CPAPI and IB REST
@@ -161,7 +161,7 @@ SessionManager.Initialize(ctx)   → tickle goroutine starts
 Manager calls (Account, Portfolio, Trade, MarketData)
    │
    ▼
-Client.Close()                   → tickle stops, logout, ws closed
+Client.Close()                   → WebSocket closes first, then release/tickle and logout
 ```
 
 Every request flows through a transport chain before it reaches the gateway:
@@ -173,11 +173,13 @@ Request
   → logging + telemetry hooks
   → circuit breaker (optional)
   → retry (safe methods only; honors Retry-After)
-  → per-endpoint rate limiter
-  → global rate limiter
+  → metrics instrumentation
+  → rate limiter (per-endpoint and global buckets)
   → per-request timeout (when the caller sets none)
-  → HTTP call
+  → response-size bound
   → error parsing (IBKR envelope → *ibkr.Error)
+  → user middleware
+  → HTTP call
 Response
 ```
 

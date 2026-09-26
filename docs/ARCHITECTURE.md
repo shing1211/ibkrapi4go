@@ -381,9 +381,10 @@ The repository checks are separate from the runtime path:
 - `scripts/check_links.py` and `scripts/check_i18n.py` validate documentation.
 - `scripts/check_design` verifies that the middleware chain diagram in
   `docs/design/01-transport.md` lists the expected layers in the expected
-  relative order, and checks documented manager counts. It validates the
-  document's internal consistency; it does not diff the diagram against the
-  assembled middleware chain.
+  relative order, checks documented manager counts, and diffs the diagram
+  against the middleware that `internal.NewClientTransport` actually assembles.
+  Reordering or adding a middleware in the code without updating the diagram
+  fails the check.
 - `scripts/bench_compare.go` compares benchmark output with the checked-in
   baseline.
 - `contrib/otel` supplies optional metrics and tracing implementations without

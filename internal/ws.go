@@ -687,7 +687,7 @@ func subscribeParams(s *wsSub) map[string]any {
 // wsReservedField reports whether a frame key is metadata rather than a field.
 func wsReservedField(k string) bool {
 	switch k {
-	case "conid", "_updated", "server_id", "6119", "6509", "topic", "method", "id":
+	case "conid", "_updated", "server_id", "6119", "topic", "method", "id":
 		return true
 	default:
 		return false

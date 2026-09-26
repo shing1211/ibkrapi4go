@@ -11,7 +11,7 @@
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
 
-> **⚠️ No oficial y pre-alfa.** ibkrapi4go es un SDK de Go de la comunidad para la
+> **⚠️ No oficial.** ibkrapi4go es un SDK de Go de la comunidad para la
 > Interactive Brokers Web API. **No está afiliado a Interactive Brokers.** Las 193
 > operaciones de la API están implementadas (123 CPAPI + 70 IB REST).
 > Consulta [DISCLAIMER.md](./DISCLAIMER.md) y [docs/ROADMAP.md](./docs/ROADMAP.md).
@@ -23,7 +23,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > Este documento es una traducción comunitaria del [README](./README.md) en inglés.
-> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: v1.1.0
+> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: v1.1.1
 
 ## Tabla de contenidos
 
@@ -56,7 +56,7 @@
 | Métricas + logging | ✅ Implementadas ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (cobertura, pre-commit) | ✅ Implementados |
 | Sitio web de documentación + Discussions | ✅ Implementado ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Lanzamiento | ✅ v1.1.0 (GitHub + Gitee) |
+| Lanzamiento | ✅ v1.1.1 (GitHub + Gitee) |
 
 Este repositorio contiene el **cliente OpenAPI generado**, documentación y
 herramientas de generación de código. Las 193 operaciones de la API están

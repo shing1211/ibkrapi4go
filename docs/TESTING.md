@@ -21,7 +21,8 @@ Testing strategy for ibkrapi4go.
 
 Fixtures:
 
-- Store representative JSON responses under `testdata/`.
+- Mock gateway fixtures live in Go source under `internal/mockgateway/`
+  (`fixtures.go` and the per-surface route files), not in `testdata/`.
 - Derive fixtures from the spec where possible so they track schema changes.
 
 ## WebSocket tests
@@ -46,15 +47,17 @@ integration tier is still required.
 
 ## Concurrency & leaks
 
-- Every test that starts goroutines asserts no leak via `go.uber.org/goleak`.
+- Tests that start background goroutines assert no leak via `go.uber.org/goleak`.
 - Session and manager e2e tests: use a 50ms post-`m.Run()` sleep before
   `goleak.Find()` to allow the scheduler to reap exited tickle goroutines before
   the leak check runs.
-- Transport tests: use `goleak.VerifyTestMain` directly.
+- Transport tests: a package-level `TestMain` in `internal/transport_test.go`
+  sleeps briefly and then calls `goleak.Find()` to catch leaked goroutines.
 - `pkg/ibkr` e2e tests exercise the real transport + generated client against an
   `httptest` gateway, asserting request headers, string-money precision, and
   sentinel error mapping.
-- Run with `-race` in CI (`make test-race`).
+- Run with `-race` in CI. CI runs `go test ./... -race -count=1` directly; the
+  `make test-race` target is the local equivalent.
 
 ## Integration tests
 
@@ -107,8 +110,10 @@ integration tier is still required.
 make codegen-verify
 ```
 
-Regenerates into a temp dir and diffs against the committed `client/`. Also run
-on a schedule, because the upstream spec can change without a commit here.
+Regenerates into a temp dir and diffs against the committed `client/`. It runs on
+every push and pull request. The separate scheduled `spec-drift.yml` workflow
+only compares the spec *version* against the pinned one; it does not run codegen
+verification.
 
 ## Coverage
 
