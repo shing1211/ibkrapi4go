@@ -255,6 +255,7 @@ func (s *fakeSystemSink) Fail(err error) {
 func TestWS_DialAndSubscribe(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
 	defer server.Close()
 	defer srv.Close()
 
@@ -294,6 +295,7 @@ func TestWS_DialAndSubscribe(t *testing.T) {
 func TestWS_SubscribeDeliversToCorrectSink(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
 	defer server.Close()
 	defer srv.Close()
 	hub := srv.Stream()
@@ -352,6 +354,7 @@ func TestWS_SystemFrameDeliversToSystemSink(t *testing.T) {
 	helloScript := mockgateway.StreamScript{Hello: true}
 	srv := mockgateway.New(mockgateway.WithStreamScript(&helloScript))
 	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
 	defer server.Close()
 	defer srv.Close()
 
@@ -390,6 +393,7 @@ func TestWS_SystemFrameDeliversToSystemSink(t *testing.T) {
 func TestWS_CloseUnsubscribes(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
 	defer server.Close()
 	defer srv.Close()
 
@@ -425,6 +429,7 @@ func TestWS_CloseUnsubscribes(t *testing.T) {
 func TestWS_CloseIdempotent(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
 	defer server.Close()
 	defer srv.Close()
 
@@ -447,6 +452,7 @@ func TestWS_CloseIdempotent(t *testing.T) {
 func TestWS_ActiveSubscriptions(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
 	defer server.Close()
 	defer srv.Close()
 
@@ -496,6 +502,7 @@ func TestWS_ActiveSubscriptions(t *testing.T) {
 func TestWS_ConcurrentSubscribeClose(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
 	defer server.Close()
 	defer srv.Close()
 
@@ -656,6 +663,7 @@ func TestWS_DispatchDeliversMarketDataStatusField(t *testing.T) {
 func TestWS_DialDiscardsConnectionAfterClose(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
 	defer server.Close()
 	defer srv.Close()
 
@@ -777,6 +785,7 @@ func (s *reconnectOrderSink) Fail(err error) {
 func TestWS_ResubscribePrecedesReconnectNotification(t *testing.T) {
 	srv := mockgateway.New()
 	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
 	defer server.Close()
 	defer srv.Close()
 

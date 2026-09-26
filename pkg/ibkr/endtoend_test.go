@@ -78,6 +78,10 @@ func newGateway(t *testing.T) *gateway {
 	})
 	gw.srv = mockgateway.New(mockgateway.WithScenario(scn))
 	gw.Server = httptest.NewServer(gw.srv.Handler())
+	// Registered before gw.Close so it runs after it: t.Cleanup is LIFO, and a
+	// goroutine still live once the gateway is down is a leak rather than one
+	// that is merely winding down.
+	t.Cleanup(func() { assertNoLeaks(t) })
 	t.Cleanup(gw.Close)
 	return gw
 }

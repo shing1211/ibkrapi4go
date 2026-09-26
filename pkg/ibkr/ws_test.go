@@ -20,6 +20,9 @@ import (
 // per subscribed conid.
 func newWSServer(t *testing.T, script *mockgateway.StreamScript) *httptest.Server {
 	t.Helper()
+	// Registered first, so it runs last: a handler still parked at this point is
+	// a leak rather than a goroutine that is merely winding down.
+	t.Cleanup(func() { assertNoLeaks(t) })
 	srv := mockgateway.New(mockgateway.WithStreamScript(script))
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)

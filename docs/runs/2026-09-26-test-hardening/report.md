@@ -40,6 +40,29 @@ is still worth raising, but as a deliberate ratchet rather than a rescue.
 P2 in the inherited `next-phase.md` was rebuilt around the real gap: `check_design`
 reads 2 of the 9 design documents, so the weakness is breadth, not strictness.
 
+## Per-Test Leak Attribution
+
+Both goroutine-owning packages already leak-check from `TestMain`, so nothing was
+unchecked; the gap was that a leak was reported without naming the test. Four
+files now assert directly, and the wiring is one edit per helper rather than one
+per test:
+
+- `pkg/ibkr/ws_test.go` - `newWSServer` covers 18 tests
+- `pkg/ibkr/endtoend_test.go` - `newGateway` covers every test that uses it,
+  which includes all of `managers_e2e_test.go`
+- `internal/ws_test.go` - 9 sites
+- `internal/session_test.go` - the two tests that start the tickle goroutine
+
+`TestSession_TickleGoroutine_NoLeak` asserted nothing. It relied on the ambient
+`TestMain` check, so it would have passed even if its own goroutine leaked. It
+now asserts.
+
+`t.Cleanup` and `defer` are both LIFO, so the assertion has to be registered
+*first* in order to run *last*. Getting that wrong is not subtle: wiring the
+check into `newTestClient` rather than `newGateway` made it run before the
+gateway shut down, and it duly reported `net/http/httptest`'s own accept loop as
+a leak in six tests.
+
 ## The Flake Was Not a Flake
 
 `TestWS_Resilience` had flaked once and then passed roughly fifteen times,

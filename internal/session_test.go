@@ -115,10 +115,11 @@ func TestSession_Initialize_Idempotent(t *testing.T) {
 	}
 	s := &Session{api: api, state: int32(StateAuthenticated), logger: testLogger}
 	ctx := context.Background()
+	defer settleGoroutines(t)
 	defer s.Close(ctx)
 
 	if err := s.Initialize(ctx); err != nil {
-		t.Fatalf("Initialize (idempotent): %v", err)
+		t.Fatalf("Initialize: %v", err)
 	}
 	if callCount.Load() != 0 {
 		t.Errorf("initSession called %d times; want 0 for already-AUTHENTICATED", callCount.Load())
@@ -431,6 +432,7 @@ func TestSession_StartTickle_Idempotent(t *testing.T) {
 	}
 	s := &Session{api: api, state: int32(StateAuthenticated), logger: testLogger}
 	ctx := context.Background()
+	defer settleGoroutines(t)
 	defer s.Close(ctx)
 
 	s.startTickle()

@@ -11,11 +11,11 @@
 | 1 | Confirm one canonical floor value | done | `ci.yml:76` only; run records are history, not competing counts |
 | 2 | Reproduce the `TestWS_Resilience` flake | done | `go test ./internal/ -count=2` fails reliably; leak is mockgateway serveWS, not WSConn |
 | 2 | Fix the cause | done | StreamHub.closeAll uses CloseNow; Server.Close added; 17 test sites updated |
-| 3 | Per-test goleak: `internal/ws_test.go` | pending | Attribution |
-| 3 | Per-test goleak: `internal/session_test.go` | pending | 0 cleanup sites, highest risk |
-| 3 | Per-test goleak: `pkg/ibkr/ws_test.go` | pending | Attribution |
-| 3 | Per-test goleak: `pkg/ibkr/managers_e2e_test.go` | pending | Attribution |
-| 3 | Fix any leaks the new assertions surface | pending | Fix, do not `IgnoreTopFunction` |
+| 3 | Per-test goleak: `internal/ws_test.go` | done | `settleGoroutines` registered first so it runs last; 9 sites |
+| 3 | Per-test goleak: `internal/session_test.go` | done | Both tickle tests; the dedicated no-leak test previously asserted nothing |
+| 3 | Per-test goleak: `pkg/ibkr/ws_test.go` | done | One edit in `newWSServer` covers 18 tests |
+| 3 | Per-test goleak: `pkg/ibkr/managers_e2e_test.go` | done | Wired in `newGateway`, which every such test calls |
+| 3 | Fix any leaks the new assertions surface | done | None; the mockgateway leak was already fixed |
 | 4 | Slice 1: `restrictions.go` | pending | 234 stmts |
 | 4 | Slice 1: `rest_utilities.go` | pending | 119 stmts |
 | 4 | Slice 1: `notifications.go` | pending | 112 stmts |
