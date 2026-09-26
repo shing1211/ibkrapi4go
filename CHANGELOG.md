@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Eight model-portfolio and allocation operations are now exposed.** The v2.40
+  spec carries 193 operations but only 185 had public wrappers. Adds
+  `ModelManager.IsFullMaster`, `ModelCashAnalyzer`, `RebalanceToExistingTargets`,
+  `RebalanceToNewTargets`, `RebalanceToSpecificTargets`, `TwsInvestDivest`,
+  `SubmitModelPortfolioOrder`, and `AllocationManager.AllocationModels`, with
+  matching mock gateway routes and fixtures. `docs/SPEC.md` is regenerated to
+  193 operations and 451 schemas, and the canonical coverage counts move from
+  115/70/185 to 123/70/193.
+
+  Money and quantity values in the new public types are strings, per ADR 0008.
+  `RebalanceToNewTargets`, `RebalanceToSpecificTargets`, `TwsInvestDivest`, and
+  `SubmitModelPortfolioOrder` take hand-marshalled request bodies because their
+  generated request types embed anonymous structs that cannot be named from
+  another package.
+
+  `SubmitModelPortfolioOrder` has no dedicated mock route: its path template
+  normalizes to the same method and path as the Phase-1 `submitNewOrder` route,
+  and the mock router is first-match, so that route always wins. The operation
+  still satisfies the SPEC coverage check, which compares normalized
+  method and path. Its response decode is therefore not exercised by the mock
+  and needs a real gateway to verify.
+
+### Fixed
+
+- **`make docs-spec` crashed on Windows.** `gen_spec_index.py` read the spec
+  without an explicit encoding, and Windows defaults to cp1252, which cannot
+  decode the spec's non-ASCII characters. Both the read and the write now pin
+  UTF-8, matching the earlier `patch_spec.py` fix.
+
 ## [1.0.8] - 2026-09-25
 
 ### Fixed
@@ -605,7 +636,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.8...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.8...v1.1.0
 [1.0.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.7...v1.0.8
 [1.0.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.6...v1.0.7
 [1.0.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.5...v1.0.6

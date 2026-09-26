@@ -34,7 +34,7 @@ Fixtures:
 ## Mock gateway
 
 `internal/mockgateway` is an in-repo, dependency-free mock of both API surfaces
-(all 185 operations in [SPEC.md](./SPEC.md)), the OAuth2 token endpoint, and the
+(all 193 operations in [SPEC.md](./SPEC.md)), the OAuth2 token endpoint, and the
 WebSocket stream, with scriptable faults and request recording. Manager and
 WebSocket tests run against it through `httptest`; the same server backs the
 `cmd/ibkr-mock-gateway` binary and `examples/mock`. See

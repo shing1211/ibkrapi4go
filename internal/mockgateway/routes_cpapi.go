@@ -56,6 +56,7 @@ const (
 	OpGetSingleAllocationGroup  = "getSingleAllocationGroup"
 	OpGetAllocationPresets      = "getAllocationPresets"
 	OpSetAllocationPreset       = "setAllocationPreset"
+	OpGetAllocationModels       = "getAllocationModels"
 
 	// Trading FA model portfolios.
 	OpGetModelPresets             = "getModelPresets"
@@ -68,6 +69,12 @@ const (
 	OpSetModelTargetPositions     = "setModelTargetPositions"
 	OpSubmitModelOrders           = "submitModelOrders"
 	OpGetModelSummarySingle       = "getModelSummarySingle"
+	OpIsFullMaster                = "isFullMaster"
+	OpModelCashAnalyzer           = "modelCashAnalyzer"
+	OpRebalanceToExistingTargets  = "rebalanceToExistingTargets"
+	OpRebalanceToNewTargets       = "rebalanceToNewTargets"
+	OpRebalanceToSpecificTargets  = "rebalanceToSpecificTargets"
+	OpTwsInvestDivest             = "twsInvestDivest"
 
 	// Trading FYIs and notifications.
 	OpGetFyiDelivery        = "getFyiDelivery"
@@ -175,6 +182,7 @@ func cpapiRoutes() []route {
 		mkRoute(OpGetSingleAllocationGroup, post, "/v1/api/iserver/account/allocation/group/single", true),
 		mkRoute(OpGetAllocationPresets, get, "/v1/api/iserver/account/allocation/presets", true),
 		mkRoute(OpSetAllocationPreset, post, "/v1/api/iserver/account/allocation/presets", true),
+		mkRoute(OpGetAllocationModels, get, "/v1/api/iserver/account/allocation/models", true),
 
 		// --- trading FA model portfolios ---
 		mkRoute(OpGetModelPresets, post, "/v1/api/fa/fa-preset/get", true),
@@ -187,6 +195,21 @@ func cpapiRoutes() []route {
 		mkRoute(OpSetModelTargetPositions, post, "/v1/api/fa/model/save", true),
 		mkRoute(OpSubmitModelOrders, post, "/v1/api/fa/model/submit-transfers", true),
 		mkRoute(OpGetModelSummarySingle, post, "/v1/api/fa/model/summary", true),
+		mkRoute(OpIsFullMaster, post, "/v1/api/fa/is-full-master", true),
+		mkRoute(OpModelCashAnalyzer, post, "/v1/api/fa/model/cash-analyzer", true),
+		mkRoute(OpRebalanceToExistingTargets, post, "/v1/api/fa/model/rebalance/to-existing-targets", true),
+		mkRoute(OpRebalanceToNewTargets, post, "/v1/api/fa/model/rebalance/to-new-targets", true),
+		mkRoute(OpRebalanceToSpecificTargets, post, "/v1/api/fa/model/rebalance/to-specific-targets", true),
+		mkRoute(OpTwsInvestDivest, post, "/v1/api/fa/model/tws-invest-divest", true),
+
+		// SubmitModelPortfolioOrder (POST /v1/api/iserver/account/{modelCode}/orders)
+		// has no dedicated route here. Its path template is byte-identical to the
+		// Phase-1 OpSubmitNewOrder route (/v1/api/iserver/account/{accountId}/orders)
+		// once placeholders are normalized, and this router is first-match, so the
+		// Phase-1 route always wins. Both operations still satisfy the docs/SPEC.md
+		// coverage check because it compares normalized method+path. The public
+		// wrapper in pkg/ibkr works against the real gateway; it cannot have its
+		// response shape exercised by the mock.
 
 		// --- trading FYIs and notifications ---
 		mkRoute(OpGetFyiDelivery, get, "/v1/api/fyi/deliveryoptions", true),
@@ -288,6 +311,7 @@ func registerCPAPIFixtures(f *Fixtures) {
 	f.Set(OpGetSingleAllocationGroup, Fixture{Body: `{"name":"Group A","isHidden":false,"method":"EQUAL"}`})
 	f.Set(OpGetAllocationPresets, Fixture{Body: `[{"accountId":"U1234567","percentage":"50.0"}]`})
 	f.Set(OpSetAllocationPreset, Fixture{Body: `{}`})
+	f.Set(OpGetAllocationModels, Fixture{Body: `{"Balanced":"AAPL,MSFT","Growth":"AAPL,MSFT,NVDA"}`})
 
 	// --- trading FA model portfolios ---
 	f.Set(OpGetModelPresets, Fixture{Body: `[{"name":"Balanced","accounts":["U1234567"]}]`})
@@ -300,6 +324,13 @@ func registerCPAPIFixtures(f *Fixtures) {
 	f.Set(OpSetModelTargetPositions, Fixture{Body: `{}`})
 	f.Set(OpSubmitModelOrders, Fixture{Body: `{}`})
 	f.Set(OpGetModelSummarySingle, Fixture{Body: `{"name":"Balanced","accountIds":["U1234567"]}`})
+	f.Set(OpIsFullMaster, Fixture{Body: `{"isFullMaster":true,"reqID":1,"subscriptionStatus":1}`})
+	f.Set(OpModelCashAnalyzer, Fixture{Body: `{"reqID":1,"subscriptionStatus":1,"cashTransfers":[{"amt":"1000.00","currency":"USD"}]}`})
+	f.Set(OpRebalanceToExistingTargets, Fixture{Body: `{"reqID":"1","subscriptionStatus":1}`})
+	f.Set(OpRebalanceToNewTargets, Fixture{Body: `{"reqID":"1","subscriptionStatus":1}`})
+	f.Set(OpRebalanceToSpecificTargets, Fixture{Body: `{"reqID":1,"subscriptionStatus":1,"allocation":[{"conId":265598,"symbol":"AAPL","quantity":"10"}],"totalBuy":"1450.00"}`})
+	f.Set(OpTwsInvestDivest, Fixture{Body: `{"reqID":1,"subscriptionStatus":1,"allocation":[{"conId":265598,"symbol":"AAPL","quantity":"10","price":"145.25","cashQty":"1452.50"}],"cashTransfers":[{"amt":"1452.50","currency":"USD"}]}`})
+	// No fixture for SubmitModelPortfolioOrder; see the route comment above.
 
 	// --- trading FYIs and notifications ---
 	f.Set(OpGetFyiDelivery, Fixture{Body: `[{"deviceId":"dev-1","type":"email","value":"user@example.com"}]`})

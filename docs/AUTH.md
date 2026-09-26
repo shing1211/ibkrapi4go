@@ -13,7 +13,7 @@ IBKR has **two authentication models**, corresponding to the two API surfaces
 | Where | Local Client Portal Gateway | `api.ibkr.com` |
 | Login | Interactive (browser + 2FA) | OAuth2 token endpoint |
 | SDK holds | Session token from gateway | Access + refresh tokens |
-| Operations | 115 | 70 |
+| Operations | 123 | 70 |
 
 ## Important: no username/password
 

@@ -130,8 +130,8 @@ go run scripts/bench_compare.go /tmp/bench_current.json benchmark.baseline
 - **JSON decode fuzzing** (47 `Fuzz*` functions): every major public `pkg/ibkr` type
   is fuzzed with valid JSON mutations (byte-flip, deletion, truncation, swap,
   duplication) and invalid inputs to verify clean errors — never panics.
-- **Response decode fuzzing** (all 185 op fixtures): each mock gateway fixture is
-  mutated across all 185 operations and decoded through the real SDK response path.
+- **Response decode fuzzing** (all 193 op fixtures): each mock gateway fixture is
+  mutated across all 193 operations and decoded through the real SDK response path.
 - **Money/quantity round-trip** (`FuzzMoneyQuantityRoundTrip`): ADR 0008 compliance —
   decimal strings survive encode/decode without precision loss.
 

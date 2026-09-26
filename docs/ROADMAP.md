@@ -3,7 +3,7 @@
 Phased plan for ibkrapi4go. Phases are gated by **exit criteria**, not calendar
 time. The v1 effort originally targeted the CPAPI (`ssoBearer`) surface only
 (see the superseded [ADR 0005](./adr/0005-v1-scope.md)); Phases 5–7 added the
-`oauth2Bearer` surface, so all 185 operations are now implemented.
+`oauth2Bearer` surface, so all 193 operations are now implemented.
 
 ## Scope
 
@@ -20,8 +20,8 @@ time. The v1 effort originally targeted the CPAPI (`ssoBearer`) surface only
 | 8 | In-repo mock gateway (test/development) | Both |
 | — | Non-goals | — |
 
-The spec contains 185 operations: 115 on CPAPI (`ssoBearer`) and 70 on IB REST
-(`oauth2Bearer`). All 185 are now implemented.
+The spec contains 193 operations: 123 on CPAPI (`ssoBearer`) and 70 on IB REST
+(`oauth2Bearer`). All 193 are now implemented.
 
 ## Phase 0 — Truth, licensing, codegen *(complete)*
 
@@ -181,7 +181,7 @@ Notes:
 
 ## Phase 7 — Remaining CPAPI surface *(complete)*
 
-Deliverables (~81 CPAPI ops to reach 185/185 total):
+Deliverables (the remaining CPAPI ops to reach 193/193 total):
 
 **PR 1 — Trading Accounts (complete):**
 - [x] `pkg/ibkr/trading_accounts.go` — `TradingAccountManager` (9 ops): `GetAccountOwners`, `SetActiveAccount`, `GetDynamicAccounts`, `GetFundSummary`, `GetBalanceSummary`, `GetMarginSummary`, `GetAccountMarketSummary`, `GetBrokerageAccounts`, `SetDynamicAccount`.
@@ -214,8 +214,8 @@ Deliverables (~81 CPAPI ops to reach 185/185 total):
 
 Notes:
 
-- All 115 CPAPI (ssoBearer) ops now implemented.
-- Total coverage: 185/185 operations (115 CPAPI + 70 IB REST).
+- All 123 CPAPI (ssoBearer) ops now implemented.
+- Total coverage: 193/193 operations (123 CPAPI + 70 IB REST).
 - All managers registered in `Client` with accessor methods.
 - All checks pass: `make check`, `make test-race`, `make docs-check`, `make license-check`.
 
@@ -227,7 +227,7 @@ recorded in [ADR 0014](./adr/0014-mock-gateway.md).
 Deliverables:
 
 - [x] `internal/mockgateway` — dependency-free mock of both API surfaces
-  (185/185 operations), the OAuth2 token endpoint, scriptable fault injection,
+  (193/193 operations), the OAuth2 token endpoint, scriptable fault injection,
   request recording, and a scripted WebSocket hub.
 - [x] `cmd/ibkr-mock-gateway` — standalone binary serving CPAPI, IB REST,
   OAuth2, and streaming on a single port, with scenario/latency/seed/TLS flags
@@ -250,10 +250,15 @@ Exit criteria:
 
 ## Post-release maintenance
 
-The feature roadmap is complete: all 185 operations are implemented, the mock
+The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.0.8`**.
+**`v1.1.0`**.
+
+The `v1.1.0` release closes the last coverage gap: eight model-portfolio and
+allocation operations that existed in the v2.40 spec but had no public wrapper
+or mock route are now implemented, bringing the documented surface to 193
+operations and 451 schemas.
 
 The `v1.0.8` patch corrects the reconnect notification order so a resubscribe is
 issued before `ErrWSReconnected` reaches the consumer, and adds a

@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
-  <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
-  <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
+  <img src="https://img.shields.io/badge/Endpoints-193-orange?style=flat-square" alt="Endpoints">
+  <img src="https://img.shields.io/badge/Schemas-451-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
@@ -13,7 +13,7 @@
 
 > **⚠️ Unofficial.** ibkrapi4go is a community Go SDK for the
 > Interactive Brokers Web API. It is **not affiliated with Interactive Brokers**.
-> All 185 API operations are implemented (115 CPAPI + 70 IB REST).
+> All 193 API operations are implemented (123 CPAPI + 70 IB REST).
 > See [DISCLAIMER.md](./DISCLAIMER.md) and [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 > **Go-native. Type-safe. OpenAPI-driven.** An idiomatic Go client for the
@@ -45,18 +45,18 @@
 | Planning & documentation | ✅ Complete |
 | OpenAPI codegen validation | ✅ Verified ([docs/CODEGEN.md](./docs/CODEGEN.md)) |
 | `client/` generated code | ✅ Committed (generated) |
-| `pkg/ibkr` public API | ✅ Implemented (185/185 operations) |
+| `pkg/ibkr` public API | ✅ Implemented (193/193 operations) |
 | `internal/` implementation | ✅ Implemented |
 | Tests / examples | ✅ Implemented |
-| Mock gateway (185/185 ops) | ✅ Shipped ([docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)) |
+| Mock gateway (193/193 ops) | ✅ Shipped ([docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)) |
 | Benchmarks + fuzz tests | ✅ Shipped ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | Metrics + logging | ✅ Shipped ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (coverage, pre-commit) | ✅ Shipped |
 | Docs website + Discussions | ✅ Shipped ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Release | ✅ v1.0.8 (GitHub + Gitee) |
+| Release | ✅ v1.1.0 (GitHub + Gitee) |
 
 This repository contains the **generated OpenAPI client**, documentation, and
-codegen tooling. All 185 API operations are implemented across both CPAPI and IB REST
+codegen tooling. All 193 API operations are implemented across both CPAPI and IB REST
 surfaces. See [docs/ROADMAP.md](./docs/ROADMAP.md) for the build plan.
 
 ## The Two APIs
@@ -66,9 +66,9 @@ different authentication schemes**. They are not interchangeable:
 
 | Surface | Base path | Operations | Auth |
 |---------|-----------|-----------:|------|
-| Client Portal API (CPAPI) | `/v1/api/*` | 115 | `ssoBearer` |
+| Client Portal API (CPAPI) | `/v1/api/*` | 123 | `ssoBearer` |
 | IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | 70 | `oauth2Bearer` |
-| **Total** | | **185** | |
+| **Total** | | **193** | |
 
 v1 originally scoped CPAPI (`ssoBearer`) only; the `oauth2Bearer` surface shipped
 in Phases 5-6. See [ADR 0001](./docs/adr/0001-two-api-surfaces.md) and

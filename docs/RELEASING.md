@@ -10,7 +10,7 @@
 
 ## Pre-1.0 policy
 
-v1.0.0 is the first stable release. All 185 operations are implemented and the
+v1.0.0 is the first stable release. All 193 operations are implemented and the
 core feature set is complete (see [ROADMAP.md](./ROADMAP.md)):
 
 See [STABILITY.md](./STABILITY.md) and [ADR 0015](./adr/0015-stability.md) for the full stability contract.

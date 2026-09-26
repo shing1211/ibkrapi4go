@@ -307,7 +307,7 @@ func mkBearerRoute(op string, methods []string, pattern string) route {
 }
 
 // defaultRoutes returns the Phase-1 (T1) routes, the remaining CPAPI routes
-// (T2), and the IB REST + OAuth2 routes (T3). All 185 operations in
+// (T2), and the IB REST + OAuth2 routes (T3). All 193 operations in
 // docs/SPEC.md resolve here.
 func defaultRoutes() []route {
 	post := []string{http.MethodPost}

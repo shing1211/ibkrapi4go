@@ -13,8 +13,8 @@ document records the pipeline and the measured state of generation.
 | OpenAPI | `3.0.0` |
 | Downloaded size | ~900 KB |
 | Paths | 171 |
-| Operations | 185 |
-| Schemas | 443 |
+| Operations | 193 |
+| Schemas | 451 |
 | Tags | 27 |
 
 The spec is **not committed**; it is fetched at build time and cached under

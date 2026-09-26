@@ -15,7 +15,7 @@ const specPath = "../../docs/SPEC.md"
 
 // Canonical operation counts from docs/SPEC.md (AGENTS.md rule 6).
 const (
-	cpapiOperationCount  = 115
+	cpapiOperationCount  = 123
 	ibRESTOperationCount = 70
 	totalOperationCount  = cpapiOperationCount + ibRESTOperationCount
 )
@@ -56,7 +56,7 @@ func TestIBRESTCoverage(t *testing.T) {
 }
 
 // TestAllOperationsCoverage asserts the combined CPAPI + IB REST surface has
-// zero unrouted operations and that docs/SPEC.md still declares 185.
+// zero unrouted operations and that docs/SPEC.md still declares 193.
 func TestAllOperationsCoverage(t *testing.T) {
 	cpapi := parseSpecSurface(t, "CPAPI")
 	rest := parseSpecSurface(t, "IB REST")

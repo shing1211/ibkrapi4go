@@ -4,16 +4,16 @@
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
-  <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
-  <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
+  <img src="https://img.shields.io/badge/Endpoints-193-orange?style=flat-square" alt="Endpoints">
+  <img src="https://img.shields.io/badge/Schemas-451-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
 
 > **⚠️ 非官方。** ibkrapi4go 是社区维护的 Interactive Brokers
-> Web API Go SDK，**与 Interactive Brokers 无任何隶属关系**。全部 185 个 API
-> 操作已实现（115 CPAPI + 70 IB REST）。请阅读 [DISCLAIMER.md](./DISCLAIMER.md) 与
+> Web API Go SDK，**与 Interactive Brokers 无任何隶属关系**。全部 193 个 API
+> 操作已实现（123 CPAPI + 70 IB REST）。请阅读 [DISCLAIMER.md](./DISCLAIMER.md) 与
 > [docs/ROADMAP.md](./docs/ROADMAP.md)。
 
 > **Go 原生 · 类型安全 · OpenAPI 驱动。** 面向 Interactive Brokers Web API 的
@@ -22,7 +22,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本文件是英文 [README](./README.md) 的社区翻译。**英文版本为准。**
-> 同步于 / Last synced: v1.0.8
+> 同步于 / Last synced: v1.1.0
 
 ## 目录
 
@@ -47,17 +47,17 @@
 | 规划与文档 | ✅ 完成 |
 | OpenAPI 代码生成验证 | ✅ 已验证（见 [docs/CODEGEN.md](./docs/CODEGEN.md)） |
 | `client/` 生成代码 | ✅ 已提交（生成） |
-| `pkg/ibkr` 公开 API | ✅ 已实现（185/185 操作） |
+| `pkg/ibkr` 公开 API | ✅ 已实现（193/193 操作） |
 | `internal/` 实现 | ✅ 已实现 |
 | 测试 / 示例 | ✅ 已实现 |
-| 模拟网关（185/185 操作） | ✅ 已实现（[docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)） |
+| 模拟网关（193/193 操作） | ✅ 已实现（[docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)） |
 | 基准测试 + 模糊测试 | ✅ 已实现（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | 指标 + 日志 | ✅ 已实现（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 质量门禁（覆盖率、预提交） | ✅ 已实现 |
 | 文档网站 + Discussions | ✅ 已实现（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| 发布 | ✅ v1.0.8（GitHub + Gitee） |
+| 发布 | ✅ v1.1.0（GitHub + Gitee） |
 
-当前仓库包含**生成的 OpenAPI 客户端**、文档与代码生成工具。全部 185 个 API
+当前仓库包含**生成的 OpenAPI 客户端**、文档与代码生成工具。全部 193 个 API
 操作已实现。构建计划见 [docs/ROADMAP.md](./docs/ROADMAP.md)。
 
 ## 两套 API
@@ -67,9 +67,9 @@ IBKR OpenAPI 规范（v2.40.0）实际描述了**两套 API 表面，使用两�
 
 | 表面 | 路径前缀 | 接口数 | 认证 |
 |------|----------|-------:|------|
-| Client Portal API (CPAPI) | `/v1/api/*` | 115 | `ssoBearer` |
+| Client Portal API (CPAPI) $1123 | `ssoBearer` |
 | IB REST API | `/gw/api/v1/*`、`/gw/api/v2/*`、`/oauth2/*` | 70 | `oauth2Bearer` |
-| **合计** | | **185** | |
+| **合计** | | **193** | |
 
 SDK 最初仅覆盖 CPAPI（`ssoBearer`）；`oauth2Bearer` 表面已在第 5-6 阶段实现。
 参见 [ADR 0001](./docs/adr/0001-two-api-surfaces.md) 与

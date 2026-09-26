@@ -7,7 +7,7 @@ the original planning docs conflated several of them.
 
 **Client Portal API (CPAPI)**
 The legacy `/v1/api/*` surface served by the locally-run Client Portal Gateway.
-Authenticated with `ssoBearer`. 115 operations in spec v2.40.0. Implemented in
+Authenticated with `ssoBearer`. 123 operations in spec v2.40.0. Implemented in
 full.
 
 **IB REST API**

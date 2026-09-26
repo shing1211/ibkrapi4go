@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
-  <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
-  <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
+  <img src="https://img.shields.io/badge/Endpoints-193-orange?style=flat-square" alt="Endpoints">
+  <img src="https://img.shields.io/badge/Schemas-451-blue?style=flat-square" alt="Schemas">
   <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
@@ -13,7 +13,7 @@
 
 > **⚠️ 비공식 & 프리알파.** ibkrapi4go는 Interactive Brokers Web API를 위한
 > 커뮤니티 Go SDK입니다. **Interactive Brokers와 아무런 제휴 관계가 없습니다.**
-> 모든 185개 API 오퍼레이션이 구현되었습니다 (115 CPAPI + 70 IB REST).
+> 모든 185개 API 오퍼레이션이 구현되었습니다 (123 CPAPI + 70 IB REST).
 > [DISCLAIMER.md](./DISCLAIMER.md)와 [docs/ROADMAP.md](./docs/ROADMAP.md)를 참고하세요.
 
 > **Go 네이티브 · 타입 안전 · OpenAPI 기반.** Interactive Brokers Web API를 위한
@@ -23,7 +23,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 이 문서는 영어 [README](./README.md)의 커뮤니티 번역입니다. **영어판이 정본입니다.**
-> 동기화 / Last synced: v1.0.8
+> 동기화 / Last synced: v1.1.0
 
 ## 목차
 
@@ -48,15 +48,15 @@
 | 기획 및 문서 | ✅ 완료 |
 | OpenAPI 코드 생성 검증 | ✅ 검증됨 ([docs/CODEGEN.md](./docs/CODEGEN.md)) |
 | `client/` 생성 코드 | ✅ 커밋됨 (생성) |
-| `pkg/ibkr` 공개 API | ✅ 구현됨 (185/185 오퍼레이션) |
+| `pkg/ibkr` 공개 API | ✅ 구현됨 (193/193 오퍼레이션) |
 | `internal/` 구현 | ✅ 구현됨 |
 | 테스트 / 예제 | ✅ 구현됨 |
-| 모의 게이트웨이 (185/185 연산) | ✅ 구현됨 ([docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)) |
+| 모의 게이트웨이 (193/193 연산) | ✅ 구현됨 ([docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)) |
 | 벤치마크 + 퍼즈 테스트 | ✅ 구현됨 ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | 메트릭 + 로깅 | ✅ 구현됨 ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI 품질 게이트 (커버리지, 프리컴밋) | ✅ 구현됨 |
 | 문서 웹사이트 + Discussions | ✅ 구현됨 ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| 릴리스 | ✅ v1.0.8 (GitHub + Gitee) |
+| 릴리스 | ✅ v1.1.0 (GitHub + Gitee) |
 
 현재 저장소에는 **생성된 OpenAPI 클라이언트**, 문서, 코드 생성 도구가 포함되어
 있습니다. 모든 185개 API 오퍼레이션이 구현되었습니다. 계획은
@@ -69,9 +69,9 @@ IBKR OpenAPI 명세(v2.40.0)는 실제로 **서로 다른 인증 방식을 가�
 
 | 표면 | 기본 경로 | 오퍼레이션 수 | 인증 |
 |------|-----------|-------------:|------|
-| Client Portal API (CPAPI) | `/v1/api/*` | 115 | `ssoBearer` |
+| Client Portal API (CPAPI) $1123 | `ssoBearer` |
 | IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | 70 | `oauth2Bearer` |
-| **합계** | | **185** | |
+| **합계** | | **193** | |
 
 SDK는 처음에 CPAPI(`ssoBearer`)만 대상으로 했으며, `oauth2Bearer` 표면은
 단계 5-6에서 구현되었습니다. [ADR 0001](./docs/adr/0001-two-api-surfaces.md)과

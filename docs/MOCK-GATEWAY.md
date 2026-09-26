@@ -4,7 +4,7 @@
 examples, and the standalone `cmd/ibkr-mock-gateway` binary. It adds no
 dependencies: it is built on `net/http` and the `github.com/coder/websocket`
 dependency the streaming client already uses. It serves both API surfaces on
-one port, covers every operation in [SPEC.md](./SPEC.md) (185 operations: 115
+one port, covers every operation in [SPEC.md](./SPEC.md) (193 operations: 123
 CPAPI + 70 IB REST), records requests, injects scriptable faults, and mocks the
 WebSocket stream.
 
@@ -161,7 +161,7 @@ The hub accepts both the JSON protocol used by `internal/ws.go`
 `internal/mockgateway/coverage_test.go` parses [SPEC.md](./SPEC.md), normalizes
 dynamic path segments to `{}`, and fails if any CPAPI, IB REST, or combined
 operation has no registered route, or if any route has no fixture. It asserts
-the parsed counts match the canonical 115 CPAPI + 70 IB REST = 185 operations
+the parsed counts match the canonical 123 CPAPI + 70 IB REST = 193 operations
 (AGENTS.md rule 6), so the mock cannot silently drift from the spec.
 
 `internal/mockgateway/shape_test.go` (`TestFixtureShapeConformance`) validates

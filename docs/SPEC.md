@@ -2,7 +2,7 @@
 
 > Source: `https://api.ibkr.com/gw/api/v3/api-docs`
 > Title: IB REST API | Version: 2.40.0 | OpenAPI: 3.0.0
-> Endpoints: 185 | Schemas: 443 | Tags: 27 | Generated: 2026-09-21
+> Endpoints: 193 | Schemas: 451 | Tags: 27 | Generated: 2026-09-26
 
 > **Canonical counts.** All endpoint/schema numbers in this repository
 > derive from this file. Regenerate with `scripts/gen_spec_index.py` — do
@@ -22,15 +22,15 @@
 
 | Surface | Base path | Operations | Auth |
 |---------|-----------|-----------:|------|
-| Client Portal API (CPAPI) | `/v1/api/*` | 115 | `ssoBearer` |
+| Client Portal API (CPAPI) | `/v1/api/*` | 123 | `ssoBearer` |
 | IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | 70 | `oauth2Bearer` |
-| **Total** | | **185** | |
+| **Total** | | **193** | |
 
-Both surfaces are implemented: 115 CPAPI (`ssoBearer`) + 70 IB REST (`oauth2Bearer`). See [ADR 0001](./adr/0001-two-api-surfaces.md) and [ADR 0011](./adr/0011-oauth2-surface.md).
+Both surfaces are implemented: 123 CPAPI (`ssoBearer`) + 70 IB REST (`oauth2Bearer`). See [ADR 0001](./adr/0001-two-api-surfaces.md) and [ADR 0011](./adr/0011-oauth2-surface.md).
 
 ---
 
-## Endpoint index (185 operations)
+## Endpoint index (193 operations)
 
 ### Account Management Accounts *(14)*
 
@@ -222,20 +222,28 @@ Both surfaces are implemented: 115 CPAPI (`ssoBearer`) + 70 IB REST (`oauth2Bear
 | GET | `/v1/api/iserver/account/allocation/presets` | CPAPI | ssoBearer | Retrieve Allocation Presets | `getAllocationPresets` |
 | POST | `/v1/api/iserver/account/allocation/presets` | CPAPI | ssoBearer | Set Allocation Preset | `setAllocationPreset` |
 
-### Trading FA Model Portfolios *(10)*
+### Trading FA Model Portfolios *(18)*
 
 | Method | Path | Surface | Auth | Summary | Operation ID |
 |--------|------|---------|------|---------|--------------|
 | POST | `/v1/api/fa/fa-preset/get` | CPAPI | ssoBearer | Get Model Preset | `getModelPresets` |
 | POST | `/v1/api/fa/fa-preset/save` | CPAPI | ssoBearer | Set Model Preset | `setModelPresets` |
+| POST | `/v1/api/fa/is-full-master` | CPAPI | ssoBearer | Is Full Master Account | `isFullMaster` |
 | POST | `/v1/api/fa/model/accounts-details` | CPAPI | ssoBearer | Get Models Accounts | `getAccountsInModel` |
+| POST | `/v1/api/fa/model/cash-analyzer` | CPAPI | ssoBearer | Model Cash Analyzer | `modelCashAnalyzer` |
 | POST | `/v1/api/fa/model/invest-divest` | CPAPI | ssoBearer | Invest Account Into Model | `setAccountinvestmentInModel` |
 | POST | `/v1/api/fa/model/invest-divest-positions` | CPAPI | ssoBearer | Summary Of Accounts Invested In The Model | `getInvestedAccountsInModel` |
 | POST | `/v1/api/fa/model/list` | CPAPI | ssoBearer | Request All Models | `getAllmodels` |
 | POST | `/v1/api/fa/model/positions` | CPAPI | ssoBearer | Request Model Positions | `getAllModelPositions` |
+| POST | `/v1/api/fa/model/rebalance/to-existing-targets` | CPAPI | ssoBearer | Rebalance To Existing Targets | `rebalanceToExistingTargets` |
+| POST | `/v1/api/fa/model/rebalance/to-new-targets` | CPAPI | ssoBearer | Rebalance To New Targets | `rebalanceToNewTargets` |
+| POST | `/v1/api/fa/model/rebalance/to-specific-targets` | CPAPI | ssoBearer | Rebalance To Specific Targets | `rebalanceToSpecificTargets` |
 | POST | `/v1/api/fa/model/save` | CPAPI | ssoBearer | Set Model Allocations | `setModelTargetPositions` |
 | POST | `/v1/api/fa/model/submit-transfers` | CPAPI | ssoBearer | Submit Transfers | `submitModelOrders` |
 | POST | `/v1/api/fa/model/summary` | CPAPI | ssoBearer | Request Model Summary | `getModelSummarySingle` |
+| POST | `/v1/api/fa/model/tws-invest-divest` | CPAPI | ssoBearer | TWS Invest / Divest | `twsInvestDivest` |
+| GET | `/v1/api/iserver/account/allocation/models` | CPAPI | ssoBearer | List Allocation Models | `getAllocationModels` |
+| POST | `/v1/api/iserver/account/{modelCode}/orders` | CPAPI | ssoBearer | Submit New Model Portfolio Order | `submitModelPortfolioOrder` |
 
 ### Trading FYIs and Notifications *(11)*
 
