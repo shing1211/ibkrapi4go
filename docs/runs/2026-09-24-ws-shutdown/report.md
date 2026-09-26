@@ -43,6 +43,10 @@ changed.
     is addressed by the `.gitattributes` added after this run.
 - Local `-race` verification unavailable: Go reports `CGO_ENABLED=0`, and no C
   compiler is installed in the Windows environment.
+  - Later correction: this was a property of that environment at the time, not a
+    project limitation. A later Windows host with `CGO_ENABLED=1` and a C compiler
+    ran the full suite under `-race` successfully, so race verification is
+    available. See the `2026-09-26-test-hardening` run.
 
 ## Follow-up
 

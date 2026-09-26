@@ -80,11 +80,23 @@ actually scripts three drops instead of one, and `mockgateway` gained
 - **The mutating model endpoints are excluded from the integration suite**,
   which declares itself read-only. They also require FA entitlements.
 - **Coverage is 37.5% against a 35% floor**, so the margin is thin.
+  - Later correction: 37.5% came from a profile two days older than the tests
+    that produced it. A fresh measurement with the CI flags gives **43.3%**, an
+    8.3-point margin. The thin-margin concern was an artifact of the stale file.
 - **goleak is asserted in only 4 of 42 test files.**
-- **The coverage gate cannot detect a replacement**: removing one middleware and
-  adding another keeps the count, so only order and presence are checked.
+  - Later correction: this understates the existing coverage. Both
+    goroutine-owning packages run `goleak.Find()` from `TestMain`, so leaks are
+    caught at package exit; the gap is per-test attribution.
 - **The race detector runs locally** on this host, contradicting the
-  `ws-shutdown` report's note that it was unavailable.
+  `ws-shutdown` report's note that it was unavailable. The `ws-shutdown` report
+  has since been annotated with the same correction.
+- ~~**The coverage gate cannot detect a replacement**: removing one middleware
+  and adding another keeps the count, so only order and presence are checked.~~
+  - Correction: this was wrong twice over. The item was misattributed to the
+    coverage gate, and the claim itself is false. `check_design` verifies both
+    presence and order, so deleting one middleware and adding another fails the
+    presence check on the new layer. See `next-phase.md` P2, which now states the
+    real gap: seven of the nine design documents are unverified.
 
 ## Verification
 
