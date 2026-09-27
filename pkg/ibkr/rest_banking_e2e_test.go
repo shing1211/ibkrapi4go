@@ -4,6 +4,7 @@
 package ibkr
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -77,6 +78,130 @@ func jsonKeys(t *testing.T, req *mockgateway.Request) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// ---------------------------------------------------------------------------
+// Wire-shape helpers
+//
+// jsonKeys above pins WHICH keys a body carries. These helpers pin the JSON TYPE
+// of each value, which is the half of the contract jsonKeys cannot see: a body
+// carrying {"quantity": 10} and a body carrying {"quantity": "10"} have the same
+// key set and the same value read as text, and only the type says which went on
+// the wire. Several banking payloads differ from their neighbours on exactly
+// that axis, so the type is asserted rather than the value alone.
+// ---------------------------------------------------------------------------
+
+// jsonTypeName names the JSON type of a value decoded by encoding/json with
+// UseNumber: "string", "number", "bool", "null", "array", or "object". A JSON
+// number reports "number" whether its literal is integral or fractional,
+// because the contract being pinned is the JSON type, not the Go representation.
+func jsonTypeName(v any) string {
+	switch v.(type) {
+	case nil:
+		return "null"
+	case string:
+		return "string"
+	case json.Number:
+		return "number"
+	case bool:
+		return "bool"
+	case map[string]any:
+		return "object"
+	case []any:
+		return "array"
+	default:
+		return "unknown"
+	}
+}
+
+// shapeOfJSONObject decodes raw, which must be a JSON object, into its exact set
+// of keys mapped to each value's JSON type. A key the payload stops sending
+// disappears from the returned map and a key whose JSON type changes changes its
+// entry, so a comparison against a recorded expectation fails for additions,
+// removals, and retypings alike.
+func shapeOfJSONObject(t *testing.T, label string, raw []byte) map[string]string {
+	t.Helper()
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	// UseNumber keeps numbers as their source literal instead of widening every
+	// one to float64, so an integral JSON token is not rounded through binary
+	// floating point on its way to the assertion.
+	dec.UseNumber()
+	var m map[string]any
+	if err := dec.Decode(&m); err != nil {
+		t.Fatalf("%s: decode %s: %v", label, raw, err)
+	}
+	if m == nil {
+		t.Fatalf("%s: %s is JSON null, not an object", label, raw)
+	}
+	shape := make(map[string]string, len(m))
+	for k, v := range m {
+		shape[k] = jsonTypeName(v)
+	}
+	return shape
+}
+
+// assertJSONShape compares the shape of the JSON object in raw against want and
+// reports every difference: a key the payload gained, a key it lost, and a key
+// whose JSON type changed. want must be complete — a partial want cannot express
+// "and no other keys", so every key in the body has to be named.
+func assertJSONShape(t *testing.T, label string, raw []byte, want map[string]string) {
+	t.Helper()
+	got := shapeOfJSONObject(t, label, raw)
+	for _, k := range sortedShapeKeys(want) {
+		kind, present := got[k]
+		if !present {
+			t.Errorf("%s: key %q is absent; body = %s", label, k, raw)
+			continue
+		}
+		if kind != want[k] {
+			t.Errorf("%s: key %q is a JSON %s; want a JSON %s; body = %s", label, k, kind, want[k], raw)
+		}
+	}
+	for _, k := range sortedShapeKeys(got) {
+		if _, wanted := want[k]; !wanted {
+			t.Errorf("%s: unexpected key %q (JSON %s); body = %s", label, k, got[k], raw)
+		}
+	}
+}
+
+// sortedShapeKeys returns the keys of a shape map in a deterministic order, so
+// the failures above come out in the same sequence on every run.
+func sortedShapeKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// rawJSONField returns the undecoded JSON token stored under key in the object
+// raw. The token is returned verbatim, so the quotes around a JSON string and
+// the fractional part of a JSON number are both visible — which is how
+// "quantity": "10" is told apart from "quantity": 10 without trusting a decoder.
+func rawJSONField(t *testing.T, label string, raw []byte, key string) []byte {
+	t.Helper()
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatalf("%s: decode %s: %v", label, raw, err)
+	}
+	tok, present := m[key]
+	if !present {
+		t.Fatalf("%s: no key %q in %s", label, key, raw)
+	}
+	return bytes.TrimSpace(tok)
+}
+
+// rawJSONArray returns the elements of the JSON array stored under key in the
+// object raw, each still undecoded, so a test can assert the shape of every
+// element rather than of the array as a whole.
+func rawJSONArray(t *testing.T, label string, raw []byte, key string) []json.RawMessage {
+	t.Helper()
+	var elems []json.RawMessage
+	if err := json.Unmarshal(rawJSONField(t, label, raw, key), &elems); err != nil {
+		t.Fatalf("%s: key %q in %s is not a JSON array: %v", label, key, raw, err)
+	}
+	return elems
 }
 
 // ---------------------------------------------------------------------------
@@ -394,6 +519,53 @@ func TestRESTBanking_CancelInstruction(t *testing.T) {
 	}
 }
 
+// TestRESTBanking_CancelInstruction_WireShape pins the exact key set and the
+// exact JSON type of every value in the single-cancel payload. This is the
+// reference shape among the two cancel paths: it is the one place the wrapper
+// populates Reason, so its test is the one to read first when the blocked
+// bulk-cancel decision is taken up.
+func TestRESTBanking_CancelInstruction_WireShape(t *testing.T) {
+	banking, gw := bankingWithGateway(t)
+
+	if err := banking.CancelInstruction(context.Background(), CancelInstructionRequest{
+		InstructionID: 67890,
+		Reason:        "no longer needed",
+	}); err != nil {
+		t.Fatalf("CancelInstruction: %v", err)
+	}
+	req := lastRESTRequest(t, gw)
+
+	assertJSONShape(t, "cancel body", req.Body, map[string]string{
+		"instruction":     "object",
+		"instructionType": "string",
+	})
+	instruction := rawJSONField(t, "cancel body", req.Body, "instruction")
+	assertJSONShape(t, "cancel instruction", instruction, map[string]string{
+		// client.gen.go declares all three fields of CancelInstruction without
+		// omitempty, so all three are on the wire even when the wrapper has
+		// nothing to put in them. Asserted from the recorded body: the zero
+		// tokens below are what the gateway actually received.
+		"clientInstructionId": "number",
+		"instructionId":       "number",
+		"reason":              "string",
+	})
+	if got, want := string(rawJSONField(t, "cancel body", instruction, "reason")), `"no longer needed"`; got != want {
+		t.Errorf("reason token = %s; want %s", got, want)
+	}
+	if got, want := string(rawJSONField(t, "cancel body", instruction, "instructionId")), "67890"; got != want {
+		t.Errorf("instructionId token = %s; want %s", got, want)
+	}
+	// CancelInstructionRequest carries no client instruction id, and the wrapper
+	// never assigns InstructionType, so both reach the gateway as the zero value
+	// of their declared Go type rather than being omitted.
+	if got, want := string(rawJSONField(t, "cancel body", instruction, "clientInstructionId")), "0"; got != want {
+		t.Errorf("clientInstructionId token = %s; want %s — CancelInstructionRequest exposes no such field", got, want)
+	}
+	if got, want := string(rawJSONField(t, "cancel body", req.Body, "instructionType")), `""`; got != want {
+		t.Errorf("instructionType token = %s; want %s — the wrapper never sets it", got, want)
+	}
+}
+
 func TestRESTBanking_CancelInstructionsBulk(t *testing.T) {
 	banking, gw := bankingWithGateway(t)
 
@@ -430,6 +602,63 @@ func TestRESTBanking_CancelInstructionsBulk(t *testing.T) {
 		if body.Instructions[i].Reason != "" {
 			t.Errorf("instructions[%d].reason = %q; want empty — the bulk payload never populates it",
 				i, body.Instructions[i].Reason)
+		}
+	}
+}
+
+// TestRESTBanking_CancelInstructionsBulk_WireShape pins the exact key set and
+// the exact JSON type of every value in the bulk-cancel payload, element by
+// element.
+//
+// CANDIDATE FOR THE BLOCKED DECISION, not a defect fixed here: rest_banking.go
+// copies only InstructionId out of each CancelInstructionRequest, so each
+// caller's Reason is dropped. The test below records the current wire contract
+// so that populating reason — if the decision goes that way — lands as a visible
+// change to this test rather than a silent one. Contrast
+// TestRESTBanking_CancelInstruction_WireShape above, which does send it.
+func TestRESTBanking_CancelInstructionsBulk_WireShape(t *testing.T) {
+	banking, gw := bankingWithGateway(t)
+
+	if err := banking.CancelInstructionsBulk(context.Background(), []CancelInstructionRequest{
+		{InstructionID: 1, Reason: "first"},
+		{InstructionID: 2, Reason: "second"},
+	}); err != nil {
+		t.Fatalf("CancelInstructionsBulk: %v", err)
+	}
+	req := lastRESTRequest(t, gw)
+
+	// A flat {instructionType, instructions} object, not the {"instruction": ...}
+	// envelope the single-cancel path sends: the two paths share the endpoint
+	// family but not the envelope, and the wrapper returns only an error, so
+	// this is the only place the difference is visible.
+	assertJSONShape(t, "bulk cancel body", req.Body, map[string]string{
+		"instructionType": "string",
+		"instructions":    "array",
+	})
+	if got, want := string(rawJSONField(t, "bulk cancel body", req.Body, "instructionType")), `""`; got != want {
+		t.Errorf("instructionType token = %s; want %s — the wrapper never sets it", got, want)
+	}
+
+	elems := rawJSONArray(t, "bulk cancel body", req.Body, "instructions")
+	if len(elems) != 2 {
+		t.Fatalf("instructions = %s; want two elements", req.Body)
+	}
+	for i, elem := range elems {
+		label := fmt.Sprintf("instructions[%d]", i)
+		// Every element carries the same three keys, in the same JSON types, as
+		// the single-cancel instruction — including reason, which is present on
+		// the wire and empty rather than absent.
+		assertJSONShape(t, label, elem, map[string]string{
+			"clientInstructionId": "number",
+			"instructionId":       "number",
+			"reason":              "string",
+		})
+		if got, want := string(rawJSONField(t, label, elem, "reason")), `""`; got != want {
+			t.Errorf("%s.reason token = %s; want %s — the bulk payload never populates the caller's reason",
+				label, got, want)
+		}
+		if got, want := string(rawJSONField(t, label, elem, "clientInstructionId")), "0"; got != want {
+			t.Errorf("%s.clientInstructionId token = %s; want %s", label, got, want)
 		}
 	}
 }
@@ -534,6 +763,77 @@ func TestRESTExternalAssetTransfers_TransferV2(t *testing.T) {
 	}{Instruction: instr})
 	if _, ok := instr["quantity"]; ok {
 		t.Errorf("body = %s; want no top-level quantity key in a v2 instruction", req.Body)
+	}
+}
+
+// TestRESTExternalAssetTransfers_TransferV2_WireShape pins the exact key set and
+// the exact JSON type of every value in the single-transfer v2 payload, down to
+// each position. Per-position quantity is a JSON NUMBER here — the assertion
+// that half of the v2 divergence. Read against
+// TestRESTExternalAssetTransfers_TransferBulkV2_WireShape below, where the same
+// caller input arrives as a JSON STRING.
+func TestRESTExternalAssetTransfers_TransferV2_WireShape(t *testing.T) {
+	banking, gw := bankingWithGateway(t)
+
+	if _, err := banking.ExternalTransfers().TransferV2(context.Background(), AssetTransferRequest{
+		AccountID:             AccountID("U1234567"),
+		ClientInstructionID:   "1012983",
+		ContraBrokerAccountID: AccountID("12345678A"),
+		ContraBrokerDtcCode:   "534",
+		Direction:             "IN",
+		Quantity:              "100",
+		ConID:                 ConID(459200101),
+		Positions: []PositionV2Request{
+			{ConID: ConID(459200101), Quantity: "10"},
+			{ConID: ConID(765432100), Quantity: "2.5"},
+		},
+	}); err != nil {
+		t.Fatalf("TransferV2: %v", err)
+	}
+	req := lastRESTRequest(t, gw)
+
+	assertJSONShape(t, "v2 body", req.Body, map[string]string{
+		"instruction":     "object",
+		"instructionType": "string",
+	})
+	instruction := rawJSONField(t, "v2 body", req.Body, "instruction")
+	// Seven keys. currency is present and empty: the generated FopInstructionV2
+	// declares it without omitempty and AssetTransferRequest exposes no
+	// currency to fill it with. quantity is NOT among them, because the v2
+	// instruction carries its amounts per position.
+	assertJSONShape(t, "v2 instruction", instruction, map[string]string{
+		"accountId":             "string",
+		"clientInstructionId":   "number",
+		"contraBrokerAccountId": "string",
+		"contraBrokerDtcCode":   "string",
+		"currency":              "string",
+		"direction":             "string",
+		"positions":             "array",
+	})
+	if got, want := string(rawJSONField(t, "v2 instruction", instruction, "currency")), `""`; got != want {
+		t.Errorf("currency token = %s; want %s — AssetTransferRequest exposes no currency", got, want)
+	}
+
+	positions := rawJSONArray(t, "v2 instruction", instruction, "positions")
+	if len(positions) != 2 {
+		t.Fatalf("positions = %s; want two elements", req.Body)
+	}
+	// The wrapper builds these from the generated TradingInstrumentV2, whose
+	// Quantity is a float32, so the quantity token carries no quotes.
+	wantQuantity := []string{"10", "2.5"}
+	wantConID := []string{"459200101", "765432100"}
+	for i, pos := range positions {
+		label := fmt.Sprintf("positions[%d]", i)
+		assertJSONShape(t, label, pos, map[string]string{
+			"conid":    "number",
+			"quantity": "number",
+		})
+		if got := string(rawJSONField(t, label, pos, "quantity")); got != wantQuantity[i] {
+			t.Errorf("%s.quantity token = %s; want the unquoted JSON number %s", label, got, wantQuantity[i])
+		}
+		if got := string(rawJSONField(t, label, pos, "conid")); got != wantConID[i] {
+			t.Errorf("%s.conid token = %s; want %s", label, got, wantConID[i])
+		}
 	}
 }
 
@@ -668,6 +968,89 @@ func TestRESTExternalAssetTransfers_TransferBulkV2(t *testing.T) {
 	}
 	if second.Positions == nil {
 		t.Errorf("body = %s; want an empty positions array, not null", req.Body)
+	}
+}
+
+// TestRESTExternalAssetTransfers_TransferBulkV2_WireShape pins the exact key set
+// and the exact JSON type of every value in the bulk-transfer v2 payload, down to
+// each position.
+//
+// Per-position quantity is a JSON STRING here, against the JSON NUMBER
+// TestRESTExternalAssetTransfers_TransferV2_WireShape pins for the single path
+// from the identical caller input "10". The key set of the instruction object
+// diverges too: six keys against the single path's seven, because the bulk path
+// declares a local instruction struct with no Currency field. Both are recorded,
+// not corrected.
+func TestRESTExternalAssetTransfers_TransferBulkV2_WireShape(t *testing.T) {
+	banking, gw := bankingWithGateway(t)
+
+	if _, err := banking.ExternalTransfers().TransferBulkV2(context.Background(), []AssetTransferRequest{
+		{
+			AccountID:             AccountID("U1234567"),
+			ClientInstructionID:   "1",
+			ContraBrokerAccountID: AccountID("12345678A"),
+			ContraBrokerDtcCode:   "534",
+			Direction:             "IN",
+			Positions:             []PositionV2Request{{ConID: ConID(459200101), Quantity: "10"}},
+		},
+		{
+			AccountID:           AccountID("U7654321"),
+			ClientInstructionID: "2",
+			Direction:           "OUT",
+		},
+	}); err != nil {
+		t.Fatalf("TransferBulkV2: %v", err)
+	}
+	req := lastRESTRequest(t, gw)
+
+	assertJSONShape(t, "bulk v2 body", req.Body, map[string]string{
+		"instructionType": "string",
+		"instructions":    "array",
+	})
+	if got, want := string(rawJSONField(t, "bulk v2 body", req.Body, "instructionType")), `"FOP"`; got != want {
+		t.Errorf("instructionType token = %s; want %s", got, want)
+	}
+
+	elems := rawJSONArray(t, "bulk v2 body", req.Body, "instructions")
+	if len(elems) != 2 {
+		t.Fatalf("instructions = %s; want two elements", req.Body)
+	}
+	// Six keys, not seven: the local struct in the bulk path has no Currency
+	// field, so the single path's empty-string currency has no counterpart here
+	// and the key is absent rather than empty.
+	for i, elem := range elems {
+		assertJSONShape(t, fmt.Sprintf("instructions[%d]", i), elem, map[string]string{
+			"accountId":             "string",
+			"clientInstructionId":   "number",
+			"contraBrokerAccountId": "string",
+			"contraBrokerDtcCode":   "string",
+			"direction":             "string",
+			"positions":             "array",
+		})
+	}
+	// The fields the caller left unset are sent empty rather than omitted, again
+	// because the local struct tags them without omitempty.
+	second := fmt.Sprintf("instructions[%d]", len(elems)-1)
+	if got, want := string(rawJSONField(t, "bulk v2 body", elems[len(elems)-1], "contraBrokerDtcCode")), `""`; got != want {
+		t.Errorf("%s.contraBrokerDtcCode token = %s; want %s", second, got, want)
+	}
+	if got, want := string(rawJSONField(t, "bulk v2 body", elems[len(elems)-1], "positions")), `[]`; got != want {
+		t.Errorf("%s.positions token = %s; want %s — an empty array, not null", second, got, want)
+	}
+
+	// The divergence, stated as an assertion: the caller passed Quantity: "10"
+	// and the token on the wire is the quoted string "10", where the single path
+	// puts the bare number 10.
+	positions := rawJSONArray(t, "instructions[0]", elems[0], "positions")
+	if len(positions) != 1 {
+		t.Fatalf("instructions[0].positions = %s; want one element", req.Body)
+	}
+	assertJSONShape(t, "instructions[0].positions[0]", positions[0], map[string]string{
+		"conid":    "number",
+		"quantity": "string",
+	})
+	if got, want := string(rawJSONField(t, "instructions[0].positions[0]", positions[0], "quantity")), `"10"`; got != want {
+		t.Errorf("instructions[0].positions[0].quantity token = %s; want the quoted JSON string %s", got, want)
 	}
 }
 
@@ -1265,133 +1648,6 @@ func TestRESTBankInstructions_CreateBulk(t *testing.T) {
 	if second.ClientAccountInfo.BankAccountTypeCode != 2 {
 		t.Errorf("instructions[1].clientAccountInfo.bankAccountTypeCode = %d; want 2", int(second.ClientAccountInfo.BankAccountTypeCode))
 	}
-}
-
-// ---------------------------------------------------------------------------
-// Helpers with no production call site
-// ---------------------------------------------------------------------------
-
-// TestStrToDecimalPtr covers strToDecimalPtr directly. It has no caller in
-// pkg/ibkr, so no e2e path can reach it; both arms are asserted here instead:
-// the nil short-circuit and the parse-through.
-func TestStrToDecimalPtr(t *testing.T) {
-	if got := strToDecimalPtr(nil); got != nil {
-		t.Errorf("strToDecimalPtr(nil) = %v; want nil", *got)
-	}
-	for _, tc := range []struct {
-		in   string
-		want float32
-	}{
-		{"12.5", 12.5},
-		{"100", 100},
-		{"0", 0},
-		{"-1.25", -1.25},
-		// A non-numeric string parses to zero rather than erroring, matching
-		// strToDecimal's discarded error.
-		{"not-a-number", 0},
-	} {
-		got := strToDecimalPtr(&tc.in)
-		if got == nil {
-			t.Errorf("strToDecimalPtr(%q) = nil; want %v", tc.in, tc.want)
-			continue
-		}
-		if *got != tc.want {
-			t.Errorf("strToDecimalPtr(%q) = %v; want %v", tc.in, *got, tc.want)
-		}
-	}
-}
-
-// TestF32PtrToInt64Ptr covers f32PtrToInt64Ptr directly. It has no caller in
-// pkg/ibkr, so no e2e path can reach it; both arms are asserted here instead.
-func TestF32PtrToInt64Ptr(t *testing.T) {
-	if got := f32PtrToInt64Ptr(nil); got != nil {
-		t.Errorf("f32PtrToInt64Ptr(nil) = %v; want nil", *got)
-	}
-	for _, tc := range []struct {
-		in   float32
-		want int64
-	}{
-		{42, 42},
-		{0, 0},
-		{9001, 9001},
-		{-3, -3},
-		// The conversion truncates toward zero rather than rounding.
-		{12.9, 12},
-		{-12.9, -12},
-	} {
-		in := tc.in
-		got := f32PtrToInt64Ptr(&in)
-		if got == nil {
-			t.Errorf("f32PtrToInt64Ptr(%v) = nil; want %d", tc.in, tc.want)
-			continue
-		}
-		if *got != tc.want {
-			t.Errorf("f32PtrToInt64Ptr(%v) = %d; want %d", tc.in, *got, tc.want)
-		}
-	}
-}
-
-// TestMakeTradingInstrumentRef covers makeTradingInstrumentRef directly. It has
-// no caller in pkg/ibkr, so no e2e path can reach it; the union it builds is
-// asserted by its marshalled wire shape, which is the only way to observe it.
-//
-// The generated TradingInstrumentRef also carries a plain non-omitempty
-// Currency string outside the union, so the marshalled object is
-// {"conid":N,"currency":""} for any conid: the wrapper cannot set currency, and
-// there is no omitempty to drop the key.
-func TestMakeTradingInstrumentRef(t *testing.T) {
-	ref := makeTradingInstrumentRef(ConID(459200101))
-	raw, err := json.Marshal(ref)
-	if err != nil {
-		t.Fatalf("marshal: %v", err)
-	}
-	var got struct {
-		ConID    int    `json:"conid"`
-		Currency string `json:"currency"`
-	}
-	if err := json.Unmarshal(raw, &got); err != nil {
-		t.Fatalf("decode %s: %v", raw, err)
-	}
-	if got.ConID != 459200101 {
-		t.Errorf("conid = %d; want 459200101", got.ConID)
-	}
-	if got.Currency != "" {
-		t.Errorf("currency = %q; want empty — the wrapper sets no currency", got.Currency)
-	}
-	if keys := sortedKeys(t, raw); len(keys) != 2 || keys[0] != "conid" || keys[1] != "currency" {
-		t.Errorf("ref keys = %v; want exactly [conid currency]", keys)
-	}
-
-	// A zero conid is still emitted: the union member has no omitempty, so the
-	// key is present rather than dropped.
-	raw, err = json.Marshal(makeTradingInstrumentRef(ConID(0)))
-	if err != nil {
-		t.Fatalf("marshal zero: %v", err)
-	}
-	if err := json.Unmarshal(raw, &got); err != nil {
-		t.Fatalf("decode %s: %v", raw, err)
-	}
-	if got.ConID != 0 {
-		t.Errorf("conid = %d; want 0 for a zero conid", got.ConID)
-	}
-	if keys := sortedKeys(t, raw); len(keys) != 2 {
-		t.Errorf("ref(0) keys = %v; want the conid key present even for a zero conid", keys)
-	}
-}
-
-// sortedKeys returns the sorted top-level JSON object keys in raw.
-func sortedKeys(t *testing.T, raw []byte) []string {
-	t.Helper()
-	var m map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &m); err != nil {
-		t.Fatalf("decode %s: %v", raw, err)
-	}
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 // ---------------------------------------------------------------------------

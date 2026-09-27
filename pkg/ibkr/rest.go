@@ -412,10 +412,11 @@ func (m *RESTTradeConfirmations) ListAvailable(ctx context.Context, id AccountID
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return nil, err
 	}
-	auth, _ := m.surface.Token(ctx)
+	// No token is acquired here: the transport's Auth middleware overwrites the
+	// Authorization header at RoundTrip time, so a token read here would be
+	// discarded on the wire. Matches TaxDocuments.ListAvailable.
 	params := client.ListTradeConfirmationsAvailableParams{
-		AccountId:     string(id),
-		Authorization: auth,
+		AccountId: string(id),
 	}
 	resp, err := m.surface.generated.ListTradeConfirmationsAvailableWithResponse(ctx, &params)
 	if err != nil {

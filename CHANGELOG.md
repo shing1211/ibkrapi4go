@@ -5,6 +5,81 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2026-09-27
+
+The mock gateway shipped a fixture-shape check that could not fail, and two
+fixtures it should have caught. Both classes of defect are closed here, along
+with the check itself.
+
+### Fixed
+
+- **The mock gateway was lying about the API contract in two places.**
+
+  `createSsoSessions` sent `accessToken` and `tokenType`, but the generated
+  `CreateSessionResponse` tags them `access_token` and `token_type`
+  (`client/client.gen.go:11717`, `:11721`). Decoding is non-strict, so
+  `CreateSessionResponse.AccessToken` was permanently `""` - the fixture looked
+  like it returned a token, and the SDK never saw one.
+
+  `getRequestsStatus` sent `executedAt`, a key belonging to a different
+  operation. The real type carries `dateSubmitted`, so
+  `RESTRequestInfo.ExecutedAt` was permanently nil on the default path. Its test
+  asserted that nil as though it were correct; the assertion is now inverted to
+  require the populated value, using a `-05:00` timestamp that crosses midnight
+  so the UTC normalisation is genuinely exercised rather than copied.
+
+- **A wasted round trip on every `TradeConfirmations.ListAvailable` call.** The
+  method acquired an OAuth2 token and passed it as a request parameter, but the
+  transport's `Auth` middleware overwrites the `Authorization` header at
+  RoundTrip time, so the acquisition was discarded. Removed; the header still
+  arrives, via the middleware, and the test now pins its exact value so a header
+  carrying an empty token cannot satisfy it.
+
+### Changed
+
+- **The fixture shape check now works, and is stricter than a naive fix.**
+  `internal/mockgateway/shape_test.go` set `DisallowUnknownFields` on a decoder
+  whose target was `var js any`. `any` has no fields, so the option could never
+  fire: the check only ever validated JSON well-formedness and could not detect a
+  wrong-key fixture - the exact class of defect the two items above are
+  instances of. It now resolves each operation's real response type,
+  key-checks the body against it, and derives from `pkg/ibkr` call sites (via
+  `go/ast`) which operations production actually decodes through the generated
+  type at all. **113 of the 184 operations** `pkg/ibkr` reaches are not: they
+  unmarshal `resp.Body` into their own structs, so for those the generated type
+  is irrelevant and comparing against it was invalid. Final state: **180
+  passed, 4 skipped, 0 failed** of 191 fixtures, with enforcement tighter than
+  the naive version - key-checked against a single response type rose from 50 to
+  59 operations, per-key `oneOf` checking from 1 to 2. Both historical bugs stay
+  caught by `TestValidateShapeRejectsMismatchedKeys`. Coverage gaps are reported
+  with the `file:line` that justifies each exemption, never silent.
+
+- **Twelve further fixtures corrected to their generated shape**: five forecast
+  operations (the generated types are objects, the fixtures were arrays), three
+  OAuth token endpoints (`token` is declared by no field), two market-data and
+  portfolio acknowledgements (`status` is not a declared key), `ackServerPrompt`
+  (the type is a bare JSON string), and `cancelOpenOrder` (`order_id` is `int64`
+  there, versus `string` in its sibling operations).
+
+- **Dead code removed**: `strToDecimalPtr`, `makeTradingInstrumentRef` and
+  `f32PtrToInt64Ptr` in `rest_banking.go` had no production caller - the only
+  references were tests that existed solely to reach them. An orphaned test
+  helper, `sortedKeys`, was removed with them. 383 insertions, 0 deletions
+  elsewhere: no exported API changed.
+
+### Testing
+
+- **Four `rest_banking.go` request payloads are now pinned byte for byte** -
+  exact key set and exact JSON type per key - so the deferred wire-contract
+  decisions can be made with a provable before and after rather than a guess.
+  Three remain **open and blocked** on a human decision or a real gateway, and
+  are **not** fixed here: whether bulk-cancel accepts a `Reason`
+  (`rest_banking.go` copies only `InstructionId`, so every element ships
+  `reason: ""`), the V2 `quantity` number/string divergence (a JSON number on
+  the single path, a JSON string on the bulk path, from the identical caller
+  input `"10"`), and the ignored `AssetTransferRequest.Quantity` on both V2
+  paths. The pinning tests say so in their own comments.
+
 ## [1.1.5] - 2026-09-27
 
 ### Fixed
@@ -872,7 +947,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.5...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.6...HEAD
+[1.1.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.2...v1.1.3

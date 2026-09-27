@@ -30,15 +30,6 @@ func strToDecimal(s string) float32 {
 	return float32(v)
 }
 
-// strToDecimalPtr is the optional variant.
-func strToDecimalPtr(s *string) *float32 {
-	if s == nil {
-		return nil
-	}
-	v := strToDecimal(*s)
-	return &v
-}
-
 // fopInstructionJSON is the wire shape for external asset transfers.
 // Money/quantity fields are strings to preserve precision (ADR 0008).
 type fopInstructionJSON struct {
@@ -1374,13 +1365,6 @@ type BankInstructionResult struct {
 // Helper functions
 // ============================================================================
 
-// makeTradingInstrumentRef creates a TradingInstrumentRef from conid
-func makeTradingInstrumentRef(conid ConID) client.TradingInstrumentRef {
-	ref := client.TradingInstrumentRef{}
-	_ = ref.FromTradingInstrumentRef0(client.TradingInstrumentRef0{Conid: int(conid)})
-	return ref
-}
-
 // extractBulkResults extracts TransferResult slice from bulk response
 func extractBulkResults(results *[]struct {
 	InstructionResult client.InstructionResult `json:"instructionResult"`
@@ -1409,15 +1393,6 @@ func derefStr(ptr *string) string {
 		return ""
 	}
 	return *ptr
-}
-
-// f32PtrToInt64Ptr converts a *float32 to *int64, returning nil if the input is nil.
-func f32PtrToInt64Ptr(p *float32) *int64 {
-	if p == nil {
-		return nil
-	}
-	v := int64(*p)
-	return &v
 }
 
 func intPtrToInt64Ptr(p *int) *int64 {

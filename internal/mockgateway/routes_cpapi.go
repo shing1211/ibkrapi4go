@@ -306,11 +306,11 @@ func registerCPAPIFixtures(f *Fixtures) {
 	f.Set(OpGetStockBySymbol, Fixture{Body: `{"AAPL":[{"conid":265598,"symbol":"AAPL","exchange":"NASDAQ","securityType":"STK"}]}`})
 
 	// --- trading event contracts ---
-	f.Set(OpGetForecastCategories, Fixture{Body: `[{"id":"1","name":"Elections"}]`})
-	f.Set(OpGetForecastContract, Fixture{Body: `{"conId":123456,"description":"US Presidential Election","category":"Elections"}`})
-	f.Set(OpGetForecastMarkets, Fixture{Body: `[{"conId":123456,"symbol":"USPREZ","description":"US Presidential Election"}]`})
-	f.Set(OpGetForecastRules, Fixture{Body: `[{"ruleId":"1","description":"Contract settles on the certified result"}]`})
-	f.Set(OpGetForecastSchedule, Fixture{Body: `[{"conId":123456,"scheduleTime":"2026-11-03T00:00:00Z"}]`})
+	f.Set(OpGetForecastCategories, Fixture{Body: `{"categories":{"categoryId":{"name":"Elections"}}}`})
+	f.Set(OpGetForecastContract, Fixture{Body: `{"conid_yes":123456,"conid_no":123457,"question":"US Presidential Election","side":"Y","symbol":"USPREZ","category":"Elections"}`})
+	f.Set(OpGetForecastMarkets, Fixture{Body: `{"market_name":"USPREZ","exchange":"MVO","symbol":"USPREZ","contracts":[{"conid":123456,"side":"Y","expiration":"20261103","underlying_conid":265598}]}`})
+	f.Set(OpGetForecastRules, Fixture{Body: `{"asset_class":"STK","market_name":"USPREZ","product_code":"USPREZ","description":"Contract settles on the certified result","source_agency":"IBKR","exchange_timezone":"US/Eastern","measured_period":"1D","price_increment":"1"}`})
+	f.Set(OpGetForecastSchedule, Fixture{Body: `{"timezone":"US/Eastern","trading_schedules":[{"day_of_week":"2026-11-03","trading_times":[{"open":"2026-11-03T00:00:00Z","close":"2026-11-03T23:59:59Z"}]}]}`})
 
 	// --- trading FA allocation management ---
 	f.Set(OpGetAllocatableSubaccounts, Fixture{Body: `["U1234567","U7654321"]`})
@@ -356,12 +356,14 @@ func registerCPAPIFixtures(f *Fixtures) {
 	f.Set(OpGetUnreadFyis, Fixture{Body: `{"count":3}`})
 
 	// --- trading OAuth 1.0a ---
-	f.Set(OpReqAccessToken, Fixture{Body: `{"token":"access-token","oauth_token":"access-token","oauth_token_secret":"secret"}`})
-	f.Set(OpReqLiveSessionToken, Fixture{Body: `{"token":"live-session-token"}`})
-	f.Set(OpReqTempToken, Fixture{Body: `{"token":"temp-token","oauth_token":"temp-token","oauth_token_secret":"secret"}`})
+	f.Set(OpReqAccessToken, Fixture{Body: `{"is_true":true,"oauth_token":"access-token","oauth_token_secret":"secret"}`})
+	f.Set(OpReqLiveSessionToken, Fixture{Body: `{"diffie_hellman_challenge":"challenge","live_session_token_expiration":1762704000000,"live_session_token_signature":"signature"}`})
+	f.Set(OpReqTempToken, Fixture{Body: `{"oauth_token":"temp-token"}`})
 
 	// --- trading orders ---
-	f.Set(OpAckServerPrompt, Fixture{Body: `{}`})
+	// ackServerPrompt answers with a bare JSON string (spec type: string), not
+	// an object, so the fixture must be a quoted string.
+	f.Set(OpAckServerPrompt, Fixture{Body: `"true"`})
 	f.Set(OpSuppressOrderReplies, Fixture{Body: `{}`})
 	f.Set(OpResetOrderSuppression, Fixture{Body: `{}`})
 

@@ -76,12 +76,18 @@ func TestRESTRequests_Status(t *testing.T) {
 	if info.ID != 5001 {
 		t.Errorf("id = %d; want the requested 5001", info.ID)
 	}
-	// The shared default body is not a spec shape: it carries an `executedAt`
-	// key the spec does not define for this operation, and no `dateSubmitted`, so
-	// there is no timestamp to report. The populated case is pinned by
-	// TestRESTRequests_Status_Timestamp.
-	if info.ExecutedAt != nil {
-		t.Errorf("executedAt = %q; want nil for a body with no dateSubmitted", *info.ExecutedAt)
+	// The shared default body is a spec shape: `dateSubmitted` is the one
+	// timestamp the StatusResponse variant of the oneOf carries, so the default
+	// path decodes it without a per-test override. The gateway sent the instant
+	// with a non-UTC offset and the wrapper normalises it. The offset is
+	// -05:00, which carries the instant forward past midnight, so the expected
+	// value lands on a different day than the wire string: it is only reachable
+	// if the offset was genuinely applied, not copied or dropped.
+	if info.ExecutedAt == nil {
+		t.Fatal("executedAt = nil; want the dateSubmitted timestamp from the shared default fixture")
+	}
+	if *info.ExecutedAt != "2026-01-03T01:30:00Z" {
+		t.Errorf("executedAt = %q; want 2026-01-03T01:30:00Z (the default fixture's instant, normalised to UTC)", *info.ExecutedAt)
 	}
 
 	req := lastRESTRequest(t, gw)
@@ -419,12 +425,20 @@ func TestRESTTradeConfirmations_ListAvailable(t *testing.T) {
 	if got := req.Query.Get("accountId"); got != "U1234567" {
 		t.Errorf("accountId = %q; want U1234567", got)
 	}
-	// The wrapper reads a token and hands it to the generated client as an
-	// `authorization` header, but the transport's Auth middleware overwrites
-	// that header with "Bearer <token>" at RoundTrip time, so the gateway must
-	// see the bearer form — not the bare token the wrapper supplied.
-	if got := req.Headers.Get("Authorization"); !strings.HasPrefix(got, "Bearer ") {
-		t.Errorf("Authorization = %q; want the transport-supplied bearer form, not the bare token", got)
+	// This method no longer reads a token itself: the transport's Auth
+	// middleware is the only thing that writes the Authorization header, so
+	// this assertion is what proves removing that read did not silently drop
+	// authentication. It pins the exact value — not merely a "Bearer " prefix —
+	// so a header carrying an empty token cannot satisfy it.
+	tok, err := surface.Token(context.Background())
+	if err != nil {
+		t.Fatalf("Token: %v", err)
+	}
+	if tok == "" {
+		t.Fatal("Token = \"\"; want a non-empty token to compare against")
+	}
+	if got, want := req.Headers.Get("Authorization"), "Bearer "+tok; got != want {
+		t.Errorf("Authorization = %q; want %q from the transport's Auth middleware", got, want)
 	}
 }
 

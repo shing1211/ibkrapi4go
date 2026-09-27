@@ -253,7 +253,29 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.5`**.
+**`v1.1.6`**.
+
+The `v1.1.6` patch closes a gap in the mock gateway's own guardrail. Its
+fixture-shape check set `DisallowUnknownFields` on a decoder whose target was
+`var js any`, and `any` has no fields, so the option could never fire: the check
+only ever tested JSON well-formedness and could not detect a wrong-key fixture —
+the one class of defect it existed to catch. That class was live twice. The
+`createSsoSessions` fixture spelled its token keys camelCase where the generated
+type tags them `access_token` and `token_type`, and non-strict decoding dropped
+them, so the SSO access token was permanently `""`. The `getRequestsStatus`
+fixture sent `executedAt`, a key belonging to a different operation, leaving
+`RESTRequestInfo.ExecutedAt` permanently nil; its test asserted that nil as
+though it were correct. The check now resolves each operation's real response
+type and key-checks the body against it, deriving from `pkg/ibkr` call sites
+which operations production actually decodes through the generated type at all —
+113 of the 184 it reaches are not, and for those the comparison was invalid. The
+twelve further fixtures that check exposed are corrected, three helpers with no
+production caller are deleted, and a redundant token fetch on
+`TradeConfirmations.ListAvailable` is removed. Four banking payloads are pinned
+byte for byte so the blocked `rest_banking.go` wire-contract decisions — the
+bulk-cancel `Reason`, the V2 quantity number/string divergence, and the ignored
+`AssetTransferRequest.Quantity` — can be taken with a provable before and after.
+No exported API changed.
 
 The `v1.1.5` patch repairs two precision and error-propagation defects on the
 REST surface, both surfaced by the new end-to-end coverage. Three banking
