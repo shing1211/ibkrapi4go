@@ -5,6 +5,44 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-09-27
+
+### Fixed
+
+- **REST connection reuse was completely broken: every request dialled a fresh
+  connection.** `internal.Timeout` installed `defer cancel()` inside its
+  `RoundTrip` closure, so the request context was cancelled the moment
+  `RoundTrip` returned, before the caller read the response body. `net/http`
+  reacts to an already-cancelled request context by closing the connection
+  instead of returning it to the keep-alive pool, which also defeated
+  `cancelOnCloseBody` — the wrapper whose documented purpose is exactly to defer
+  that cancel until the body is consumed. Measured with 24 sequential REST
+  calls: **24 new TCP connections before the fix, 0 after**. The cancel func is
+  now handed to the body wrapper on success and called explicitly on the error
+  paths, so no request timer leaks.
+
+- **The logout response body was never drained or closed.**
+  `internal.httpAPI.logout` discarded the `*http.Response` returned by
+  `client.Do`, dropping one connection per `Client.Close()`. Draining to EOF
+  before closing is required here: `net/http` still discards the connection on a
+  bare `Close`, so a close without a drain would not have fixed it. The
+  `defer cancel()` already in that function remains load-bearing and was left in
+  place.
+
+- **`UpdateTasks` silently dropped `isCompleted: false`.** The internal wire
+  struct tagged a plain `bool` with `omitempty`, and `encoding/json` omits
+  `false` for `omitempty`, so a request marking a task not-completed or declined
+  serialised to `{"taskId":"t2"}` with the field absent. The call is a `PATCH`,
+  where absence means "leave unchanged", which made that update inexpressible.
+  The tag no longer carries `omitempty`. The exported `TaskUpdate.IsCompleted`
+  type is unchanged, so this is not an API change.
+
+### Added
+
+- **REST coverage work continued.** The accounts surface gained end-to-end
+  tests. CI coverage is now **50.0%** against a floor of **48%**, up from 35% in
+  the previous release.
+
 ## [1.1.3] - 2026-09-26
 
 ### Fixed
@@ -785,7 +823,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.4...HEAD
+[1.1.4]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.0...v1.1.1

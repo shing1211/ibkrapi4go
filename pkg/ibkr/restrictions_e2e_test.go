@@ -14,6 +14,15 @@ import (
 // than hand-written handlers so assertions run against realistic bodies.
 func newRESTClient(t *testing.T) *Client {
 	t.Helper()
+	cli, _ := newRESTClientWithGateway(t)
+	return cli
+}
+
+// newRESTClientWithGateway is newRESTClient plus the gateway handle. Wrappers
+// that return only an error have no decoded value to assert on, so those tests
+// need the gateway's request recorder.
+func newRESTClientWithGateway(t *testing.T) (*Client, *gateway) {
+	t.Helper()
 	gw := newGateway(t)
 	cli, err := NewClient(
 		WithGatewayURL(gw.URL),
@@ -26,7 +35,7 @@ func newRESTClient(t *testing.T) *Client {
 		t.Fatalf("NewClient: %v", err)
 	}
 	t.Cleanup(func() { _ = cli.Close() })
-	return cli
+	return cli, gw
 }
 
 func restrictionsSurface(t *testing.T) *RESTRestrictions {

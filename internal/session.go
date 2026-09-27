@@ -109,8 +109,20 @@ func (h *httpAPI) logout(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = h.client.Do(req)
-	return err
+	resp, err := h.client.Do(req)
+	if err != nil {
+		return err
+	}
+	// The logout payload is irrelevant, but net/http only returns a connection to
+	// the keep-alive pool once the body has been read to EOF *and* closed, so a
+	// bare Close here would drop the connection instead of reusing it. This defer
+	// is registered after cancel() above, so it runs first (LIFO) and the request
+	// context is still live while the body is drained.
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
+	return nil
 }
 
 type Session struct {

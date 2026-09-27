@@ -360,9 +360,13 @@ func (m *RESTAccounts) UpdateTasks(ctx context.Context, accountID AccountID, tas
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return err
 	}
+	// IsCompleted deliberately carries no omitempty. This is a PATCH, so a
+	// missing key means "leave unchanged" rather than "set false", and flipping a
+	// task's state is the whole purpose of the call. For a boolean, "absent" is
+	// not a state the API should offer, so the flag is always transmitted.
 	type taskItem struct {
 		TaskID      string `json:"taskId"`
-		IsCompleted bool   `json:"isCompleted,omitempty"`
+		IsCompleted bool   `json:"isCompleted"`
 		Action      string `json:"action,omitempty"`
 	}
 	taskList := make([]taskItem, len(updates))

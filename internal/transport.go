@@ -141,6 +141,13 @@ func Auth(header string, token func() (string, bool)) func(http.RoundTripper) ht
 
 // Timeout returns a middleware that applies d as a per-request deadline when the
 // caller's context has none.
+//
+// On success the cancel func is handed to cancelOnCloseBody instead of being
+// deferred. A deferred cancel fires when this closure returns — before the caller
+// has read the body — and net/http reacts to an already-cancelled request context
+// by closing the connection rather than returning it to the keep-alive pool, so
+// every request would dial afresh. Deferring the cancel also defeats the
+// documented purpose of cancelOnCloseBody below.
 func Timeout(d time.Duration) func(http.RoundTripper) http.RoundTripper {
 	return func(base http.RoundTripper) http.RoundTripper {
 		return RoundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -151,14 +158,18 @@ func Timeout(d time.Duration) func(http.RoundTripper) http.RoundTripper {
 				return base.RoundTrip(req)
 			}
 			ctx, cancel := context.WithTimeout(req.Context(), d)
-			defer cancel()
 			resp, err := base.RoundTrip(req.WithContext(ctx))
 			if err != nil {
+				cancel()
 				return resp, err
 			}
 			if resp == nil {
-				return resp, err
+				cancel()
+				return resp, nil
 			}
+			// Ownership of cancel moves to the body. Every remaining exit path is
+			// therefore covered: either the body is wrapped and the caller's
+			// Close releases the timer, or the cancel above already ran.
 			resp.Body = &cancelOnCloseBody{body: resp.Body, cancel: cancel}
 			return resp, nil
 		})
@@ -167,7 +178,12 @@ func Timeout(d time.Duration) func(http.RoundTripper) http.RoundTripper {
 
 // cancelOnCloseBody wraps resp.Body so that the timeout cancel fires only after
 // the body is fully consumed and closed. This prevents context.Canceled errors
-// when a large or slow success body is read after the transport has returned.
+// when a large or slow success body is read after the transport has returned, and
+// it keeps the request context alive long enough for net/http to return the
+// connection to the keep-alive pool.
+//
+// Close may be called more than once; context.CancelFunc is idempotent, so the
+// repeated cancel is a no-op.
 type cancelOnCloseBody struct {
 	body   io.ReadCloser
 	cancel context.CancelFunc

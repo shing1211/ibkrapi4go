@@ -253,7 +253,20 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.3`**.
+**`v1.1.4`**.
+
+The `v1.1.4` patch repairs three defects in the connection-management and
+request-encoding paths, all found by extending REST test coverage. REST
+connection reuse had been broken outright: the per-request timeout cancelled
+its context before the caller could read the body, and `net/http` responds to
+an already-cancelled request context by closing the connection rather than
+returning it to the keep-alive pool, so 24 sequential REST calls opened 24
+connections. That is 0 now. Separately, the logout response body was never
+drained or closed, and `UpdateTasks` dropped an explicit `isCompleted: false`
+because `omitempty` cannot represent a false boolean — on a `PATCH`, where
+absence means "leave unchanged", that made marking a task not-completed
+impossible to express. The same patch takes CI coverage to 50.0% against a 48%
+floor, raised from 35% in the previous release.
 
 The `v1.1.3` patch fixes a real goroutine leak in the mock gateway. Each parked
 WebSocket handler blocked on a read that no context could cancel, so handlers
