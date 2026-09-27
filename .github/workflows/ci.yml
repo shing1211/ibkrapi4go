@@ -118,6 +118,12 @@ jobs:
       - name: Check design docs against the code
         run: go run ./scripts/check_design
 
+      - name: Check money types against ADR 0008
+        run: python3 scripts/check_money.py
+
+      - name: Verify SPDX headers
+        run: make license-check
+
   codegen:
     name: codegen drift
     runs-on: ubuntu-latest

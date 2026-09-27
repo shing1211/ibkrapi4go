@@ -381,6 +381,7 @@ func (b *RESTBanking) CancelInstructionsBulk(ctx context.Context, reqs []CancelI
 	for i, r := range reqs {
 		payload.Instructions[i] = client.CancelInstruction{
 			InstructionId: int(r.InstructionID),
+			Reason:        r.Reason,
 		}
 	}
 	resp, err := b.surface.generated.BulkInstructionsCancelWithBodyWithResponse(ctx, "application/json", mustMarshal(payload))
@@ -557,8 +558,11 @@ type AssetTransferRequest struct {
 	ContraBrokerAccountID AccountID
 	ContraBrokerDtcCode   string
 	Direction             string // "IN" or "OUT"
-	Quantity              string
-	ConID                 ConID
+	// Quantity is the single-instrument quantity for the V1 endpoints
+	// (Transfer, TransferBulk). The V2 endpoints take a Positions slice and
+	// ignore this field; set Quantity on each PositionV2Request instead.
+	Quantity string
+	ConID    ConID
 	// For V2 only
 	Positions []PositionV2Request
 }
@@ -782,16 +786,17 @@ func (m *RESTExternalAssetTransfers) TransferBulkV2(ctx context.Context, reqs []
 		return nil, err
 	}
 
+	type posV2JSON struct {
+		Conid    int     `json:"conid"`
+		Quantity float32 `json:"quantity"`
+	}
 	type instrV2JSON struct {
-		AccountId             string `json:"accountId"`
-		ClientInstructionId   int    `json:"clientInstructionId"`
-		ContraBrokerAccountId string `json:"contraBrokerAccountId"`
-		ContraBrokerDtcCode   string `json:"contraBrokerDtcCode"`
-		Direction             string `json:"direction"`
-		Positions             []struct {
-			Conid    int    `json:"conid"`
-			Quantity string `json:"quantity"`
-		} `json:"positions"`
+		AccountId             string      `json:"accountId"`
+		ClientInstructionId   int         `json:"clientInstructionId"`
+		ContraBrokerAccountId string      `json:"contraBrokerAccountId"`
+		ContraBrokerDtcCode   string      `json:"contraBrokerDtcCode"`
+		Direction             string      `json:"direction"`
+		Positions             []posV2JSON `json:"positions"`
 	}
 	type bulkPayloadV2 struct {
 		InstructionType string        `json:"instructionType"`
@@ -800,15 +805,13 @@ func (m *RESTExternalAssetTransfers) TransferBulkV2(ctx context.Context, reqs []
 
 	instrs := make([]instrV2JSON, len(reqs))
 	for i, req := range reqs {
-		positions := make([]struct {
-			Conid    int    `json:"conid"`
-			Quantity string `json:"quantity"`
-		}, len(req.Positions))
+		positions := make([]posV2JSON, len(req.Positions))
 		for j, pos := range req.Positions {
-			positions[j] = struct {
-				Conid    int    `json:"conid"`
-				Quantity string `json:"quantity"`
-			}{Conid: int(pos.ConID), Quantity: pos.Quantity}
+			// quantity is a JSON number on the wire, per the generated
+			// TradingInstrumentV2.Quantity (float32). The single-instruction path
+			// converts with strToDecimal; this must match it, or the bulk endpoint
+			// receives a different type for the same field.
+			positions[j] = posV2JSON{Conid: int(pos.ConID), Quantity: strToDecimal(pos.Quantity)}
 		}
 		instrs[i] = instrV2JSON{
 			AccountId:             string(req.AccountID),

@@ -13,8 +13,14 @@ quantities are **never `float64`**.
 | Percentage | `string` | e.g. `"1.23"` |
 | Counts (pages, ids) | `int` | non-monetary only |
 
-Public fields use `string` by default. `json.Number` is used internally where a
-value may be numeric or string in JSON.
+Public fields use `string` by default. `json.Number` is used internally in two
+cases: where a value may be numeric or string in JSON, and where a field is
+always numeric but a generated binary float would round it. The tax voucher's
+`divAmount`, `withHeldAmount`, `fee` and `quantity` are the second case: the
+gateway sends them as bare JSON numbers, so retyping them to `string` would make
+the decode fail outright, and a `float32` mantissa is 24 bits - it silently
+rounds anything above 2^24 (16777216), which an aggregate withholding figure can
+exceed. `json.Number` accepts the number and preserves the gateway's own digits.
 
 ## Why strings
 

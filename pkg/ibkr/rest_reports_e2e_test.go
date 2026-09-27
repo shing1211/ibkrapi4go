@@ -293,11 +293,13 @@ func TestRESTTaxDocuments_ListAvailable(t *testing.T) {
 	if got := req.Query.Get("accountId"); got != "U1234567" {
 		t.Errorf("accountId = %q; want U1234567", got)
 	}
-	// The generated params carry a non-pointer `year`, so the wrapper cannot
-	// leave it out: it is sent present-and-empty. Pinned so a future change to
-	// omit it (or to start forwarding a year) has to be deliberate.
-	if got, ok := req.Query["year"]; !ok || len(got) != 1 || got[0] != "" {
-		t.Errorf("year = %v (present=%t); want exactly one empty value", got, ok)
+	// The operation exists to report which tax years are available, so a caller
+	// cannot know a year to send. The spec marked `year` required, which made
+	// oapi-codegen emit a non-pointer field and forced a present-and-empty
+	// `year=` onto the wire; patch_spec.py defect 10 relaxes it so the wrapper
+	// omits the parameter instead.
+	if got, ok := req.Query["year"]; ok {
+		t.Errorf("year = %v (present=%t); want the parameter omitted entirely", got, ok)
 	}
 }
 

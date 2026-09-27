@@ -16342,17 +16342,17 @@ type TaxResidencyTinType string
 
 // TaxVoucherDTO defines model for TaxVoucherDTO.
 type TaxVoucherDTO struct {
-	CorpactionId       *string  `json:"corpactionId,omitempty"`
-	CountryCode        *string  `json:"countryCode,omitempty"`
-	CustAcctId         *string  `json:"custAcctId,omitempty"`
-	DivAmount          *float32 `json:"divAmount,omitempty"`
-	Fee                *float32 `json:"fee,omitempty"`
-	MigratedCustAcctId *string  `json:"migratedCustAcctId,omitempty"`
-	Quantity           *float32 `json:"quantity,omitempty"`
-	RequestId          *string  `json:"requestId,omitempty"`
-	RequestState       *string  `json:"requestState,omitempty"`
-	WithHeldAmount     *float32 `json:"withHeldAmount,omitempty"`
-	Year               *int64   `json:"year,omitempty"`
+	CorpactionId       *string      `json:"corpactionId,omitempty"`
+	CountryCode        *string      `json:"countryCode,omitempty"`
+	CustAcctId         *string      `json:"custAcctId,omitempty"`
+	DivAmount          *json.Number `json:"divAmount,omitempty"`
+	Fee                *json.Number `json:"fee,omitempty"`
+	MigratedCustAcctId *string      `json:"migratedCustAcctId,omitempty"`
+	Quantity           *json.Number `json:"quantity,omitempty"`
+	RequestId          *string      `json:"requestId,omitempty"`
+	RequestState       *string      `json:"requestState,omitempty"`
+	WithHeldAmount     *json.Number `json:"withHeldAmount,omitempty"`
+	Year               *int64       `json:"year,omitempty"`
 }
 
 // TaxVoucherJWTListWrapper defines model for TaxVoucherJWTListWrapper.
@@ -24299,9 +24299,6 @@ type IsEmpTrack = string
 // MasterUserName Example: user1
 type MasterUserName = string
 
-// TaxYearRequestParam Example: 2024
-type TaxYearRequestParam = string
-
 // BadRequest defines model for BadRequest.
 type BadRequest = ErrorResponse
 
@@ -24786,7 +24783,7 @@ type ListTaxDocumentsAvailableParams struct {
 	AccountId AccountIdRequestParam `form:"accountId" json:"accountId"`
 
 	// Year Specifies the tax year to retrieve information
-	Year TaxYearRequestParam `form:"year" json:"year"`
+	Year *string `form:"year,omitempty" json:"year,omitempty"`
 
 	// Authorization Specifies the authorization header value (e.g., Bearer eyJ0eXAiOiJKV1...).
 	Authorization AuthorizationHeaderParam `json:"authorization"`
@@ -40139,12 +40136,16 @@ func NewListTaxDocumentsAvailableRequest(server string, params *ListTaxDocuments
 			}
 		}
 
-		if queryFrag, err := runtime.StyleParamWithOptions("form", false, "year", params.Year, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-			return nil, err
-		} else {
-			for _, qp := range strings.Split(queryFrag, "&") {
-				rawQueryFragments = append(rawQueryFragments, qp)
+		if params.Year != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", false, "year", *params.Year, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else {
+				for _, qp := range strings.Split(queryFrag, "&") {
+					rawQueryFragments = append(rawQueryFragments, qp)
+				}
 			}
+
 		}
 
 		if encoded := queryValues.Encode(); encoded != "" {

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/shing1211/ibkrapi4go/internal/mockgateway"
@@ -284,5 +285,58 @@ func TestRESTTaxVouchers_RequestState_ServerError(t *testing.T) {
 	}
 	if e.HTTPStatus != http.StatusNotFound {
 		t.Errorf("httpStatus = %d; want 404", e.HTTPStatus)
+	}
+}
+
+// TestRESTTaxVouchers_Dividends_MoneyPrecision pins the reason the voucher's
+// money fields are json.Number rather than float32.
+//
+// Every other tax-voucher assertion uses 12.5 / 0.75 / 1.25, all of which a
+// float32 represents exactly - so they pass whether the field is a float32 or a
+// json.Number and prove nothing about precision. A float32 mantissa is 24 bits,
+// so it rounds anything above 2^24 (16777216); an aggregate withholding figure
+// can exceed that, and the old code re-emitted the rounded value as the
+// caller's money string with nothing to indicate a loss.
+func TestRESTTaxVouchers_Dividends_MoneyPrecision(t *testing.T) {
+	surface, gw := restSurfaceWithGateway(t)
+	gw.srv.Fixtures().Set(mockgateway.OpFetchDividends1, mockgateway.Fixture{
+		Body: `[{"corpactionId":"ca-1","country":"US","currency":"USD","exDate":"2026-01-02",` +
+			`"isin":"US0378331005","payDate":"2026-01-15","securityDesc":"Apple Inc","symbol":"AAPL",` +
+			`"voucher":{"corpactionId":"ca-1","countryCode":"US","custAcctId":"U7654321",` +
+			`"divAmount":12345678.91,"fee":0.007,"quantity":10,"requestId":"tv-prec",` +
+			`"withHeldAmount":33554432.55,"year":2025}}]`,
+	})
+
+	dividends, err := surface.TaxVouchers().Dividends(context.Background(), AccountID("U1234567"), "2025", "US")
+	if err != nil {
+		t.Fatalf("Dividends: %v", err)
+	}
+	if len(dividends) != 1 {
+		t.Fatalf("dividends = %+v; want one", dividends)
+	}
+
+	// Each expected value is the gateway's own literal, byte for byte. A float32
+	// decode would yield 12345678 and 33554432 here.
+	for _, tc := range []struct{ name, got, want string }{
+		{"amount", dividends[0].Amount, "12345678.91"},
+		{"fee", dividends[0].Fee, "0.007"},
+		{"withheldAmount", dividends[0].WithheldAmount, "33554432.55"},
+		{"quantity", dividends[0].Quantity, "10"},
+	} {
+		if tc.got != tc.want {
+			t.Errorf("%s = %q; want %q - the gateway's digits must survive verbatim", tc.name, tc.got, tc.want)
+		}
+	}
+
+	// Show the loss the old path produced, so the expectation above is not just
+	// a literal someone picked. float32 holds 24 mantissa bits; these two values
+	// exceed 2^24 and are rounded to a whole number of units.
+	var divAmount float32 = 12345678.91
+	var withheld float32 = 33554432.55
+	if old := strconv.FormatFloat(float64(divAmount), 'f', -1, 32); old == "12345678.91" {
+		t.Errorf("float32 held 12345678.91 exactly (%q); this test no longer proves the precision fix", old)
+	}
+	if old := strconv.FormatFloat(float64(withheld), 'f', -1, 32); old == "33554432.55" {
+		t.Errorf("float32 held 33554432.55 exactly (%q); this test no longer proves the precision fix", old)
 	}
 }

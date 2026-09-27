@@ -595,13 +595,13 @@ func TestRESTBanking_CancelInstructionsBulk(t *testing.T) {
 		if body.Instructions[i].InstructionID != want {
 			t.Errorf("instructions[%d].instructionId = %d; want %d", i, body.Instructions[i].InstructionID, want)
 		}
-		// Each CancelInstructionRequest carries a Reason, but the bulk payload
-		// only populates InstructionId, so the caller's reason never reaches the
-		// wire. Asserted as the current contract so a future fix is a visible
-		// change here rather than a silent one.
-		if body.Instructions[i].Reason != "" {
-			t.Errorf("instructions[%d].reason = %q; want empty — the bulk payload never populates it",
-				i, body.Instructions[i].Reason)
+		// Each CancelInstructionRequest carries a Reason, and the bulk payload
+		// forwards it, so the caller's reason reaches the wire exactly as the
+		// single-cancel path does. It previously sent an empty string, silently
+		// dropping the reason on a money-moving operation.
+		if wantReason := []string{"first", "second"}[i]; body.Instructions[i].Reason != wantReason {
+			t.Errorf("instructions[%d].reason = %q; want %q - the caller's reason must reach the wire",
+				i, body.Instructions[i].Reason, wantReason)
 		}
 	}
 }
@@ -643,18 +643,21 @@ func TestRESTBanking_CancelInstructionsBulk_WireShape(t *testing.T) {
 	if len(elems) != 2 {
 		t.Fatalf("instructions = %s; want two elements", req.Body)
 	}
+	reasons := []string{"first", "second"}
 	for i, elem := range elems {
 		label := fmt.Sprintf("instructions[%d]", i)
 		// Every element carries the same three keys, in the same JSON types, as
-		// the single-cancel instruction — including reason, which is present on
-		// the wire and empty rather than absent.
+		// the single-cancel instruction - including reason, which the bulk path
+		// now populates from the caller's request, exactly as the single path
+		// does. It previously shipped as an empty string, so a caller's reason
+		// was silently dropped on a money-moving operation.
 		assertJSONShape(t, label, elem, map[string]string{
 			"clientInstructionId": "number",
 			"instructionId":       "number",
 			"reason":              "string",
 		})
-		if got, want := string(rawJSONField(t, label, elem, "reason")), `""`; got != want {
-			t.Errorf("%s.reason token = %s; want %s — the bulk payload never populates the caller's reason",
+		if got, want := string(rawJSONField(t, label, elem, "reason")), fmt.Sprintf("%q", reasons[i]); got != want {
+			t.Errorf("%s.reason token = %s; want %s - the caller's reason must reach the wire",
 				label, got, want)
 		}
 		if got, want := string(rawJSONField(t, label, elem, "clientInstructionId")), "0"; got != want {
@@ -928,8 +931,8 @@ func TestRESTExternalAssetTransfers_TransferBulkV2(t *testing.T) {
 			ContraBrokerDtcCode   string `json:"contraBrokerDtcCode"`
 			Direction             string `json:"direction"`
 			Positions             []struct {
-				ConID    int    `json:"conid"`
-				Quantity string `json:"quantity"`
+				ConID    int     `json:"conid"`
+				Quantity float32 `json:"quantity"`
 			} `json:"positions"`
 		} `json:"instructions"`
 	}
@@ -956,11 +959,12 @@ func TestRESTExternalAssetTransfers_TransferBulkV2(t *testing.T) {
 	if first.Positions[0].ConID != 459200101 {
 		t.Errorf("instructions[0].positions[0].conid = %d; want 459200101", first.Positions[0].ConID)
 	}
-	// Unlike the single v2 path, the bulk v2 path declares its own local
-	// position struct with a string quantity, so the same input reaches the wire
-	// as "10" here and as 10 above. Asserted so the divergence is on the record.
-	if first.Positions[0].Quantity != "10" {
-		t.Errorf("instructions[0].positions[0].quantity = %q; want the string \"10\"", first.Positions[0].Quantity)
+	// Both v2 paths emit the same wire type: the spec models
+	// TradingInstrumentV2.Quantity as a number, and the bulk path used to
+	// diverge by sending a quoted string, so the bulk endpoint saw a different
+	// type for the same field than the single endpoint.
+	if first.Positions[0].Quantity != 10 {
+		t.Errorf("instructions[0].positions[0].quantity = %v; want the number 10", first.Positions[0].Quantity)
 	}
 	second := body.Instructions[1]
 	if second.AccountID != "U7654321" || second.ClientInstructionID != 2 || second.Direction != "OUT" {
@@ -1038,19 +1042,21 @@ func TestRESTExternalAssetTransfers_TransferBulkV2_WireShape(t *testing.T) {
 		t.Errorf("%s.positions token = %s; want %s — an empty array, not null", second, got, want)
 	}
 
-	// The divergence, stated as an assertion: the caller passed Quantity: "10"
-	// and the token on the wire is the quoted string "10", where the single path
-	// puts the bare number 10.
+	// The two paths must agree on the wire. The caller passed Quantity: "10" and
+	// the bulk path now emits the bare JSON number 10, matching both the spec
+	// (TradingInstrumentV2.Quantity is a number) and the single path. It
+	// previously emitted the quoted string "10", so the bulk endpoint received a
+	// different type for the same field than the single endpoint.
 	positions := rawJSONArray(t, "instructions[0]", elems[0], "positions")
 	if len(positions) != 1 {
 		t.Fatalf("instructions[0].positions = %s; want one element", req.Body)
 	}
 	assertJSONShape(t, "instructions[0].positions[0]", positions[0], map[string]string{
 		"conid":    "number",
-		"quantity": "string",
+		"quantity": "number",
 	})
-	if got, want := string(rawJSONField(t, "instructions[0].positions[0]", positions[0], "quantity")), `"10"`; got != want {
-		t.Errorf("instructions[0].positions[0].quantity token = %s; want the quoted JSON string %s", got, want)
+	if got, want := string(rawJSONField(t, "instructions[0].positions[0]", positions[0], "quantity")), "10"; got != want {
+		t.Errorf("instructions[0].positions[0].quantity token = %s; want the bare JSON number %s", got, want)
 	}
 }
 

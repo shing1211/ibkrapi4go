@@ -8,6 +8,7 @@
 | 2026-09-26 | [test-hardening](./2026-09-26-test-hardening/) | BUILD | complete | `v1.1.2` | `f8ddeb4` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-26 | [payload-contracts](./2026-09-26-payload-contracts/) | BUILD | complete | `aa43fdb` | `f9345dd` | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-27 | [design-checkers](./2026-09-27-design-checkers/) | BUILD | complete | `f9345dd` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
+| 2026-09-27 | [banking-contracts](./2026-09-27-banking-contracts/) | BUILD | complete | `e741ba1` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 
 Older runs are archived under
 [`../archive/runs/index.md`](../archive/runs/index.md).

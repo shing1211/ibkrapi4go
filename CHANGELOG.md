@@ -5,6 +5,56 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.8] - 2026-09-27
+
+Five wire-contract and numeric-precision defects, plus two CI gates that existed
+but were never enforced. Two of the defects had been carried as "needs live
+gateway evidence" and turned out to be decidable from the committed spec.
+
+### Fixed
+
+- **Bulk instruction cancel silently dropped the caller's reason.**
+  `CancelInstructionsBulk` built each instruction with only `InstructionId`, even
+  though the generated `CancelInstruction` carries `Reason` and the single-cancel
+  path sets it. A reason supplied to a money-moving operation was discarded before
+  the request left the process.
+- **Bulk external asset transfer V2 sent `quantity` as a JSON string.** The spec
+  models `TradingInstrumentV2.Quantity` as a number, and the single-item path
+  already emitted one, but the bulk path hand-rolled a local struct with
+  `Quantity string` — so the bulk endpoint received a different type for the same
+  field than the single endpoint did. The bulk path now converts with the same
+  `strToDecimal` helper, and its triplicated inline position type is collapsed
+  into one named type.
+- **Tax voucher money was silently rounded.** `divAmount`, `withHeldAmount`,
+  `fee` and `quantity` generated as `float32`, whose 24-bit mantissa rounds
+  anything above 2^24 (16777216). An input of `12345678.91` was reported to the
+  caller as `"12345679"`. These four fields are now `json.Number`, which accepts
+  the JSON number the gateway actually sends and preserves its digits. The
+  existing spec patch that retypes money to `string` cannot be used here: that
+  would fail to decode, because Go cannot unmarshal a number into a string.
+- **The available-tax-years call sent `year=`.** The spec marked the tax year as
+  required on the operation that reports which years exist, so the generated
+  field was non-pointer and the wrapper sent a present-and-empty parameter. The
+  parameter is now optional for that one operation and is omitted. The shared
+  component is untouched for operations that genuinely require a year.
+- `AssetTransferRequest.Quantity` is now documented as the V1 single-instrument
+  field. No behaviour change — the V2 paths were already correct to ignore it.
+
+### Added
+
+- `scripts/check_money.py` (the ADR 0008 guard) now runs in CI. It existed as a
+  Make target but was never enforced, so a float money field could land in
+  `pkg/ibkr` without failing the build.
+- `make license-check` now runs in CI, so a missing SPDX header fails the build.
+
+### Changed
+
+- `patch_spec.py` gains two defects: one retyping always-numeric money fields to
+  `json.Number`, one relaxing the tax year on the available-years operation.
+- `docs/design/07-money-and-numbers.md` now records both reasons the SDK uses
+  `json.Number` internally, including the float32-rounding case this release
+  fixes.
+
 ## [1.1.7] - 2026-09-27
 
 Docs and tooling only. No production code, no generated code, no dependency
@@ -1018,7 +1068,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.7...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.8...HEAD
+[1.1.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.4...v1.1.5

@@ -5,6 +5,7 @@ package ibkr
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -767,12 +768,12 @@ func (m *RESTTaxVouchers) Dividends(ctx context.Context, accountID AccountID, ye
 			WithheldAmount: "",
 		}
 		if d.Voucher != nil {
-			tvd.Amount = float32ToStr(d.Voucher.DivAmount)
-			tvd.Fee = float32ToStr(d.Voucher.Fee)
-			tvd.Quantity = float32ToStr(d.Voucher.Quantity)
+			tvd.Amount = jsonNumberToStr(d.Voucher.DivAmount)
+			tvd.Fee = jsonNumberToStr(d.Voucher.Fee)
+			tvd.Quantity = jsonNumberToStr(d.Voucher.Quantity)
 			tvd.RequestID = strPtrVal(d.Voucher.RequestId)
 			tvd.Year = int64PtrVal(d.Voucher.Year)
-			tvd.WithheldAmount = float32ToStr(d.Voucher.WithHeldAmount)
+			tvd.WithheldAmount = jsonNumberToStr(d.Voucher.WithHeldAmount)
 		}
 		out = append(out, tvd)
 	}
@@ -899,4 +900,18 @@ func float32ToStr(p *float32) string {
 		return ""
 	}
 	return strconv.FormatFloat(float64(*p), 'f', -1, 32)
+}
+
+// jsonNumberToStr renders a money field the gateway sent as a JSON number.
+//
+// Unlike float32ToStr it returns the gateway's own digits verbatim rather than
+// reformatting a rounded float. A float32 mantissa is 24 bits, so any amount
+// above 2^24 is silently rounded; divAmount and withHeldAmount on a tax voucher
+// can exceed that, and the rounding would be invisible in the SDK's public
+// string. Per ADR 0008 money is never carried as a float.
+func jsonNumberToStr(n *json.Number) string {
+	if n == nil {
+		return ""
+	}
+	return n.String()
 }

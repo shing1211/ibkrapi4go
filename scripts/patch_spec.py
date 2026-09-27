@@ -292,6 +292,76 @@ def patch(spec: dict) -> collections.Counter:
     for path_item in spec.get("paths", {}).values():
         patch_inline_money(path_item)
 
+    # 9. Retype money fields that the gateway sends as JSON *numbers* to
+    #    `json.Number` rather than `string`.
+    #
+    #    Defects 7 and 8 retype `type: number` to `type: string`, which is correct
+    #    for the money fields the gateway already quotes on the wire (e.g.
+    #    "balance":"1000.00"). It is wrong for any field the gateway sends as a
+    #    bare JSON number: Go cannot unmarshal a number into a string field, so
+    #    the retyped decode fails outright rather than losing precision. Those
+    #    fields need `json.Number`, which accepts the number *and* preserves the
+    #    literal exactly.
+    #
+    #    float32 is the reason this matters. A float32 mantissa holds 24 bits, so
+    #    it silently rounds any amount above 2^24 (16777216) - reachable for
+    #    aggregate dividend and withholding figures on a tax voucher. json.Number
+    #    keeps the gateway's own digits, per ADR 0008.
+    NUMBER_MONEY_SCHEMAS = {
+        "TaxVoucherDTO": frozenset([
+            "fee",
+            "divAmount",
+            "withHeldAmount",
+            "quantity",
+        ]),
+    }
+
+    for schema_name, field_names in NUMBER_MONEY_SCHEMAS.items():
+        schema = schemas.get(schema_name)
+        props = schema.get("properties") if isinstance(schema, dict) else None
+        if not isinstance(props, dict):
+            continue
+        for name in field_names:
+            prop = props.get(name)
+            if isinstance(prop, dict) and prop.get("type") == "number":
+                prop["x-go-type"] = "json.Number"
+                report["number_money_patched"] += 1
+
+    # 10. Make `year` optional on the "which tax years are available" operation.
+    #
+    #     The spec marks TaxYearRequestParam as `required: true`, so
+    #     oapi-codegen emits a non-pointer string and the wrapper has no way to
+    #     leave it out: calling the operation to discover the available years
+    #     sends a present-and-empty `year=`. The requirement is also incoherent
+    #     on its face - an endpoint whose purpose is to list which years exist
+    #     cannot require the caller to already know the year.
+    #
+    #     `required` is a sibling of `$ref`, so overriding it in place would be
+    #     ignored. The parameter is inlined for this operation only, leaving the
+    #     shared component untouched for the operations that genuinely need a
+    #     year. The result is a `*string` the wrapper can omit.
+    OPTIONAL_YEAR_OPS = frozenset(["listTaxDocumentsAvailable"])
+
+    for path_item in spec.get("paths", {}).values():
+        if not isinstance(path_item, dict):
+            continue
+        for op in path_item.values():
+            if not isinstance(op, dict) or op.get("operationId") not in OPTIONAL_YEAR_OPS:
+                continue
+            params = op.get("parameters")
+            if not isinstance(params, list):
+                continue
+            for idx, param in enumerate(params):
+                resolved = resolve(param)
+                if resolved.get("name") != "year" or resolved.get("in") != "query":
+                    continue
+                if resolved.get("required") is not True:
+                    continue
+                relaxed = dict(resolved)
+                relaxed["required"] = False
+                params[idx] = relaxed
+                report["year_optional_patched"] += 1
+
     return report
 
 
