@@ -32,11 +32,13 @@ type OrderRequest struct {
     Quantity    string      // never float64
     OrderType   OrderType   // Market | Limit | Stop | ...
     LimitPrice  string      // empty for market orders
-    TimeInForce TimeInForce
     StopPrice   string      // for STOP/STOP_LIMIT orders
+    TimeInForce TimeInForce
     OutsideRTH  bool        // outside regular trading hours
     AllOrNone   bool        // fill completely or not at all
     ClientOrderID string    // client-supplied order id
+    ParentID    string      // parent order id, for grouping
+    IsSingleGroup bool      // quantity is per-conid rather than a total
 }
 
 type SubmitResult struct {
@@ -47,7 +49,7 @@ type SubmitResult struct {
 
 type Reply struct {
     ID          string
-    Message     string
+    Messages    []string // human-readable warning texts
     MessageIDs  []string // additional message ids
 }
 

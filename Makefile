@@ -10,7 +10,7 @@ OAPI_CODEGEN_VERSION ?= v2.8.0
 .DEFAULT_GOAL := help
 
 .PHONY: help tools fmt vet test test-race test-integration coverage check \
-        codegen codegen-verify docs-spec docs-check \
+        codegen codegen-verify docs-spec docs-check design-check \
         license license-check mock-gateway fuzz clean
 
 help: ## List targets
@@ -43,10 +43,13 @@ coverage: ## Write coverage.out and coverage.html
 		echo "wrote coverage.out and coverage.html"; \
 	else echo "no go.mod yet; skipping"; fi
 
-check: fmt vet money-check test ## Format, vet, check money types, and test
+check: fmt vet money-check design-check test ## Format, vet, check money types and design docs, and test
 
 money-check: ## Fail if pkg/ibkr exposes float money fields (ADR 0008)
 	python3 scripts/check_money.py
+
+design-check: ## Fail if a design doc disagrees with the code it describes
+	go run ./scripts/check_design
 
 codegen: ## Regenerate client/ from the OpenAPI spec
 	./scripts/codegen.sh

@@ -37,9 +37,8 @@ type Client struct {
 }
 ```
 
-> **Note**: The struct diagram shows all significant fields. Internal
-> synchronization fields (`wsMu`, `restMu`) and the pool `release` callback
-> are omitted for clarity.
+> **Note**: The struct diagram shows all significant fields. The pool
+> `release` callback is omitted for clarity.
 
 ## Accessors
 
@@ -114,7 +113,8 @@ WithStreamingLimits(StreamingLimits)
 WithRESTGateway(url string)
 WithOAuth2ClientCredentials(clientID, clientSecret string)
 WithOAuth2RefreshToken(token string)
-WithOAuth2JWTKey(key []byte)
-WithOAuth2JWTKeyPath(path string)
+WithOAuth2JWTKey(key *rsa.PrivateKey)
 WithOAuth2JWTKeyFile(path string)
+WithOAuth2JWTKeyPEM(pemData []byte)
+WithOAuth2JWTKeyReader(r io.Reader)
 ```

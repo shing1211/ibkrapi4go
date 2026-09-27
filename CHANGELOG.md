@@ -5,6 +5,77 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.7] - 2026-09-27
+
+Docs and tooling only. No production code, no generated code, no dependency
+change: the only file touched under `pkg/` is the `Version` constant.
+
+### Changed
+
+- **`check_design` is now a release gate.** It previously ran only when a
+  maintainer typed `make docs-check`; neither CI nor the pre-PR `make check`
+  invoked it, so drift in the design documents could not fail anything. The
+  `docs` job gained a `setup-go` step and a `Check design docs against the code`
+  step, and `make check` is now `fmt vet money-check design-check test`. For the
+  first time, a design document that disagrees with the code stops the build.
+
+- **The checker now verifies 8 of 9 design documents, up from 2.** New coverage
+  for `02-client.md` (5 checks), `04-generated-wrapping.md` (2),
+  `05-streaming.md` (3), `06-errors-retries.md` (6), `08-concurrency.md` (3) and
+  `09-orders-and-confirmation.md` (6) - **25 checks in total**, each one observed
+  failing when its claim is broken, so none of them is inert.
+  `07-money-and-numbers.md` is deliberately excluded: `check_money.py` already
+  enforces its main claim over the whole tree, and a second gate over the same
+  fact would be one more thing to keep in step and no stronger.
+
+- **The checker is backed by a mutation harness of 232 subtests** across five
+  suites, including **two negative controls** that swap a strict branch for a
+  naive one and require the specific cases to go red, so a future edit cannot
+  quietly weaken a check. A third control breaks two documents at once and
+  requires both messages from a single run, proving the harness is not inert.
+
+### Fixed
+
+- **Five false statements in design documents**, all found by the new checks and
+  all resolved in favour of the code:
+
+  - `09-orders-and-confirmation.md` documented `Reply.Message string` where the
+    code declares `Messages []string` (`pkg/ibkr/trade.go`). A caller following
+    the document got a **compile error**. Its `OrderRequest` block also listed
+    `TimeInForce` before `StopPrice` and omitted `ParentID` and `IsSingleGroup`
+    entirely.
+  - `02-client.md` documented `WithOAuth2JWTKey(key []byte)` and
+    `WithOAuth2JWTKeyPath(path string)`. Neither compiles: the real signature
+    takes `*rsa.PrivateKey`, and the path form is `WithOAuth2JWTKeyFile`. The
+    same block's completeness note claimed to omit two fields that the block
+    lists directly above it.
+  - `06-errors-retries.md` omitted `RetryPolicy.Metrics`, which the struct
+    declares and which drives the retry backoff and retry metrics.
+
+### Fixed (tooling hygiene)
+
+- **Every `golangci-lint` finding in `scripts/` is resolved.** `golangci-lint
+  run` over `./scripts/...` now reports **0 issues** uncapped; the run recorded 8
+  before. Every `//nolint` carries a site-specific reason.
+
+- **`scripts/changelog-gen.sh` and `scripts/sbom-gen.sh` now carry the SPDX
+  header** that `AGENTS.md` requires of every source file.
+  `addlicense -check scripts pkg internal cmd` exits 0.
+
+### Known, deliberately unchanged
+
+- The `lint & security` job **remains red**: `golangci-lint run` uncapped over
+  `./pkg/... ./internal/... ./cmd/... ./scripts/...` reports **733 issues**, all
+  of them in library code, and `.golangci.yml` still **fails**
+  `golangci-lint config verify` - a v1 file declaring `version: 2`, so
+  golangci-lint silently discards its `linters-settings` and `issues` blocks and
+  the author's exclusions have never applied. This release is out of that
+  scope; the state is documented in
+  [`docs/runs/2026-09-27-design-checkers/report.md`](./docs/runs/2026-09-27-design-checkers/report.md)
+  and is **not** fixed here. The three blocked wire-contract items from v1.1.6
+  (bulk-cancel `Reason`, the V2 `quantity` number/string divergence, the ignored
+  `AssetTransferRequest.Quantity`) also remain open.
+
 ## [1.1.6] - 2026-09-27
 
 The mock gateway shipped a fixture-shape check that could not fail, and two
@@ -947,7 +1018,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.6...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.7...HEAD
+[1.1.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.3...v1.1.4

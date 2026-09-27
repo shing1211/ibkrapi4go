@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+# Copyright 2026 shing1211
+# SPDX-License-Identifier: Apache-2.0
+#
+# changelog-gen.sh - print a Conventional Commits changelog for the commits
+# since the most recent tag, grouped by commit type.
+#
+# Usage:
+#   ./scripts/changelog-gen.sh
+
 set -euo pipefail
 
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")

@@ -1,6 +1,12 @@
 // Copyright 2026 shing1211
 // SPDX-License-Identifier: Apache-2.0
 
+// bench_compare is the benchmark regression gate. It reads two `go test -bench
+// -json` result sets and exits non-zero when any benchmark is more than a fixed
+// percentage slower than its baseline. The benchmark-regression CI job runs it
+// with benchmark.baseline as the baseline.
+//
+// Usage: bench_compare <current.json> <baseline.json>
 package main
 
 import (
@@ -32,11 +38,12 @@ type resultEntry struct {
 var nsOpRe = regexp.MustCompile(`([0-9.]+)\s+ns/op`)
 
 func parseBenchResults(path string) (map[string]benchResult, error) {
+	//nolint:gosec // path is the CLI argument naming a benchmark JSON file for a dev-only CI gate; reading the file the operator named is the whole job
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open %s: %w", path, err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	results := make(map[string]benchResult)
 	scanner := bufio.NewScanner(f)
@@ -166,7 +173,7 @@ func main() {
 	fmt.Printf("Current:   %s\n", currentPath)
 	fmt.Printf("Baseline:  %s\n", baselinePath)
 	fmt.Println()
-	fmt.Println(fmt.Sprintf("%-70s  %-20s  %-20s  %-10s  %s", "Benchmark", "Baseline", "Current", "Ratio", "Change"))
+	fmt.Printf("%-70s  %-20s  %-20s  %-10s  %s\n", "Benchmark", "Baseline", "Current", "Ratio", "Change")
 	fmt.Println(strings.Repeat("-", 150))
 
 	const threshold = 10.0

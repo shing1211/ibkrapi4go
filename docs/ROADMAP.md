@@ -253,7 +253,33 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.6`**.
+**`v1.1.7`**.
+
+The `v1.1.7` patch is documentation and tooling only — no production code, no
+generated code, no dependency change. Its subject is a guardrail that existed but
+was not enforced. `check_design` compares each design document against the code it
+describes, and until now it ran only when a maintainer typed `make docs-check`:
+neither CI nor the pre-PR `make check` invoked it, so 7 of the 9 design documents
+were verified by nothing and could drift freely. It is now a `make check` target
+and a `docs` CI step, so a document that disagrees with the code stops the build.
+Widening it is the other half: it now verifies 8 of 9 documents, up from 2, with
+25 new checks — client composition, the generated-code import and
+exported-type boundaries, the streaming surface and limits, `RetryPolicy` defaults
+and the ADR 0009 no-retry rule, the redaction and TLS-warning claims, the OAuth
+generation counter, and the whole order-confirmation surface. Each new check was
+observed failing when its claim is broken, and a 232-subtest mutation harness
+holds that property, including two negative controls that swap a strict branch for
+a naive one. `07-money-and-numbers.md` stays unverified on purpose:
+`check_money.py` already enforces its main claim tree-wide. The new checks found
+**five false statements in the design documents**, all corrected in favour of the
+code — most seriously `09-orders-and-confirmation.md`, which documented
+`Reply.Message string` where the code declares `Messages []string`, so a caller
+following the document got a compile error. The patch also clears the 8 lint
+findings in `scripts/` (now 0 uncapped) and adds the missing SPDX headers to the
+two shell scripts, so `addlicense -check` passes. Known and deliberately unchanged:
+the `lint & security` job is still red with 733 findings uncapped in library code,
+and `.golangci.yml` still fails `golangci-lint config verify`, so its linter
+settings are silently discarded. Both are recorded in the run artifacts.
 
 The `v1.1.6` patch closes a gap in the mock gateway's own guardrail. Its
 fixture-shape check set `DisallowUnknownFields` on a decoder whose target was
