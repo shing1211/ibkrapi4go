@@ -679,7 +679,7 @@ func (m *RESTExternalAssetTransfers) Transfer(ctx context.Context, req AssetTran
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return strconv.FormatFloat(float64(resp.JSON202.InstructionSetId), 'f', -1, 32), nil
+	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
 }
 
 // TransferBulk initiates multiple external asset transfers in a single request
@@ -893,7 +893,7 @@ func (m *RESTInternalAssetTransfers) Transfer(ctx context.Context, req InternalA
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return strconv.FormatFloat(float64(resp.JSON202.InstructionSetId), 'f', -1, 32), nil
+	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
 }
 
 // TransferBulk initiates multiple internal asset transfers in a single request
@@ -1003,7 +1003,7 @@ func (m *RESTExternalCashTransfers) Transfer(ctx context.Context, req CashTransf
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
 	}
-	return strconv.FormatFloat(float64(resp.JSON202.InstructionSetId), 'f', -1, 32), nil
+	return strconv.Itoa(resp.JSON202.InstructionSetId), nil
 }
 
 // TransferBulk initiates multiple external cash transfers in a single request

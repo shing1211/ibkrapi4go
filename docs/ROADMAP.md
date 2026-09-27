@@ -253,7 +253,23 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.4`**.
+**`v1.1.5`**.
+
+The `v1.1.5` patch repairs two precision and error-propagation defects on the
+REST surface, both surfaced by the new end-to-end coverage. Three banking
+acknowledgements rendered `instructionSetId` through a 32-bit float, so any ID
+above 2^24 was rounded — the spec's own documented example, `1988905739`, came
+back as `1988905700`, and a caller reconciling by that ID addressed the wrong
+instruction. And `wrapOp` buried the status code and error code of every typed
+REST error one level down, so the `errors.As` idiom documented in
+`docs/ERRORS.md` read zero across all 79 status-guard call sites. The patch also
+populates `RESTRequestInfo.ExecutedAt` from the spec's only timestamp for that
+operation, and deletes five dead response types in `rest.go`. Two documentation
+claims are corrected: `TradeConfirmationRequest.Gzip` is not sent because the
+upstream schema has no such property, and `ActiveCountries` returns display
+names such as "United States" rather than ISO codes. The same patch takes CI
+coverage to 58.7% against a 58% floor, the third step of a ratchet that started
+at 35% in v1.1.3.
 
 The `v1.1.4` patch repairs three defects in the connection-management and
 request-encoding paths, all found by extending REST test coverage. REST

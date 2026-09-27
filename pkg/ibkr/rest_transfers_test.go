@@ -22,7 +22,13 @@ func TestRESTExternalAssetTransfers_Transfer(t *testing.T) {
 			transferPath = r.URL.Path
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
-			fmt.Fprint(w, `{"instructionSetId":12345,"status":202}`)
+			// The ID is above 2^24 on purpose: instructionSetId is an int, and a
+			// renderer that routes it through a 32-bit float silently loses the
+			// low bits up here. 1988905739 is the magnitude IBKR's own spec uses
+			// as this field's documented example, so this is a value the gateway
+			// can plausibly return. A renderer that must not truncate it has to
+			// produce the exact string.
+			fmt.Fprint(w, `{"instructionSetId":1988905739,"status":202}`)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -58,8 +64,8 @@ func TestRESTExternalAssetTransfers_Transfer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Transfer: %v", err)
 	}
-	if transferID != "12345" {
-		t.Errorf("transferID = %q; want 12345", transferID)
+	if transferID != "1988905739" {
+		t.Errorf("transferID = %q; want 1988905739 exactly — the acknowledgement ID is an int and must not be rendered through a 32-bit float, which truncates anything above 2^24", transferID)
 	}
 	if transferPath != "/gw/api/v1/external-asset-transfers" {
 		t.Errorf("path = %q; want /gw/api/v1/external-asset-transfers", transferPath)
@@ -76,7 +82,7 @@ func TestRESTInternalAssetTransfers_Transfer(t *testing.T) {
 			transferPath = r.URL.Path
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
-			fmt.Fprint(w, `{"instructionSetId":67890,"status":202}`)
+			fmt.Fprint(w, `{"instructionSetId":1988905739,"status":202}`)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -110,8 +116,8 @@ func TestRESTInternalAssetTransfers_Transfer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Transfer: %v", err)
 	}
-	if transferID != "67890" {
-		t.Errorf("transferID = %q; want 67890", transferID)
+	if transferID != "1988905739" {
+		t.Errorf("transferID = %q; want 1988905739 exactly — the acknowledgement ID is an int and must not be rendered through a 32-bit float, which truncates anything above 2^24", transferID)
 	}
 	if transferPath != "/gw/api/v1/internal-asset-transfers" {
 		t.Errorf("path = %q; want /gw/api/v1/internal-asset-transfers", transferPath)
@@ -128,7 +134,7 @@ func TestRESTExternalCashTransfers_Transfer(t *testing.T) {
 			transferPath = r.URL.Path
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusAccepted)
-			fmt.Fprint(w, `{"instructionSetId":11111,"status":202}`)
+			fmt.Fprint(w, `{"instructionSetId":1988905739,"status":202}`)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -162,8 +168,8 @@ func TestRESTExternalCashTransfers_Transfer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Transfer: %v", err)
 	}
-	if transferID != "11111" {
-		t.Errorf("transferID = %q; want 11111", transferID)
+	if transferID != "1988905739" {
+		t.Errorf("transferID = %q; want 1988905739 exactly — the acknowledgement ID is an int and must not be rendered through a 32-bit float, which truncates anything above 2^24", transferID)
 	}
 	if transferPath != "/gw/api/v1/external-cash-transfers" {
 		t.Errorf("path = %q; want /gw/api/v1/external-cash-transfers", transferPath)

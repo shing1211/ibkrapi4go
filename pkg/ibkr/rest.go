@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/shing1211/ibkrapi4go/client"
 	"github.com/shing1211/ibkrapi4go/internal"
@@ -186,7 +187,18 @@ type RESTRequests struct {
 
 // RESTRequestInfo holds metadata about a submitted request.
 type RESTRequestInfo struct {
-	ID         int64
+	// ID is the request ID that was asked about, echoed back to the caller. It is
+	// the ID passed to Status, not one read from the response.
+	ID int64
+	// ExecutedAt is the gateway's timestamp for the request, as an RFC 3339
+	// string normalised to UTC. It is nil when the response carries none.
+	//
+	// The upstream 200 body is a oneOf, and only one of its two variants has a
+	// timestamp: the StatusResponse variant's `dateSubmitted`. The other variant,
+	// AmRequestStatusResponse, has no time field at all, so ExecutedAt is nil for
+	// it. The field name is a misnomer inherited from the original stub and is
+	// kept for API compatibility: the value is the submission time the gateway
+	// reports, not a separately-reported execution time.
 	ExecutedAt *string
 }
 
@@ -207,10 +219,21 @@ func (m *RESTRequests) Status(ctx context.Context, requestID int64) (*RESTReques
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
 	}
+	info := &RESTRequestInfo{ID: requestID}
+	// The 200 body is a oneOf union whose variants decode into different Go
+	// types, so it has to be unwrapped by hand. Only the StatusResponse variant
+	// carries a timestamp; decoding the AmRequestStatusResponse variant as a
+	// StatusResponse fails (its requestId is a string, not an int64), which
+	// means "this variant has no timestamp", not "the request failed" — the
+	// transport already reported the status code and the body parsed as JSON.
 	if j := resp.GetJSON200(); j != nil {
-		return &RESTRequestInfo{ID: requestID}, nil
+		st, derr := j.AsStatusResponse()
+		if derr == nil && st.DateSubmitted != nil {
+			ts := st.DateSubmitted.UTC().Format(time.RFC3339)
+			info.ExecutedAt = &ts
+		}
 	}
-	return &RESTRequestInfo{ID: requestID}, nil
+	return info, nil
 }
 
 // TaxDocuments returns the REST tax-documents manager.
@@ -357,7 +380,13 @@ type TradeConfirmationRequest struct {
 	EndDate string
 	// Format is the output MIME type. Defaults to application/pdf.
 	Format string
-	// Gzip compresses the response body.
+	// Gzip is not sent. The upstream createTradeConfirmations body schema
+	// (TradeConfirmationRequest) has no gzip property, and the operation takes no
+	// gzip query parameter, so there is nothing to forward this into — unlike
+	// StatementRequest, whose schema does carry one. It is kept so existing
+	// callers keep compiling; use RESTStatements if you need compressed
+	// statements. The gateway's own choice is still reported back on
+	// TradeConfirmationResponse.Gzip.
 	Gzip bool
 }
 
@@ -416,6 +445,8 @@ func (m *RESTTradeConfirmations) Generate(ctx context.Context, req TradeConfirma
 	if type_ == "" {
 		type_ = "application/pdf"
 	}
+	// req.Gzip has no counterpart in the generated body model, so it is dropped
+	// here; see TradeConfirmationRequest.Gzip.
 	body := client.TradeConfirmationRequest{
 		AccountId: string(req.AccountID),
 		EndDate:   req.EndDate,
@@ -666,8 +697,10 @@ func (m *RESTTaxVouchers) CreateRequests(ctx context.Context, csvContent string)
 	return strPtrVal((*resp.JSON200)[0].RequestId), nil
 }
 
-// ActiveCountries lists the country codes that have active tax-voucher
-// agreements. Returns nil on a nil response body.
+// ActiveCountries lists the countries that have active tax-voucher agreements,
+// as display names such as "United States". Each upstream record also carries an
+// ISO `countryCode`; this returns the name, and not the code. Returns nil on a
+// nil response body.
 func (m *RESTTaxVouchers) ActiveCountries(ctx context.Context) ([]string, error) {
 	const op = "TaxVouchers.ActiveCountries"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -858,75 +891,6 @@ type TaxVoucherDividend struct {
 type TaxVoucherState struct {
 	RequestID    string
 	RequestState string
-}
-
-type requestIDRaw struct {
-	RequestId *string `json:"requestId,omitempty"`
-}
-
-func (r *requestIDRaw) toPublic() string {
-	return strPtrVal(r.RequestId)
-}
-
-type countriesRaw struct {
-	Countries []string `json:"countries,omitempty"`
-}
-
-func (r *countriesRaw) toPublic() []string {
-	if r.Countries == nil {
-		return nil
-	}
-	return r.Countries
-}
-
-type yearsRaw struct {
-	Years []string `json:"years,omitempty"`
-}
-
-func (r *yearsRaw) toPublic() []string {
-	if r.Years == nil {
-		return nil
-	}
-	return r.Years
-}
-
-type dividendsRaw struct {
-	TaxVouchers []taxVoucherRaw `json:"taxVoucherRequests,omitempty"`
-}
-
-type taxVoucherRaw struct {
-	CorpactionId       *string  `json:"corpactionId,omitempty"`
-	CountryCode        *string  `json:"countryCode,omitempty"`
-	CustAcctId         *string  `json:"custAcctId,omitempty"`
-	DivAmount          *float32 `json:"divAmount,omitempty"`
-	Fee                *float32 `json:"fee,omitempty"`
-	MigratedCustAcctId *string  `json:"migratedCustAcctId,omitempty"`
-	Quantity           *float32 `json:"quantity,omitempty"`
-	RequestId          *string  `json:"requestId,omitempty"`
-	RequestState       *string  `json:"requestState,omitempty"`
-	WithHeldAmount     *float32 `json:"withHeldAmount,omitempty"`
-	Year               *int64   `json:"year,omitempty"`
-}
-
-func (r *dividendsRaw) toPublic() []TaxVoucherDividend {
-	if r.TaxVouchers == nil {
-		return nil
-	}
-	out := make([]TaxVoucherDividend, 0, len(r.TaxVouchers))
-	for _, t := range r.TaxVouchers {
-		out = append(out, TaxVoucherDividend{
-			CorpActionID:   strPtrVal(t.CorpactionId),
-			CountryCode:    strPtrVal(t.CountryCode),
-			AccountID:      AccountID(strPtrVal(t.CustAcctId)),
-			Amount:         float32ToStr(t.DivAmount),
-			Fee:            float32ToStr(t.Fee),
-			Quantity:       float32ToStr(t.Quantity),
-			RequestID:      strPtrVal(t.RequestId),
-			Year:           int64PtrVal(t.Year),
-			WithheldAmount: float32ToStr(t.WithHeldAmount),
-		})
-	}
-	return out
 }
 
 func float32ToStr(p *float32) string {

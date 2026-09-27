@@ -5,6 +5,55 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-09-27
+
+### Fixed
+
+- **`instructionSetId` was silently truncated on three banking
+  acknowledgements.** `rest_banking.go` rendered the ID with
+  `strconv.FormatFloat(float64(id), 'f', -1, 32)` on an `int` field. A 32-bit
+  float keeps only 24 mantissa bits, so any ID above 2^24 (16,777,216) was
+  rounded — the spec's own documented example, `1988905739`, came back as
+  `1988905700`, off by 39. Callers polling or reconciling by that ID addressed
+  the wrong instruction. Now uses `strconv.Itoa`, matching the three sibling
+  sites in the same file that already did.
+
+- **REST error detail was being discarded.** `wrapOp` unconditionally wrapped
+  its argument in a new `*Error`, so the 79-plus `>= 400` guards that pass a
+  typed `*Error` produced an outer error with `Code: ""` and `HTTPStatus: 0`,
+  with the real values buried one level down in `.Err`. Callers following the
+  documented `errors.As(err, &e); e.HTTPStatus` idiom in `docs/ERRORS.md` read
+  zero. `wrapOp` now adopts an existing `*Error`, filling only a missing `Op`.
+
+- **`RESTRequestInfo.ExecutedAt` was never populated** and the method had an
+  `if` whose two branches were identical. The 200 body is a `oneOf` union; it is
+  now decoded properly and `ExecutedAt` is filled from the `dateSubmitted`
+  field, the only timestamp the spec provides for that operation. The field name
+  is a known misnomer (it carries submission time) and is kept for API
+  compatibility.
+
+- **Dead code removed**: five unused response types and their `toPublic`
+  converters in `rest.go` had no caller anywhere in the module.
+
+### Changed
+
+- **`TradeConfirmationRequest.Gzip` is documented as not sent**: the upstream
+  body schema has no `gzip` property and the operation takes no gzip query
+  parameter, so there is nothing to forward it into. The field is retained for
+  API compatibility. `RESTStatements` does support gzip.
+
+- **`ActiveCountries` documentation corrected**: it returns display names such
+  as "United States", not ISO codes. Each upstream record also carries
+  `countryCode`, which this method does not return.
+
+### Added
+
+- **Coverage is now 58.7%**, with the CI floor raised from 48% to **58%** — the
+  third step of a ratchet that started at 35% in v1.1.3. The reports,
+  tax-vouchers and REST-banking surfaces gain end-to-end tests in this release,
+  following the accounts, utilities and notifications surfaces in v1.1.4; no
+  production code changed to make them pass.
+
 ## [1.1.4] - 2026-09-27
 
 ### Fixed
@@ -823,7 +872,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.4...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.5...HEAD
+[1.1.5]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.1...v1.1.2

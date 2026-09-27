@@ -23,10 +23,38 @@ Schema: `| ID | Task | Role | Status | Depends On | Acceptance |`
 | T21 | **DEFECT** `IsCompleted bool` + `omitempty` drops `false` | backend | done | T14a | One-line tag fix + regression test. Verified: no exported API change, `gofmt`/`vet`/suite/`-race`/`check_money` green. A pre-existing T14a test had encoded the bug; inverted to require explicit `false` (strictly stronger) |
 | T22 | **DEFECT** connection reuse broken by `defer cancel()` | backend | done | T14a | Premise corrected: the "62 unclosed bodies" theory was **wrong** (`Body` is `[]byte`, already drained by `Parse*Response`). Real cause: `internal.Timeout` deferred `cancel()`, firing before body read and defeating `cancelOnCloseBody`. Fixed with `cancel()` on both error paths. **24 calls/24 conns -> 24 calls/0 conns** |
 | T23 | Logout response body never closed | backend | review | T22 | `internal/session.go:112` discards the `*http.Response` without closing, so one connection is dropped per `Client.Close()`. Its `defer cancel()` there is correct and must stay. 3-line fix; not done — out of the approved T21/T22 scope |
-| T14b | Slice 2b: `rest.go` 24 funcs at 0% | tester | todo | T14a,T21,T22 | Non-zero; no ci.yml edit |
+| T14b | Slice 2b: `rest.go` 0% funcs | tester | done | T24 | 24/24 targets non-zero; **50.2% -> 53.4%**; 3 new test files, no production change |
 | T14c | Slice 2c: `rest_banking.go` 21 funcs at 0% | tester | todo | T14b | Non-zero; no ci.yml edit |
 | T15 | `cmd/ibkr` order validation + flag handling | tester | todo | T14c | `main()` stays uncovered; meaningful paths covered; **no ci.yml edit** |
-| T16 | Re-measure and ratchet floor to Slice 2 value | orchestrator | todo | T14b,T14c,T15 | Floor never above measured |
+| T16 | Re-measure and ratchet floor to final value | orchestrator | todo | T14c,T15 | Floor never above measured (currently 53.4%, floor 48%) |
+
+## Defects found by T14b — resolution
+
+| ID | Location | Issue | Resolution |
+|---|---|---|---|
+| D1 | `pkg/ibkr/client.go` `wrapOp` | Wrapped an already-typed `*Error` in a fresh one, so the outer error had `Code: ""` and `HTTPStatus: 0`, breaking the documented `errors.As(err, &e); e.HTTPStatus` idiom across every `>= 400` guard | **fixed** — `wrapOp` now adopts an existing `*Error`, filling only a missing `Op`. 85 call sites surveyed: 79 plain-error sites unchanged, 6 `*Error` sites changed. One test inverted (it had encoded the bug) |
+| D2 | `pkg/ibkr/rest.go` ~445 | `TradeConfirmationRequest.Gzip` never reached the wire: the generated `TradeConfirmationRequest` has no `gzip` property and the operation takes no gzip query param | **doc corrected** — the transport cannot express it, so the field is kept for compatibility and documented as not sent, pointing callers at `RESTStatements`. Test asserts no `gzip` key and pins the exact key set so a future spec change fails loudly |
+| D3 | `pkg/ibkr/rest.go` ~723 | `ActiveCountries` returns display names while its doc claimed codes | **doc corrected** — the spec is ambiguous but `Country` is the only schema carrying both `country` and `countryCode`, and the spec uses bare `country` for codes elsewhere. Names are correct |
+| D4 | `pkg/ibkr/rest.go` ~219 | `RESTRequests.Status` had an `if` with two identical branches; exported `ExecutedAt` was never populated | **fixed** — real oneOf decode via `j.AsStatusResponse()`, populating from `dateSubmitted` (the only timestamp the spec provides for this operation). Field name kept for API compatibility and documented as a misnomer |
+| D5 | `pkg/ibkr/rest.go` 896-964 | `requestIDRaw`, `countriesRaw`, `yearsRaw`, `dividendsRaw`, `taxVoucherRaw` and their `toPublic` converters had no caller anywhere in the module | **deleted** — verified unreferenced including reflection and doc references. `float32ToStr` **kept**: it has 4 live callers in `TaxVouchers.Dividends`. Four converter-only tests deleted with the code; `TestFloat32ToStr` relocated and kept because it covers live code |
+| D6-D9 | `rest.go`, `client.TaxVoucherDTO` | Wasted token fetch; `float32` money precision; forced `year=` param; JSON-quoted download bytes | deferred — D7 needs a spec change plus regeneration (ADR 0008 territory) |
+
+### Rejected findings — recorded so they are not re-raised
+- **"`rest.go`'s `>= 400` guards leak the response body."** False. The generated
+  `*WithResponse` methods call `Parse*Response(rsp)` unconditionally, and that
+  function does `io.ReadAll` + `defer Body.Close()` regardless of status. The
+  neighbouring `errorFrom` guards that close explicitly are closing an
+  already-closed body, which is harmless.
+- **"Stray unbalanced paren at `rest.go` ~708."** False — that `})` correctly
+  closes the `&client.FetchDividends1Params{...}` composite literal.
+- **"`fault_injection_test.go` had to reach into `.Err`."** False — it goes
+  through `netDo`/`errorFrom`, never `wrapOp`, so it was never affected. The
+  file that did dig into `.Err` was `rest_reports_e2e_test.go`, which is the one
+  that was inverted.
+
+Pattern: sub-agents produce reliable work on the task they are briefed on, but
+**incidental findings need checking individually**. Two of three incidental
+claims in one report were false.
 | T17 | Docs sync across all project Markdown | docs | todo | T16 | No stale refs; summary table of files + actions |
 | T18 | Release Slice 2 patch to both remotes | release | todo | T17 | **Requires explicit user approval before push** |
 | T19 | Next-phase planning | planner | todo | T16 | 3-7 candidates + recommendation + open questions |

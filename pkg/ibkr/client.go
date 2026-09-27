@@ -594,8 +594,24 @@ func (c *Client) errorFrom(resp *http.Response, op string) *Error {
 	return e
 }
 
-// wrapOp wraps a transport-level error as *Error so callers can use errors.As.
+// wrapOp attaches op to err so callers can use errors.As. A plain error is
+// wrapped in a fresh *Error; an *Error is adopted as-is apart from a missing
+// Op, so Code, HTTPStatus, and RequestID stay readable on the value the caller
+// receives. Adopting rather than re-wrapping is what makes the documented
+// errors.As(err, &e); e.HTTPStatus idiom (docs/ERRORS.md) work for the >= 400
+// guards, which build a typed *Error and hand it straight here.
+//
+// The type assertion is deliberately not errors.As: wrapOp adopts the value it
+// is given, not the first *Error buried somewhere in its chain, so a wrapped
+// context prefix is never silently dropped. Callers must not pass an *Error
+// they retain a reference to, since Op is filled in place.
 func wrapOp(op string, err error) *Error {
+	if e, ok := err.(*Error); ok {
+		if e.Op == "" {
+			e.Op = op
+		}
+		return e
+	}
 	return &Error{Op: op, Message: err.Error(), Err: err}
 }
 
