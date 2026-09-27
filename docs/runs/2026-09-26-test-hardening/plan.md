@@ -73,3 +73,29 @@ handling) get tests. The denominator is not trimmed to flatter the number.
 - No new dependencies. `goleak` is already required.
 - No edits to `client/*.gen.go`.
 - No ADR 0009 relevance: no order-mutation retry behaviour changes here.
+
+## Actuals vs. Plan
+
+| Planned | Outcome |
+|---|---|
+| Re-measure coverage before planning further work | Done, and it mattered: the inherited 37.5% came from a two-day-stale profile. Real baseline was 43.3%, with 8.3 points of margin rather than 2.5 |
+| Correct the four false claims in the inherited run records | Done, annotated in place |
+| Fix `TestWS_Resilience` at the cause, not the symptom | Done, but **the premise was wrong**. The cause was not `WSConn` at all but a mock-gateway handler parked on an uncancellable read. A reliable reproducer (`go test ./internal/ -count=2`) was found only after the first hypothesis failed to reproduce in ~15 runs |
+| Extend per-test leak attribution | Done, one edit per helper rather than per test. Surfaced that `TestSession_TickleGoroutine_NoLeak` asserted nothing |
+| Raise the floor in reviewable slices, never above measured | Done: 43.3% -> 48.9% -> 50.0% -> 53.4% -> 58.7%; floor 35% -> 48% -> 53% -> 58% |
+| Slice 1 = the four wholly-uncovered managers | Done, +5.6 points, and all 49 functions moved off 0% |
+| Cover `cmd/ibkr`'s meaningful parts | **Deferred.** Deferred by choice once the margin was adequate, and recorded in `next-phase.md` |
+| Seven defects to fix after the first release | Not in the plan at all. Testing surfaced seven production defects, all fixed and shipped in v1.1.4 and v1.1.5 |
+
+### Where the plan was wrong
+
+Two of the plan's own premises did not survive contact with the code:
+
+1. The plan attributed the `TestWS_Resilience` flake to `WSConn.Close`'s
+   bounded wait. That was a plausible story, not a finding, and it was wrong.
+2. The plan assumed Slice 1's four managers were untestable because the mock
+   gateway lacked routes. Every route and fixture already existed; only the
+   tests were missing.
+
+Both errors were caught by verification rather than by reasoning, which is the
+main process lesson recorded in `next-phase.md`.

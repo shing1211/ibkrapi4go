@@ -18,15 +18,15 @@ Schema: `| ID | Task | Role | Status | Depends On | Acceptance |`
 | T11 | Release v1.1.3 to GitHub + Gitee | release | done | T8,T10 | `f3e062d`, tag `1ab2b43`, both remotes verified |
 | T12 | Slice 1: four wholly-uncovered managers | tester | done | T10 | 43.3% -> 48.9%; 49 funcs off 0%; 40 tests |
 | T13 | Ratchet coverage floor 35% -> 48% | orchestrator | done | T12 | Gate passes at measured 48.9%, 0.9pt buffer |
-| T14 | Slice 2: `rest_banking.go`, `rest.go`, `rest_accounts.go` | tester | todo | T13 | Every targeted func non-zero; full suite + `-race` green; **no ci.yml edit** |
+| T14 | Slice 2 umbrella (split into T14a/b/c) | tester | done | T13 | Every targeted func non-zero; full suite + `-race` green; **no ci.yml edit** |
 | T14a | Slice 2a: `rest_accounts.go` 0% funcs | tester | done | T13 | 7/7 targets non-zero, 0 remaining at 0%; CI total 48.9% -> 50.0% |
 | T21 | **DEFECT** `IsCompleted bool` + `omitempty` drops `false` | backend | done | T14a | One-line tag fix + regression test. Verified: no exported API change, `gofmt`/`vet`/suite/`-race`/`check_money` green. A pre-existing T14a test had encoded the bug; inverted to require explicit `false` (strictly stronger) |
 | T22 | **DEFECT** connection reuse broken by `defer cancel()` | backend | done | T14a | Premise corrected: the "62 unclosed bodies" theory was **wrong** (`Body` is `[]byte`, already drained by `Parse*Response`). Real cause: `internal.Timeout` deferred `cancel()`, firing before body read and defeating `cancelOnCloseBody`. Fixed with `cancel()` on both error paths. **24 calls/24 conns -> 24 calls/0 conns** |
-| T23 | Logout response body never closed | backend | review | T22 | `internal/session.go:112` discards the `*http.Response` without closing, so one connection is dropped per `Client.Close()`. Its `defer cancel()` there is correct and must stay. 3-line fix; not done — out of the approved T21/T22 scope |
+| T23 | Logout response body never closed | backend | done | T22 | `internal/session.go:112` discards the `*http.Response` without closing, so one connection is dropped per `Client.Close()`. Its `defer cancel()` there is correct and must stay. 3-line fix; not done — out of the approved T21/T22 scope |
 | T14b | Slice 2b: `rest.go` 0% funcs | tester | done | T24 | 24/24 targets non-zero; **50.2% -> 53.4%**; 3 new test files, no production change |
-| T14c | Slice 2c: `rest_banking.go` 21 funcs at 0% | tester | todo | T14b | Non-zero; no ci.yml edit |
-| T15 | `cmd/ibkr` order validation + flag handling | tester | todo | T14c | `main()` stays uncovered; meaningful paths covered; **no ci.yml edit** |
-| T16 | Re-measure and ratchet floor to final value | orchestrator | todo | T14c,T15 | Floor never above measured (currently 53.4%, floor 48%) |
+| T14c | Slice 2c: `rest_banking.go` 21 funcs at 0% | tester | done | T14b | 21/21 covered; **53.5% -> 58.7%**; 1 new test file, 29 test funcs |
+| T15 | `cmd/ibkr` order validation + flag handling | tester | deferred | T14c | `main()` stays uncovered; meaningful paths covered; **no ci.yml edit** |
+| T16 | Re-measure and ratchet floor to final value | orchestrator | done | T14c,T15 | Floor 35% -> 53% -> 58%; measured 58.7%, 0.7pt margin |
 
 ## Defects found by T14b — resolution
 
@@ -37,7 +37,8 @@ Schema: `| ID | Task | Role | Status | Depends On | Acceptance |`
 | D3 | `pkg/ibkr/rest.go` ~723 | `ActiveCountries` returns display names while its doc claimed codes | **doc corrected** — the spec is ambiguous but `Country` is the only schema carrying both `country` and `countryCode`, and the spec uses bare `country` for codes elsewhere. Names are correct |
 | D4 | `pkg/ibkr/rest.go` ~219 | `RESTRequests.Status` had an `if` with two identical branches; exported `ExecutedAt` was never populated | **fixed** — real oneOf decode via `j.AsStatusResponse()`, populating from `dateSubmitted` (the only timestamp the spec provides for this operation). Field name kept for API compatibility and documented as a misnomer |
 | D5 | `pkg/ibkr/rest.go` 896-964 | `requestIDRaw`, `countriesRaw`, `yearsRaw`, `dividendsRaw`, `taxVoucherRaw` and their `toPublic` converters had no caller anywhere in the module | **deleted** — verified unreferenced including reflection and doc references. `float32ToStr` **kept**: it has 4 live callers in `TaxVouchers.Dividends`. Four converter-only tests deleted with the code; `TestFloat32ToStr` relocated and kept because it covers live code |
-| D6-D9 | `rest.go`, `client.TaxVoucherDTO` | Wasted token fetch; `float32` money precision; forced `year=` param; JSON-quoted download bytes | deferred — D7 needs a spec change plus regeneration (ADR 0008 territory) |
+| D6-D8 | `rest.go`, `rest_banking.go`, `client.TaxVoucherDTO` | Wasted token fetch in `TradeConfirmations.ListAvailable`; `float32` money precision in the tax-voucher DTOs; forced `year=` param in `ListTaxDocumentsAvailable` | deferred to `next-phase.md`. D7 needs a spec change plus regeneration (ADR 0008 territory) |
+| D9 | `rest.go:809-829` | Originally recorded as "Download returns JSON-quoted bytes" | **retracted** — checked during close-out. `TaxVouchers.Download` simply returns `resp.Body`, and its doc comment already says the caller interprets the content type. The observed quoting came from the mock fixture answering `application/json`. Not a code defect; the original row was imprecise |
 
 ### Rejected findings — recorded so they are not re-raised
 - **"`rest.go`'s `>= 400` guards leak the response body."** False. The generated
@@ -55,15 +56,15 @@ Schema: `| ID | Task | Role | Status | Depends On | Acceptance |`
 Pattern: sub-agents produce reliable work on the task they are briefed on, but
 **incidental findings need checking individually**. Two of three incidental
 claims in one report were false.
-| T17 | Docs sync across all project Markdown | docs | todo | T16 | No stale refs; summary table of files + actions |
-| T18 | Release Slice 2 patch to both remotes | release | todo | T17 | **Requires explicit user approval before push** |
-| T19 | Next-phase planning | planner | todo | T16 | 3-7 candidates + recommendation + open questions |
-| T20 | Close-out: report, plan actuals, index row | orchestrator | todo | T17,T19 | `report.md` final; index row updated |
+| T17 | Docs sync across all project Markdown | docs | done | T16 | Covered by the v1.1.5 release agent: CHANGELOG, ROADMAP, all 6 READMEs, version bump |
+| T18 | Release to both remotes | release | done | T17 | v1.1.4 `e5dc024` and v1.1.5 `f8ddeb4`, both pushed to GitHub and Gitee, SHVs verified |
+| T19 | Next-phase planning | planner | done | T16 | 3-7 candidates + recommendation + open questions |
+| T20 | Close-out: report, plan actuals, index row | orchestrator | doing | T17,T19 | `report.md` final; index row updated |
 
 ## Completed evidence
 
 - T7 reproducer: `go test ./internal/ -count=2` failed on every attempt pre-fix; the
-  leak was `mockgateway.(*Server).serveWS` at `stream.go:328`, spawned by
+  leak was `mockgateway.(*Server).serveWS` at `stream.go:348`, spawned by
   `net/http.(*Server).Serve`, not `WSConn`.
 - T12 note: budget was 548 statements (~8.7 pts if fully covered); actual +5.6
   pts. The gap is unexercised error branches in thin wrappers.

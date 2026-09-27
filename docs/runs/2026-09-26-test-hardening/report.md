@@ -1,6 +1,14 @@
 ﻿# Test Hardening - Report
 
-Status: in progress. Steps 0 and 1 are complete; steps 2 through 4 are open.
+Status: complete. Steps 0-4 are done, coverage slices 2a/2b/2c are done, defects
+D1-D5 and D10 are fixed, and two patch releases shipped: v1.1.4 (`e5dc024`) and
+v1.1.5 (`f8ddeb4`).
+
+Final coverage: **58.7%**, with the CI floor ratcheted from 35% to 58%.
+
+> **Correction:** an earlier version of this line reported the run as in
+> progress at 48.9% coverage. That figure was two releases stale. Both the
+> status and the number are superseded.
 
 ## What This Run Set Out To Do
 
@@ -42,6 +50,9 @@ reads 2 of the 9 design documents, so the weakness is breadth, not strictness.
 
 ## Slice 1: The Four Uncovered Managers
 
+> Per-slice figures. The run's final coverage is **58.7%**, reached after slices
+> 2a/2b/2c — see "Slice 2" below.
+
 Baseline 43.3%, result **48.9%**, so **+5.6 points** for 40 new tests. The
 estimate was 8.7 points if fully covered; thin REST wrappers never reach 100%
 because their error branches stay unexercised, so 5.6 is the honest number. All
@@ -54,10 +65,12 @@ because their error branches stay unexercised, so 5.6 is the honest number. All
 | `notifications.go` | 12 | 0% | all non-zero |
 | `trading_accounts.go` | 10 | 0% | all non-zero |
 
-The floor moved from 35% to **48%**, a 0.9-point buffer under the measured
-value. Exactly 48.9% would also be stable, since coverage is deterministic for a
-fixed suite, but the buffer absorbs platform differences between the Linux CI
-runner and the Windows host used here.
+The floor moved from 35% to **48%** at this point, a 0.9-point buffer under the
+measured value. It was later ratcheted twice more, to 53% and then to **58%**,
+tracking the later slices; the final measured value is 58.7%, so the shipped
+floor sits 0.7 points under it. A buffer is worth keeping even though coverage
+is deterministic for a fixed suite, because CI measures on Linux while this run
+measured on Windows.
 
 ### Two false starts worth recording
 
@@ -116,10 +129,10 @@ failed on every attempt. `-count=1` passed. The leaked goroutine was not
 `WSConn` at all:
 
     mockgateway.(*Server).serveWS
-      internal/mockgateway/stream.go:328
+      internal/mockgateway/stream.go:348
     created by net/http.(*Server).Serve
 
-`serveWS` parks on `c.Read(context.Background())` (stream.go:328). That context
+`serveWS` parks on `c.Read(context.Background())` (stream.go:348). That context
 is never cancelled, and `httptest.Server.Close` does not track hijacked
 connections, so the handler outlived the server that started it. The parent
 `TestWS_Resilience` failed because a `serveWS` handler from an earlier subtest
@@ -160,23 +173,65 @@ Both were hit in this run's first pass and are recorded in `plan.md`:
   `go tool cover -func` exactly. Any coverage number used for planning must
   reproduce the tool's own total.
 
+## Slice 2: The Three Remaining Large Surfaces
+
+| Slice | File | Targets | Coverage |
+|---|---|---|---|
+| 2a | `rest_accounts.go` | 7 functions at 0% | 48.9% -> 50.0% |
+| 2b | `rest.go` | 24 functions at 0% | 50.2% -> 53.4% |
+| 2c | `rest_banking.go` | 21 functions at 0% | 53.5% -> **58.7%** |
+
+No function in any of the three files remains at 0%. No route or fixture had to
+be added: every operation these managers call was already served by the mock
+gateway. The total went from 43.3% to 58.7%, and the floor from 35% to 58%.
+
+## Defects Found and Fixed
+
+Testing surfaced seven production defects. None were in the original plan; all
+were fixed and shipped rather than recorded and deferred, because each was
+either silent data loss or a lie told to the caller.
+
+| Shipped in | Defect | Effect |
+|---|---|---|
+| v1.1.4 | `UpdateTasks` tagged a `bool` with `omitempty` | `IsCompleted: false` was dropped from a `PATCH`; "decline a task" was inexpressible |
+| v1.1.4 | `internal.Timeout` deferred `cancel()` | Request context cancelled before the body was read, so **no connection was ever reused**: 24 sequential calls opened 24 connections |
+| v1.1.4 | Logout response body never drained or closed | One connection dropped per `Client.Close()`. Closing without draining is also insufficient — `net/http` still discards it |
+| v1.1.5 | `wrapOp` re-wrapped an already-typed `*Error` | `Code` and `HTTPStatus` came back empty/zero on every `>= 400` guard, breaking the documented `errors.As` idiom |
+| v1.1.5 | `instructionSetId` rendered through a 32-bit float | IDs above 2^24 truncated; the spec's own example `1988905739` returned as `1988905700`, off by 39, on a banking acknowledgement |
+| v1.1.5 | `RESTRequests.Status` had a dead branch | `ExecutedAt` was never populated; now filled from `dateSubmitted` |
+| v1.1.5 | Five dead response types and their converters | ~70 statements with no caller anywhere in the module |
+
+Two documentation mismatches were also corrected: `TradeConfirmationRequest.Gzip`
+is not sent (the upstream schema has no such property), and `ActiveCountries`
+returns display names rather than the codes its comment claimed.
+
 ## Verification
 
 - `scripts/check_links.py` - all local markdown links resolve
 - `scripts/check_i18n.py` - 6 languages consistent
-- Coverage total cross-checked against `go tool cover -func`
+- `scripts/check_money.py` - OK
+- `scripts/check_spec_version.py` - OK, no drift
+- Coverage total cross-checked against `go tool cover -func` after every slice
 - `go build ./...`, `go vet ./...`, `gofmt -s -l .` - clean
 - `go test ./...` - pass
 - `go test -race ./internal/... ./pkg/ibkr/...` - pass, no data races
-- `go test ./internal/ -count=2` - the reproducer, pass (failed before the fix)
-- `go test ./internal/ -count=3` - pass
-- `go test ./pkg/ibkr/ -count=2` - pass
+- `go test ./internal/ -count=2` - the leak reproducer, pass (failed before the fix)
+- `go test ./internal/ -count=3` and `go test ./pkg/ibkr/ -count=3` - pass, goleak `TestMain` stable
 - `TestWaitForGoroutinesToSettle_*` - prove the settle helper reports a real
   leak, returns immediately when clean, and tolerates a slow shutdown
+- Connection reuse measured before and after the `Timeout` fix: 24/24 -> 0/24
+- `instructionSetId` precision reproduced independently outside the test suite
+  before the fix was accepted
 
 ## Known Limitations
 
-- The mutating model endpoints remain unverified against a real gateway.
+- The mutating model endpoints remain unverified against a real gateway. The
+  mock cannot route `SubmitModelPortfolioOrder` separately because both
+  operations send byte-identical payloads, so no body predicate can
+  discriminate.
 - `cmd/ibkr` and `cmd/ibkr-mock-gateway` contribute 318 uncovered statements to
   the denominator. They stay in `-coverpkg` by decision; only their testable
-  parts will be covered, and `main()` will remain uncovered.
+  parts are worth covering, and `main()` is not.
+- `check_design` still verifies only 2 of the 9 design documents.
+- Several further defects were found and deliberately deferred; they are listed
+  with file:line evidence in `todos.md` and triaged in `next-phase.md`.
