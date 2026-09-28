@@ -5,6 +5,47 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.18] - 2026-09-27
+
+The account summary, positions and ledger decode their money fields as `json.Number`
+precisely so decimal digits survive - and no test used a value that would notice if
+they stopped.
+
+### Fixed
+
+- **39 `json.Number` money fields had no test proving they keep their digits.**
+  `accountSummaryRaw` declares 15 monetary fields as `json.Number`, with the comment
+  "decodes monetary fields as json.Number to preserve decimal precision", and
+  `portfolio.go` declares 17 more. `toPublic` then calls `.String()` on each, so a
+  caller receives the gateway's exact digits - or, under a `float32` regression, a
+  rounded string.
+
+  Every existing assertion on those fields uses a value `float32` renders unchanged,
+  so those tests pass whether the field is a float or a `json.Number`. This is the
+  same blind spot that hid real money bugs in 1.1.9 (the tax-voucher response) and
+  1.1.13 (the banking request): an assertion that cannot detect rounding while
+  looking like a precision test.
+
+  `money_precision_test.go` now covers all three responses with values above 2^24,
+  where a 24-bit mantissa rounds to a whole unit - the account summary including
+  both nested `cashBalances` values, six position fields, and the currency-keyed
+  ledger. Five mutations, each emulating a `float32` decode in the production
+  conversion, are caught on the assertion: `12345678.91` arrives as `12345679`,
+  `16777217.89` as `16777218`, `33554432.55` as `33554432`, `67108865.13` as
+  `67108864`.
+
+- **A precision test should check detectability, not representability.** A value can
+  be lossy in binary and still render back as its own literal under Go's
+  shortest-round-trip formatting - `0.007` is one, and no string comparison could
+  ever notice it had been through a `float32`. The new tests reject any value that
+  survives the `float32` round trip unchanged, so they cannot silently stop proving
+  anything.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-money-precision/`](./docs/runs/2026-09-27-money-precision/).
+
 ## [1.1.17] - 2026-09-27
 
 The fault injection the SDK's retry tests depend on was almost entirely untested,
