@@ -185,6 +185,11 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 		opts.DialWS = func(ctx context.Context, wsURL string, httpClient *http.Client) (*websocket.Conn, error) {
 			dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
+			// The response is discarded because gorilla/websocket already closes
+			// it: on a failed dial it is closed before returning, and on success
+			// the 101 body is consumed and closed as part of the handshake.
+			//
+			//nolint:bodyclose // handled inside websocket.Dial; closing it here would be wrong.
 			conn, _, err := websocket.Dial(dctx, wsURL, &websocket.DialOptions{HTTPClient: httpClient})
 			return conn, err
 		}
@@ -607,13 +612,16 @@ func parseSystemFrame(m map[string]json.RawMessage) *WSSystemFrame {
 			frame.Status = status
 		}
 		if t, ok := m["topic"]; ok {
-			json.Unmarshal(t, &frame.Topic)
+			// A non-string topic leaves Topic empty, matching how every other
+			// field above is decoded: a malformed optional field is skipped, not
+			// fatal to the frame.
+			_ = json.Unmarshal(t, &frame.Topic)
 		}
 		return &frame
 	case m["ntf"] != nil:
 		frame.Type = "ntf"
 		if t, ok := m["topic"]; ok {
-			json.Unmarshal(t, &frame.Topic)
+			_ = json.Unmarshal(t, &frame.Topic)
 		}
 		frame.Payload = m["ntf"]
 		return &frame
@@ -756,6 +764,8 @@ func backoffDelay(attempt int, base, max time.Duration) time.Duration {
 	if d > max {
 		d = max
 	}
+	// #nosec G404 -- reconnect backoff jitter, not a security-relevant random
+	// value; see the equivalent annotation in retry.go.
 	return time.Duration(rand.Int63n(int64(d) + 1))
 }
 

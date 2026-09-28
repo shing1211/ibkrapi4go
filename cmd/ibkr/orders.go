@@ -30,7 +30,7 @@ func runOrders() error {
 		os.Args = append(os.Args[:2], args[1:]...)
 		return runOrdersCancel()
 	case "-h", "--help", "help":
-		fmt.Fprintf(os.Stderr, `Usage: ibkr orders <subcommand> [flags]
+		_, _ = fmt.Fprintf(os.Stderr, `Usage: ibkr orders <subcommand> [flags]
 
 Subcommands:
   list      List open orders
@@ -51,13 +51,13 @@ func runOrdersList() error {
 	defer cli.Close()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	orders, err := cli.Trade().OpenOrders(ctx())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: list orders: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: list orders: %v\n", err)
 		return err
 	}
 
@@ -67,11 +67,11 @@ func runOrdersList() error {
 	}
 
 	w := os.Stdout
-	fmt.Fprintf(w, "%-12s %-10s %-10s %-6s %-8s %-8s %-12s %-12s %-8s %-6s\n",
+	_, _ = fmt.Fprintf(w, "%-12s %-10s %-10s %-6s %-8s %-8s %-12s %-12s %-8s %-6s\n",
 		"ORDER_ID", "ACCOUNT", "CONID", "SIDE", "TYPE", "SIZE", "PRICE", "AVG_PRICE", "STATUS", "TIF")
-	fmt.Fprintf(w, "%s\n", strings.Repeat("-", 112))
+	_, _ = fmt.Fprintf(w, "%s\n", strings.Repeat("-", 112))
 	for _, o := range orders {
-		fmt.Fprintf(w, "%-12s %-10s %-10d %-6s %-8s %-8s %-12s %-12s %-8s %-6s\n",
+		_, _ = fmt.Fprintf(w, "%-12s %-10s %-10d %-6s %-8s %-8s %-12s %-12s %-8s %-6s\n",
 			o.OrderID, o.AccountID, o.ConID, o.Side, o.OrderType,
 			o.Size, o.Price, o.AveragePrice, o.Status, o.TimeInForce)
 	}
@@ -130,7 +130,7 @@ func runOrdersSubmit() error {
 				i++
 			}
 		case "-h", "--help":
-			fmt.Fprintf(os.Stderr, `Usage: ibkr orders submit [flags]
+			_, _ = fmt.Fprintf(os.Stderr, `Usage: ibkr orders submit [flags]
 
 Flags:
   -conid    INT     Contract ID (required)
@@ -169,7 +169,7 @@ Flags:
 	defer cli.Close()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
@@ -193,7 +193,7 @@ Flags:
 
 	result, err := cli.Trade().Submit(ctx(), acct, req)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: submit order: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: submit order: %v\n", err)
 		return err
 	}
 
@@ -215,7 +215,7 @@ func runOrdersCancel() error {
 				i++
 			}
 		case "-h", "--help":
-			fmt.Fprintf(os.Stderr, "Usage: ibkr orders cancel -orderid ORDER_ID\n\nCancel an open order.\n")
+			_, _ = fmt.Fprintf(os.Stderr, "Usage: ibkr orders cancel -orderid ORDER_ID\n\nCancel an open order.\n")
 			return nil
 		}
 	}
@@ -236,12 +236,12 @@ func runOrdersCancel() error {
 	defer cli.Close()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	if err := cli.Trade().Cancel(ctx(), acct, orderID); err != nil {
-		fmt.Fprintf(os.Stderr, "error: cancel order: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: cancel order: %v\n", err)
 		return err
 	}
 

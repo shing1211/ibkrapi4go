@@ -5,32 +5,34 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"io"
 )
 
-func runCompletion() error {
-	args := os.Args[2:]
+// runCompletion takes the arguments after "completion" rather than reading
+// os.Args, so the shell it is asked for comes from the caller and a test harness's
+// own flags cannot be mistaken for a shell name.
+func runCompletion(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: ibkr completion <bash|zsh|fish>\n")
+		_, _ = fmt.Fprintf(stderr, "Usage: ibkr completion <bash|zsh|fish>\n")
 		return nil
 	}
 
 	shell := args[0]
 	switch shell {
 	case "bash":
-		printBashCompletion()
+		printBashCompletion(stdout)
 	case "zsh":
-		printZshCompletion()
+		printZshCompletion(stdout)
 	case "fish":
-		printFishCompletion()
+		printFishCompletion(stdout)
 	default:
 		return fmt.Errorf("unsupported shell %q (want bash, zsh, or fish)", shell)
 	}
 	return nil
 }
 
-func printBashCompletion() {
-	fmt.Println(`# ibkr bash completion
+func printBashCompletion(w io.Writer) {
+	_, _ = fmt.Fprintln(w, `# ibkr bash completion
 _ibkr() {
     local cur prev commands subcommands
     COMPREPLY=()
@@ -80,8 +82,8 @@ _ibkr() {
 complete -F _ibkr ibkr`)
 }
 
-func printZshCompletion() {
-	fmt.Println(`#compdef ibkr
+func printZshCompletion(w io.Writer) {
+	_, _ = fmt.Fprintln(w, `#compdef ibkr
 
 _ibkr() {
     local -a commands
@@ -165,8 +167,8 @@ _ibkr() {
 _ibkr "$@"`)
 }
 
-func printFishCompletion() {
-	fmt.Println(`# ibkr fish completion
+func printFishCompletion(w io.Writer) {
+	_, _ = fmt.Fprintln(w, `# ibkr fish completion
 
 function __ibkr_commands
     echo -e "accounts\tList brokerage accounts"

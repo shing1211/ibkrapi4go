@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/shing1211/ibkrapi4go/client"
@@ -682,7 +683,7 @@ func (m *RESTTaxVouchers) CreateRequests(ctx context.Context, csvContent string)
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return "", err
 	}
-	resp, err := m.surface.generated.CreateTaxVoucherRequestsWithTextBodyWithResponse(ctx, nil, client.CreateTaxVoucherRequestsTextRequestBody(csvContent))
+	resp, err := m.surface.generated.CreateTaxVoucherRequestsWithTextBodyWithResponse(ctx, nil, csvContent)
 	if err != nil {
 		e := wrapOp(op, err)
 		internal.LogError(m.surface.owner.cfg.logger, e)
@@ -900,6 +901,15 @@ func float32ToStr(p *float32) string {
 		return ""
 	}
 	return strconv.FormatFloat(float64(*p), 'f', -1, 32)
+}
+
+// escapeQuotes applies the escaping RFC 7578 requires inside a multipart
+// Content-Disposition filename parameter: a backslash or a double quote would
+// otherwise terminate the quoted string early. mime/multipart's own
+// CreateFormFile does this for the filenames it is given; the hand-built part in
+// SubmitDocument has to do it itself.
+func escapeQuotes(s string) string {
+	return strings.NewReplacer("\\", "\\\\", `"`, "\\\"").Replace(s)
 }
 
 // jsonNumberToStr renders a money field the gateway sent as a JSON number.

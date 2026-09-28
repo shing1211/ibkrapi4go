@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/shing1211/ibkrapi4go/client"
 )
@@ -215,9 +214,4 @@ func (m *AlertManager) AckServerPrompt(ctx context.Context, orderID int64) error
 	}
 	resp.Body.Close()
 	return nil
-}
-
-// alertIDToString converts an alert ID to string.
-func alertIDToString(id int64) string {
-	return strconv.FormatInt(id, 10)
 }

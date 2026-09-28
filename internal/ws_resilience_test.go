@@ -128,7 +128,10 @@ func TestWS_HeartbeatTimeout(t *testing.T) {
 			hasErr := len(sink.errs) > 0
 			var errWS error
 			for _, e := range sink.errs {
-				if e == ErrWSDisconnected || e == ErrWSReconnected {
+				// errors.Is, not ==: the websocket layer wraps its errors, so a
+				// direct comparison silently never matches and this test stops
+				// detecting a disconnect at all.
+				if errors.Is(e, ErrWSDisconnected) || errors.Is(e, ErrWSReconnected) {
 					errWS = e
 					break
 				}
@@ -471,10 +474,8 @@ func TestWS_ReconnectStorm_ThreeDrop(t *testing.T) {
 	// frame, so the client must reconnect `drops` times before reaching a
 	// connection that survives.
 	deadline := time.After(15 * time.Second)
-	for {
-		if srv.Stream().AcceptedConnections() >= drops+1 {
-			break
-		}
+	for srv.Stream().AcceptedConnections() < drops+1 {
+
 		select {
 		case <-deadline:
 			t.Fatalf("accepted connections = %d, want at least %d after %d drops",

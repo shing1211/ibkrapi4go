@@ -5,6 +5,77 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.9] - 2026-09-27
+
+The lint gate now runs, and it found five real defects that nothing else was
+watching for.
+
+### Fixed
+
+- **`SubmitDocument` discarded its `mimeType` argument.** The signature accepted a
+  MIME type, defaulted it to `application/pdf`, and then built the multipart part
+  with `CreateFormFile`, which hardcodes `application/octet-stream`. The caller's
+  argument never reached the wire. The part is now constructed explicitly, with
+  the filename escaped per RFC 7578.
+- **The default response size limit was never applied.** `internal/transport.go`
+  declared `defaultMaxResponseBytes` and applied the cap only when
+  `MaxResponseBytes` was explicitly configured, leaving the constant unreferenced
+  and every default-configured client with no limit at all on the response body it
+  buffers. The cap is now always applied.
+- **Exceeding that limit failed silently.** `maxBytesReader` returned a short read
+  and its own documentation claimed the truncation was "detected by the caller and
+  surfaced as a typed error" - no caller did that anywhere, so an oversized
+  response decoded as corrupt JSON with no indication why. It now returns the new
+  `internal.ErrResponseTooLarge`, and an exact fit still succeeds.
+- **A panic in a subscription goroutine was swallowed.** The recover block in
+  `pkg/ibkr/ws.go` was empty, under a comment reading "sink is already gone; log
+  and exit"; it did neither. A panic there would have made a live subscription go
+  quietly quiet. It now logs through the client logger and closes the
+  subscription.
+- **A WebSocket resilience test was not testing anything.** It compared errors with
+  `==` against `ErrWSDisconnected`, but the WebSocket layer wraps its errors, so
+  the comparison could never match and the test could not detect the disconnect it
+  exists to detect. Now uses `errors.Is`.
+
+### Changed
+
+- **`.golangci.yml` was rejected by the linter and had never analysed any code.**
+  It declared `version: "2"` but used the v1 schema, so `linters-settings` and the
+  `issues.exclude-*` keys were all invalid. The job passed by never running. The
+  config is migrated to the v2 schema, revive's `exported` rule is configured
+  correctly (it had also been failing to set up and silently reporting nothing),
+  and every remaining exclusion carries a comment explaining its reason. The gate
+  now reports **0 issues** over a true finding count of 192.
+- 32 exported symbols gained doc comments; 9 redundant conversions, 33 unchecked
+  writes and 2 ignored `json.Unmarshal` calls were made explicit; 4 unused wire
+  structs, 2 unused helpers and 1 unused test helper were deleted.
+- `examples/models` uses `ModelsPager` instead of the deprecated `AllModels`.
+- The mock gateway sets `tls.Config.MinVersion` explicitly instead of relying on
+  the zero value.
+
+### Added
+
+- **Tests for `cmd/ibkr`, which had none.** `run`, `parseGlobalFlags` and
+  `runCompletion` now take their arguments and output streams as parameters
+  instead of reading `os.Args`, so the dispatch table, help, version, flag
+  parsing and the generated shell completions are all reachable from a test.
+- **A design-doc checker for `docs/design/07-money-and-numbers.md`**, bringing
+  verified design documents from 8 of 9 to **9 of 9**. `check_money.py` proves no
+  exported field is a float; this check additionally requires that the four
+  `json.Number` money fields the document names are still `json.Number` in the
+  generated client, so a spec edit cannot quietly put a float back.
+- Regression tests for the response size cap: default applied without opt-in,
+  overflow reported rather than truncated, exact fit accepted, and a 101 upgrade
+  response left unwrapped so WebSocket dialing keeps working.
+- Five red cases and a control for the new money checker.
+
+### Fixed in the tooling itself
+
+- The design-checker red tests asserted on error messages containing hard-coded
+  line numbers, so adding a doc comment anywhere above a declaration broke them
+  with a misleading "failed for the wrong reason". The comparison now strips line
+  numbers from both sides.
+
 ## [1.1.8] - 2026-09-27
 
 Five wire-contract and numeric-precision defects, plus two CI gates that existed
@@ -1068,7 +1139,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.8...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.9...HEAD
+[1.1.9]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.5...v1.1.6

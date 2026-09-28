@@ -8,6 +8,8 @@ import "time"
 // WSOrderStatus is the IBKR order status string values from WebSocket frames.
 type WSOrderStatus string
 
+// Order status strings as the gateway reports them over the WebSocket
+// order-status stream.
 const (
 	WSOrderStatusPreSubmitted  WSOrderStatus = "PreSubmitted"
 	WSOrderStatusSubmitted     WSOrderStatus = "Submitted"

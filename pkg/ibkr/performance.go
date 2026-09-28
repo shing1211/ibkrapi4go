@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/shing1211/ibkrapi4go/client"
 )
@@ -180,9 +179,4 @@ func (m *PerformanceManager) Transactions(ctx context.Context, accountIDs []stri
 		})
 	}
 	return out, nil
-}
-
-// conIDToString converts a ConID to string.
-func conIDToString(c ConID) string {
-	return strconv.Itoa(int(c))
 }

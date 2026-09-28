@@ -71,7 +71,7 @@ func (m *RESTSSOSessions) CreateBrowserSession(ctx context.Context, req SSOBrows
 	}
 	resp, err := m.surface.generated.CreateSsoBrowserSessionsWithBodyWithResponse(
 		ctx,
-		&client.CreateSsoBrowserSessionsParams{Authorization: client.AuthorizationHeaderParam(auth)},
+		&client.CreateSsoBrowserSessionsParams{Authorization: auth},
 		"application/json",
 		bytes.NewReader(jsonMarshal(payload)),
 	)
@@ -124,7 +124,7 @@ func (m *RESTSSOSessions) CreateSession(ctx context.Context, req SSOSessionReque
 	}
 	resp, err := m.surface.generated.CreateSsoSessionsWithBodyWithResponse(
 		ctx,
-		&client.CreateSsoSessionsParams{Authorization: client.AuthorizationHeaderParam(auth)},
+		&client.CreateSsoSessionsParams{Authorization: auth},
 		"application/json",
 		bytes.NewReader(jsonMarshal(payload)),
 	)

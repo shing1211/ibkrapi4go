@@ -8,9 +8,15 @@ import (
 	"sync"
 )
 
+// OrderState is the SDK's normalised order lifecycle state, collapsed from
+// the gateway's per-broker status strings.
 type OrderState int
 
+// Normalised order states. The zero value is OrderStateUnknown so an
+// unrecognised gateway status is visible rather than silently terminal.
 const (
+	// OrderStateUnknown is the zero value: the gateway sent a status this
+	// SDK version does not recognise.
 	OrderStateUnknown OrderState = iota
 	OrderStateSubmitted
 	OrderStateAccepted
@@ -51,14 +57,26 @@ func (s OrderState) String() string {
 	}
 }
 
+// IsTerminal reports whether no further transition is possible: the order is
+// filled, cancelled, or inactive.
 func (s OrderState) IsTerminal() bool {
 	return s == OrderStateFilled || s == OrderStateCancelled || s == OrderStateRejected || s == OrderStateExpired || s == OrderStateApiCanceled
 }
 
+// IsActive reports whether the order is still working at the exchange.
 func (s OrderState) IsActive() bool {
 	return s == OrderStateAccepted || s == OrderStatePartiallyFilled || s == OrderStatePendingCancel || s == OrderStatePendingModify
 }
 
+// TransitionError describes an attempted state change that the order state
+// machine does not permit.
+//
+// The name does not follow the ErrFoo convention staticcheck prefers (ST1012).
+// It is exported and has been part of the public API since it was introduced, so
+// renaming it to ErrTransition would be a breaking change; the suppression is
+// deliberate and this comment is the reason.
+//
+//nolint:staticcheck // ST1012: renaming would break the published API.
 var TransitionError = errors.New("ibkr: order: invalid state transition")
 
 type orderRecord struct {
@@ -106,6 +124,9 @@ func (r *cOIDRegistry) List() []*orderRecord {
 	return out
 }
 
+// AdvanceTo moves an order to the next state, returning an error describing
+// the illegal transition if one is not allowed. It is the single entry point
+// for state changes, so the transition table cannot be bypassed.
 func AdvanceTo(oldState, newState OrderState) error {
 	valid := map[OrderState][]OrderState{
 		OrderStateSubmitted:       {OrderStateAccepted, OrderStateRejected, OrderStateExpired},

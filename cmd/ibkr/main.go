@@ -20,6 +20,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -30,31 +31,35 @@ import (
 var Version = "dev"
 
 func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "ibkr: %v\n", err)
+	if err := run(os.Args, os.Stdout, os.Stderr); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "ibkr: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	if len(os.Args) < 2 {
-		printUsage()
+// run is the testable entry point. It takes its arguments and output streams as
+// parameters rather than reading os.Args and os.Stdout directly, so every command
+// in the dispatch table below can be exercised from a test without spawning a
+// process or mutating global state.
+func run(args []string, stdout, stderr io.Writer) error {
+	if len(args) < 2 {
+		printUsage(stderr)
 		return nil
 	}
 
-	cmd := os.Args[1]
+	cmd := args[1]
 	switch cmd {
 	case "--help", "-h", "help":
-		if len(os.Args) > 2 {
-			return printSubHelp(os.Args[2])
+		if len(args) > 2 {
+			return printSubHelp(stderr, args[2])
 		}
-		printUsage()
+		printUsage(stderr)
 		return nil
 	case "--version", "-v", "version":
-		fmt.Printf("ibkr %s\n", Version)
+		_, _ = fmt.Fprintf(stdout, "ibkr %s\n", Version)
 		return nil
 	case "completion":
-		return runCompletion()
+		return runCompletion(args[2:], stdout, stderr)
 	case "config":
 		return runConfig()
 	case "accounts":
@@ -68,15 +73,15 @@ func run() error {
 	case "portfolio":
 		return runPortfolio()
 	default:
-		fmt.Fprintf(os.Stderr, "ibkr: unknown command %q\n\n", cmd)
-		printUsage()
+		_, _ = fmt.Fprintf(stderr, "ibkr: unknown command %q\n\n", cmd)
+		printUsage(stderr)
 		return fmt.Errorf("unknown command %q", cmd)
 	}
 }
 
 // newClient creates an ibkr.Client from global flags and config.
 func newClient() (*ibkr.Client, error) {
-	gateway, rest, account, insecure, _ := parseGlobalFlags()
+	gateway, rest, account, insecure, _ := parseGlobalFlags(os.Args[1:])
 
 	cfg, err := loadConfig()
 	if err != nil {
@@ -102,11 +107,10 @@ func newClient() (*ibkr.Client, error) {
 	return ibkr.NewClient(opts...)
 }
 
-// globalFlagSet parses os.Args to extract global flags and the command index.
-// Returns gateway, rest, account, insecure, and the index of the first
-// non-global-flag arg.
-func parseGlobalFlags() (gateway, rest, account string, insecure bool, cmdIdx int) {
-	args := os.Args[1:]
+// parseGlobalFlags extracts the global flags from args and returns the index of
+// the first non-flag argument. It takes the arguments as a parameter, like run,
+// so the parsing is reachable from a test without touching os.Args.
+func parseGlobalFlags(args []string) (gateway, rest, account string, insecure bool, cmdIdx int) {
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "-gateway", "--gateway":
@@ -155,8 +159,8 @@ func ctx() context.Context {
 	return c
 }
 
-func printUsage() {
-	fmt.Fprintf(os.Stderr, `ibkr — Interactive Brokers CLI tool
+func printUsage(w io.Writer) {
+	_, _ = fmt.Fprintf(w, `ibkr — Interactive Brokers CLI tool
 
 Usage:
   ibkr <command> [subcommand] [flags]
@@ -189,14 +193,14 @@ Examples:
 `)
 }
 
-func printSubHelp(sub string) error {
+func printSubHelp(w io.Writer, sub string) error {
 	switch sub {
 	case "accounts":
-		fmt.Fprintf(os.Stderr, "Usage: ibkr accounts\n\nList all brokerage accounts accessible in the session.\n")
+		_, _ = fmt.Fprintf(w, "Usage: ibkr accounts\n\nList all brokerage accounts accessible in the session.\n")
 	case "positions":
-		fmt.Fprintf(os.Stderr, "Usage: ibkr positions [-account ACCOUNT]\n\nList positions for an account.\n")
+		_, _ = fmt.Fprintf(w, "Usage: ibkr positions [-account ACCOUNT]\n\nList positions for an account.\n")
 	case "orders":
-		fmt.Fprintf(os.Stderr, `Usage: ibkr orders <subcommand> [flags]
+		_, _ = fmt.Fprintf(w, `Usage: ibkr orders <subcommand> [flags]
 
 Subcommands:
   list      List open orders
@@ -215,7 +219,7 @@ Submit flags:
   -coid     ID      Client order ID
 `)
 	case "stream":
-		fmt.Fprintf(os.Stderr, `Usage: ibkr stream -conid CONID [-fields FIELDS]
+		_, _ = fmt.Fprintf(w, `Usage: ibkr stream -conid CONID [-fields FIELDS]
 
 Subscribe to a market data snapshot for a contract.
 
@@ -226,7 +230,7 @@ Flags:
                        7295(open), 70(high), 71(low), 7296(close), 82(change), 83(change%%), 55(symbol)
 `)
 	case "portfolio":
-		fmt.Fprintf(os.Stderr, `Usage: ibkr portfolio <subcommand> [-account ACCOUNT]
+		_, _ = fmt.Fprintf(w, `Usage: ibkr portfolio <subcommand> [-account ACCOUNT]
 
 Subcommands:
   summary     Portfolio summary
@@ -234,7 +238,7 @@ Subcommands:
   allocation  Asset allocation breakdown
 `)
 	case "config":
-		fmt.Fprintf(os.Stderr, `Usage: ibkr config <subcommand>
+		_, _ = fmt.Fprintf(w, `Usage: ibkr config <subcommand>
 
 Subcommands:
   show        Display current configuration

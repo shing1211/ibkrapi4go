@@ -27,7 +27,7 @@ func runPortfolio() error {
 		os.Args = append(os.Args[:2], args[1:]...)
 		return runPortfolioAllocation()
 	case "-h", "--help", "help":
-		fmt.Fprintf(os.Stderr, `Usage: ibkr portfolio <subcommand> [-account ACCOUNT]
+		_, _ = fmt.Fprintf(os.Stderr, `Usage: ibkr portfolio <subcommand> [-account ACCOUNT]
 
 Subcommands:
   summary     Portfolio summary
@@ -74,19 +74,19 @@ func runPortfolioSummary() error {
 	defer cli.Close()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	summary, err := cli.Portfolio().Summary(ctx(), acct)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: portfolio summary: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: portfolio summary: %v\n", err)
 		return err
 	}
 
 	w := os.Stdout
-	fmt.Fprintf(w, "Portfolio Summary — %s\n", acct)
-	fmt.Fprintf(w, "%s\n", strings.Repeat("-", 60))
+	_, _ = fmt.Fprintf(w, "Portfolio Summary — %s\n", acct)
+	_, _ = fmt.Fprintf(w, "%s\n", strings.Repeat("-", 60))
 	for k, v := range summary {
 		val := v.Amount
 		if val == "" {
@@ -95,7 +95,7 @@ func runPortfolioSummary() error {
 		if v.Currency != "" {
 			val += " " + v.Currency
 		}
-		fmt.Fprintf(w, "  %-30s %s\n", k, val)
+		_, _ = fmt.Fprintf(w, "  %-30s %s\n", k, val)
 	}
 	return nil
 }
@@ -117,13 +117,13 @@ func runPortfolioLedger() error {
 	defer cli.Close()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	ledger, err := cli.Portfolio().Ledger(ctx(), acct)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: portfolio ledger: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: portfolio ledger: %v\n", err)
 		return err
 	}
 
@@ -149,13 +149,13 @@ func runPortfolioAllocation() error {
 	defer cli.Close()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	alloc, err := cli.Portfolio().Allocation(ctx(), acct)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: portfolio allocation: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: portfolio allocation: %v\n", err)
 		return err
 	}
 

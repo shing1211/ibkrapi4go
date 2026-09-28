@@ -69,6 +69,9 @@ func (p RetryPolicy) delayFor(attempt int, resp *http.Response) time.Duration {
 		d = p.MaxDelay
 	}
 	if p.Jitter && d > 0 {
+		// #nosec G404 -- this is backoff jitter, not a security-relevant random
+		// value. A cryptographic source would add contention for no benefit, and
+		// the distribution only needs to spread concurrent retries apart.
 		d = time.Duration(rand.Int63n(int64(d) + 1))
 	}
 	return d

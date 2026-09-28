@@ -47,33 +47,6 @@ type externalAssetTransferJSON struct {
 	InstructionType string             `json:"instructionType"`
 }
 
-// depositInstructionJSON is the wire shape for deposit fund instructions.
-// Amount is a string to preserve precision (ADR 0008).
-type depositInstructionJSON struct {
-	AccountId             string  `json:"accountId"`
-	Amount                string  `json:"amount"`
-	BankInstructionMethod string  `json:"bankInstructionMethod"`
-	BankInstructionName   *string `json:"bankInstructionName,omitempty"`
-	ClientInstructionId   int     `json:"clientInstructionId"`
-	Currency              string  `json:"currency"`
-}
-
-// withdrawInstructionJSON is the wire shape for withdrawal fund instructions.
-// Amount is a string to preserve precision (ADR 0008).
-type withdrawInstructionJSON struct {
-	AccountId             string `json:"accountId"`
-	Amount                string `json:"amount"`
-	BankInstructionMethod string `json:"bankInstructionMethod"`
-	BankInstructionName   string `json:"bankInstructionName"`
-	ClientInstructionId   int    `json:"clientInstructionId"`
-	Currency              string `json:"currency"`
-}
-
-type cashTransferJSON struct {
-	Instruction     any    `json:"instruction"`
-	InstructionType string `json:"instructionType"`
-}
-
 // internalTransferJSON is the wire shape for internal asset transfers.
 // TransferQuantity and TransferPrice are strings (ADR 0008).
 type internalTransferJSON struct {
@@ -90,13 +63,6 @@ type internalTransferJSON struct {
 type internalAssetTransferJSON struct {
 	Instruction     internalTransferJSON `json:"instruction"`
 	InstructionType string               `json:"instructionType"`
-}
-
-// withdrawableFundsResultJSON decodes the withdrawable funds response.
-// CashBalance is kept as json.Number to avoid float32 precision loss (ADR 0008).
-type withdrawableFundsResultJSON struct {
-	CashBalance json.Number `json:"cashBalance"`
-	Currency    string      `json:"currency"`
 }
 
 // RESTBanking is the sub-manager for all IBKR banking REST endpoints,

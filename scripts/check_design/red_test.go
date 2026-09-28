@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -46,6 +47,7 @@ var scratchFiles = []string{
 	wrapDoc,
 	streamDoc,
 	concDoc,
+	moneyDoc,
 	"internal",
 	"pkg/ibkr",
 	"client",
@@ -190,6 +192,20 @@ type redCase struct {
 	edits []edit
 	want  string
 }
+
+// stripLineNumbers removes the `:NNN` suffix the checkers append to a file
+// reference, so a red case can assert on the substance of a message rather than
+// on an incidental line number.
+//
+// Every checker's diagnostics cite `path:line`, which means any edit above a
+// declaration - adding a doc comment, say - shifted every pinned line number and
+// failed these cases with "failed for the wrong reason", even though the checker
+// had in fact detected the mutation. The line number carries no meaning for the
+// assertion: what matters is that the checker named the right file, symbol and
+// problem.
+var lineNumberRE = regexp.MustCompile(`:\d+`)
+
+func stripLineNumbers(s string) string { return lineNumberRE.ReplaceAllString(s, ":") }
 
 // greenCase is a tree that must pass, which is what stops a change to the
 // checker from passing by breaking every case at once.

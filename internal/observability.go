@@ -119,6 +119,8 @@ func (nopTelemetry) OnWSUnsubscribe(context.Context, WSSubInfo)                 
 func (nopTelemetry) OnOrderSubmit(context.Context, OrderEventInfo)                        {}
 func (nopTelemetry) OnOrderUpdate(context.Context, OrderEventInfo)                        {}
 
+// NopTelemetry returns a Telemetry sink that discards every event. It is the
+// default when the caller configures no exporter.
 func NopTelemetry() Telemetry { return nopTelemetry{} }
 
 // Logging returns a middleware that logs each request (method, normalized path,

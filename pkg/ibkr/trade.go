@@ -70,6 +70,8 @@ func (r OrderRequest) toJSON() orderTicketJSON {
 	return t
 }
 
+// Validate checks an order request for the combinations the gateway rejects,
+// such as a limit price on a market order, before it is sent.
 func (r OrderRequest) Validate() error {
 	if r.ConID == 0 {
 		return fmt.Errorf("ibkr: OrderRequest.ConID is required")

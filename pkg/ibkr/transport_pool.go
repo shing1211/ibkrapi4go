@@ -104,8 +104,7 @@ func NewTransportPool(opts ...Option) (*TransportPool, error) {
 		transportTimeout = cfg.endpointTimeout
 	}
 
-	var session *internal.Session
-	session = internal.NewSession(internal.SessionConfig{
+	var session = internal.NewSession(internal.SessionConfig{
 		ServerURL:      cfg.gatewayURL,
 		TickleInterval: cfg.tickleInterval,
 		RequestTimeout: cfg.requestTimeout,

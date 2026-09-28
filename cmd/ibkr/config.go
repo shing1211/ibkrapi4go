@@ -81,7 +81,7 @@ func runConfig() error {
 		os.Args = append(os.Args[:2], args[1:]...)
 		return runConfigSet()
 	case "-h", "--help", "help":
-		fmt.Fprintf(os.Stderr, `Usage: ibkr config <subcommand>
+		_, _ = fmt.Fprintf(os.Stderr, `Usage: ibkr config <subcommand>
 
 Subcommands:
   show        Display current configuration
@@ -107,10 +107,10 @@ func runConfigShow() error {
 	}
 
 	w := os.Stdout
-	fmt.Fprintf(w, "Config file: %s\n\n", configPath())
-	fmt.Fprintf(w, "  gateway:     %s\n", cfg.GatewayURL)
-	fmt.Fprintf(w, "  rest:        %s\n", cfg.RestGatewayURL)
-	fmt.Fprintf(w, "  account:     %s\n", cfg.AccountID)
+	_, _ = fmt.Fprintf(w, "Config file: %s\n\n", configPath())
+	_, _ = fmt.Fprintf(w, "  gateway:     %s\n", cfg.GatewayURL)
+	_, _ = fmt.Fprintf(w, "  rest:        %s\n", cfg.RestGatewayURL)
+	_, _ = fmt.Fprintf(w, "  account:     %s\n", cfg.AccountID)
 	return nil
 }
 

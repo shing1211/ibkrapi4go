@@ -34,6 +34,7 @@ type Update struct {
 // SystemUpdateType classifies a system (non-market-data) frame.
 type SystemUpdateType string
 
+// System update types delivered on a subscription's system-updates channel.
 const (
 	SystemUpdateStatus       SystemUpdateType = "sts"
 	SystemUpdateNotification SystemUpdateType = "ntf"
@@ -361,7 +362,16 @@ func (m *MarketDataManager) Subscribe(ctx context.Context, conids []ConID, field
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				// sink is already gone; log and exit
+				// The subscription goroutine outlives the call, so a panic here
+				// would otherwise be swallowed and the subscription would go
+				// silently quiet. The previous version recovered and discarded,
+				// despite a comment claiming it logged.
+				internal.LogError(m.client.cfg.logger, &Error{
+					Op:      op,
+					Code:    "panic",
+					Message: fmt.Sprintf("recovered panic in subscription for conids %v: %v", conids, r),
+				})
+				_ = sub.Close()
 			}
 		}()
 		select {

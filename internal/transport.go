@@ -69,9 +69,15 @@ func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundT
 	if cfg.Timeout > 0 {
 		ms = append(ms, Timeout(cfg.Timeout))
 	}
-	if cfg.MaxResponseBytes > 0 {
-		ms = append(ms, MaxBytes(cfg.MaxResponseBytes))
+	// The cap is always applied, not only when the caller opts in. It used to be
+	// gated on `cfg.MaxResponseBytes > 0`, which left defaultMaxResponseBytes
+	// unreferenced and every default-configured client with no limit at all on
+	// the response body it buffers.
+	maxBytes := cfg.MaxResponseBytes
+	if maxBytes <= 0 {
+		maxBytes = defaultMaxResponseBytes
 	}
+	ms = append(ms, MaxBytes(maxBytes))
 	ms = append(ms, ErrorDecode())
 	ms = append(ms, cfg.UserMiddleware...)
 	return Chain(base, ms...)
@@ -80,6 +86,7 @@ func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundT
 // RoundTripFunc lets a plain function satisfy http.RoundTripper.
 type RoundTripFunc func(*http.Request) (*http.Response, error)
 
+// RoundTrip implements http.RoundTripper by calling f.
 func (f RoundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 // Chain builds a middleware stack on top of base. Middlewares are applied
@@ -204,19 +211,52 @@ type maxBytesReader struct {
 	lim  *io.LimitedReader
 }
 
-func (m *maxBytesReader) Read(b []byte) (int, error) { return m.lim.Read(b) }
+// Read serves up to the configured cap. When the cap is consumed and the body
+// still has data, it reports ErrResponseTooLarge instead of returning a short
+// read. Silently truncating would hand the caller a body that decodes as corrupt
+// JSON, which is far harder to diagnose than an explicit error - and the previous
+// version did exactly that, so the "detected by the caller via a short read"
+// contract this type documents was never actually implemented.
+func (m *maxBytesReader) Read(b []byte) (int, error) {
+	n, err := m.lim.Read(b)
+	if m.lim.N > 0 || err != nil {
+		return n, err
+	}
+	// The cap is exhausted. Probe the underlying reader: a byte here means the
+	// response is genuinely longer than the cap, whereas EOF means it fit exactly.
+	var probe [1]byte
+	pn, perr := m.lim.R.Read(probe[:])
+	if pn > 0 {
+		return n, ErrResponseTooLarge
+	}
+	if perr == nil {
+		// A zero-length read with no error is not EOF; report what we have and
+		// let the next Read try again rather than looping.
+		return n, nil
+	}
+	return n, perr
+}
 
 func (m *maxBytesReader) Close() error { return m.orig.Close() }
 
 // MaxBytes returns a middleware that limits the response body size to n bytes,
-// preventing unbounded memory growth on large responses. Truncation is detected
-// by the caller via a short read and surfaced as a typed error.
+// preventing unbounded memory growth on large responses. Exceeding the limit
+// surfaces as ErrResponseTooLarge from the body reader rather than a truncated
+// body.
+//
+// A 1xx response is passed through unwrapped. A WebSocket upgrade replies 101 and
+// then hands the underlying connection to the WebSocket library, which requires
+// the body to be the connection's own io.ReadWriteCloser; wrapping it in a reader
+// makes every WebSocket dial fail with "response body is not a io.ReadWriteCloser".
 func MaxBytes(n int64) func(http.RoundTripper) http.RoundTripper {
 	return func(base http.RoundTripper) http.RoundTripper {
 		return RoundTripFunc(func(req *http.Request) (*http.Response, error) {
 			resp, err := base.RoundTrip(req)
 			if err != nil || resp == nil {
 				return resp, err
+			}
+			if resp.StatusCode >= 100 && resp.StatusCode < 200 {
+				return resp, nil
 			}
 			orig := resp.Body
 			resp.Body = &maxBytesReader{orig: orig, lim: &io.LimitedReader{R: orig, N: n}}
@@ -264,9 +304,7 @@ var tokenPatterns = []string{
 
 var secretRedact = regexp.MustCompile(func() string {
 	var all []string
-	for _, p := range tokenPatterns {
-		all = append(all, p)
-	}
+	all = append(all, tokenPatterns...)
 	return `(?i)(` + strings.Join(all, `|`) + `)`
 }())
 

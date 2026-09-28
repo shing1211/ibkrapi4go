@@ -48,12 +48,17 @@ type designCheck struct {
 // that document fails the build, so adding one without a check is exactly the
 // gap this program exists to close.
 //
-// docs/design/07-money-and-numbers.md is deliberately absent. Its main claim —
-// money and quantities never reach a float — is already enforced by
-// scripts/check_money.py over the whole tree, and a second gate over the same
-// fact would be one more thing to keep in step and no stronger.
+// docs/design/07-money-and-numbers.md is covered by checkMoneyNumberFields, not
+// omitted. Its main claim - money and quantities never reach a float - is
+// already enforced by scripts/check_money.py over the whole tree, and re-checking
+// that here would be one more thing to keep in step and no stronger. But the
+// document also names specific fields as json.Number, and check_money.py cannot
+// see those: it proves the absence of a float, not the presence of a particular
+// type in generated code. That claim is checked here, so a spec edit that
+// regenerates a money field back to a float fails the build.
 var designChecks = []designCheck{
 	{"docs/design/01-transport.md", checkTransportChain},
+	{"docs/design/07-money-and-numbers.md", checkMoneyNumberFields},
 	{clientDoc, checkClientComposition},
 	{"docs/design/03-managers.md", checkManagerCounts},
 	{wrapDoc, checkGeneratedWrapping},

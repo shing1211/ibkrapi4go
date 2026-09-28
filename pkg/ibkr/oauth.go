@@ -88,6 +88,9 @@ func WithOAuth2JWTKey(key *rsa.PrivateKey) Option {
 // JWT-bearer token exchange.
 func WithOAuth2JWTKeyFile(path string) Option {
 	return func(c *config) error {
+		// #nosec G304 -- the path is the caller's own argument to a documented
+		// option (WithOAuth2JWTKeyFile); reading the file it names is the
+		// entire purpose. There is no request- or network-derived path here.
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return &ConfigError{Field: "JWTKeyFile", Message: "read key file: " + err.Error()}

@@ -11,28 +11,6 @@ import (
 	"time"
 )
 
-// recordingTransport records requests that pass through it.
-type recordingTransport struct {
-	base   http.RoundTripper
-	called []string
-	mu     sync.Mutex
-}
-
-func (t *recordingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	t.mu.Lock()
-	t.called = append(t.called, req.Header.Get("X-Trace"))
-	t.mu.Unlock()
-	return t.base.RoundTrip(req)
-}
-
-func (t *recordingTransport) traceValues() []string {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	out := make([]string, len(t.called))
-	copy(out, t.called)
-	return out
-}
-
 // tagMiddleware adds a header value to each request.
 func tagMiddleware(tag string) func(http.RoundTripper) http.RoundTripper {
 	return func(next http.RoundTripper) http.RoundTripper {

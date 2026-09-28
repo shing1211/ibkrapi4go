@@ -65,7 +65,7 @@ func TestWideDocsChecksAreLoadBearing(t *testing.T) {
 			if err == nil {
 				t.Fatalf("checkWideDocs passed; expected a failure containing %q", tc.want)
 			}
-			if !strings.Contains(err.Error(), tc.want) {
+			if !strings.Contains(stripLineNumbers(err.Error()), stripLineNumbers(tc.want)) {
 				t.Fatalf("checkWideDocs failed for the wrong reason.\nwant substring: %q\ngot: %v", tc.want, err)
 			}
 		})

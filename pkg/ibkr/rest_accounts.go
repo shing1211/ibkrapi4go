@@ -7,8 +7,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
+	"net/textproto"
 	"strings"
 	"time"
 
@@ -283,6 +285,9 @@ func (m *RESTAccounts) Create(ctx context.Context, payload io.Reader, mimeType s
 }
 
 // SubmitDocument uploads a document (PDF) for the account.
+//
+// mimeType is the Content-Type of the uploaded part. It defaults to
+// application/pdf when empty.
 func (m *RESTAccounts) SubmitDocument(ctx context.Context, accountID AccountID, doc io.Reader, filename, mimeType string) error {
 	const op = "Accounts.SubmitDocument"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -293,7 +298,16 @@ func (m *RESTAccounts) SubmitDocument(ctx context.Context, accountID AccountID, 
 	}
 	buf := &bytes.Buffer{}
 	w := multipart.NewWriter(buf)
-	part, err := w.CreateFormFile("file", filename)
+	// CreateFormFile hardcodes the part's Content-Type to
+	// application/octet-stream, which would silently ignore the caller's
+	// mimeType. Build the part by hand so the documented argument is honoured.
+	// The field order matters: `file` first, then `accountId`, matching what the
+	// gateway receives today.
+	hdr := make(textproto.MIMEHeader)
+	hdr.Set("Content-Disposition",
+		fmt.Sprintf(`form-data; name="file"; filename="%s"`, escapeQuotes(filename)))
+	hdr.Set("Content-Type", mimeType)
+	part, err := w.CreatePart(hdr)
 	if err != nil {
 		e := wrapOp(op, err)
 		internal.LogError(m.surface.owner.cfg.logger, e)
@@ -371,7 +385,7 @@ func (m *RESTAccounts) UpdateTasks(ctx context.Context, accountID AccountID, tas
 	}
 	taskList := make([]taskItem, len(updates))
 	for i, u := range updates {
-		taskList[i] = taskItem{TaskID: u.TaskID, IsCompleted: u.IsCompleted, Action: u.Action}
+		taskList[i] = taskItem(u)
 	}
 	payload := struct {
 		Tasks []taskItem `json:"tasks"`

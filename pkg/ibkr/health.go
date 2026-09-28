@@ -9,9 +9,13 @@ import (
 	"time"
 )
 
+// HealthStatus summarises a session's health as a single comparable value,
+// the worst of its component dimensions.
 type HealthStatus int
 
+// Overall health values, ordered from least to most severe.
 const (
+	// HealthUnknown means health has not been computed yet.
 	HealthUnknown HealthStatus = iota
 	HealthHealthy
 	HealthDegraded
@@ -31,12 +35,16 @@ func (s HealthStatus) String() string {
 	}
 }
 
+// Dimension is one named axis of a health report, such as connectivity or
+// latency, with a status and an optional detail message.
 type Dimension struct {
 	Status  HealthStatus
 	Message string
 	Since   time.Time
 }
 
+// HealthReport is the result of a health check: an overall status plus the
+// individual dimensions it was derived from.
 type HealthReport struct {
 	Transport  Dimension
 	Session    Dimension
@@ -45,6 +53,8 @@ type HealthReport struct {
 	ReportedAt time.Time
 }
 
+// Health probes the session and returns a HealthReport. It does not mutate
+// session state and is safe to call concurrently.
 func (m *SessionManager) Health(ctx context.Context) *HealthReport {
 	report := &HealthReport{ReportedAt: time.Now()}
 

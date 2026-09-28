@@ -19,7 +19,9 @@ func FuzzWSDispatch(f *testing.F) {
 		}
 		wsScalarString(data)
 		for _, key := range []string{"conid", "_updated", "server_id", "6119", "6509", "topic", "method", "id", "random"} {
-			wsReservedField(key)
+			// The return value is deliberately discarded: this asserts only that
+			// recognising a reserved field does not panic, whatever the input.
+			_ = wsReservedField(key)
 		}
 	})
 }

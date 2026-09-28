@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -77,7 +78,7 @@ func run() error {
 	}
 	mock := mockgateway.New(opts...)
 
-	var handler http.Handler = mock.Handler()
+	var handler = mock.Handler()
 	if *verbose {
 		handler = requestLogger(handler)
 	}
@@ -94,7 +95,13 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("generate self-signed certificate: %w", err)
 		}
-		httpSrv.TLSConfig = &tls.Config{Certificates: []tls.Certificate{cert}}
+		// MinVersion is set explicitly. Go's zero value already defaults a
+		// server to TLS 1.2, but relying on that is implicit and gosec (G402)
+		// cannot see it; stating it keeps the floor obvious and the lint honest.
+		httpSrv.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS12,
+		}
 		scheme = "https"
 	}
 
@@ -115,7 +122,7 @@ func run() error {
 
 	select {
 	case err := <-errCh:
-		if err != nil && err != http.ErrServerClosed {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 		return nil

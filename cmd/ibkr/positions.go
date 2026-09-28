@@ -21,7 +21,7 @@ func runPositions() error {
 				i++
 			}
 		case "-h", "--help":
-			fmt.Fprintf(os.Stderr, "Usage: ibkr positions [-account ACCOUNT]\n\nList positions for an account.\n")
+			_, _ = fmt.Fprintf(os.Stderr, "Usage: ibkr positions [-account ACCOUNT]\n\nList positions for an account.\n")
 			return nil
 		}
 	}
@@ -38,13 +38,13 @@ func runPositions() error {
 	defer cli.Close()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	positions, err := cli.Portfolio().Positions(ctx(), acct)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: list positions: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "error: list positions: %v\n", err)
 		return err
 	}
 
@@ -55,11 +55,11 @@ func runPositions() error {
 
 	// Print as table
 	w := os.Stdout
-	fmt.Fprintf(w, "%-12s %-8s %-30s %-6s %-8s %-12s %-12s %-12s %-12s\n",
+	_, _ = fmt.Fprintf(w, "%-12s %-8s %-30s %-6s %-8s %-12s %-12s %-12s %-12s\n",
 		"ACCOUNT", "CONID", "DESCRIPTION", "CLASS", "QTY", "AVG_COST", "MKT_PRICE", "MKT_VALUE", "UNRL_PNL")
-	fmt.Fprintf(w, "%s\n", strings.Repeat("-", 112))
+	_, _ = fmt.Fprintf(w, "%s\n", strings.Repeat("-", 112))
 	for _, p := range positions {
-		fmt.Fprintf(w, "%-12s %-8d %-30s %-6s %-8s %-12s %-12s %-12s %-12s\n",
+		_, _ = fmt.Fprintf(w, "%-12s %-8d %-30s %-6s %-8s %-12s %-12s %-12s %-12s\n",
 			p.AccountID, p.ConID, truncate(p.ContractDesc, 30), p.AssetClass,
 			p.Quantity, p.AvgCost, p.MktPrice, p.MktValue, p.UnrealizedPnL)
 	}

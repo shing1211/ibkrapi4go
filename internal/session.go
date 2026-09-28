@@ -17,9 +17,13 @@ import (
 	"time"
 )
 
+// SessionState is the lifecycle state of a gateway session.
 type SessionState int
 
+// Session lifecycle states, in the order a healthy session passes through
+// them. A session that never authenticates stops at StateInitializing.
 const (
+	// StateDisconnected is the initial state: no session has been started.
 	StateDisconnected SessionState = iota
 	StateInitializing
 	StateAuthenticated
@@ -44,6 +48,8 @@ func (s SessionState) String() string {
 	}
 }
 
+// BrokerageStatus reports which trading permissions a session holds. The
+// gateway returns it from the auth/status call after authentication.
 type BrokerageStatus struct {
 	Authenticated bool
 	Established   bool
@@ -125,6 +131,9 @@ func (h *httpAPI) logout(ctx context.Context) error {
 	return nil
 }
 
+// Session is an authenticated Client Portal Gateway session. It owns the
+// session cookie, the CSRF token, and the tickle loop that keeps the session
+// alive. Use NewSession to create one.
 type Session struct {
 	api             api
 	token           string
@@ -142,6 +151,8 @@ type Session struct {
 	clock           *Clock
 }
 
+// SessionConfig configures a Session. GatewayURL and AccountID are required;
+// the remaining fields are optional.
 type SessionConfig struct {
 	HTTPClient     *http.Client
 	ServerURL      string
@@ -151,6 +162,8 @@ type SessionConfig struct {
 	Clock          *Clock
 }
 
+// NewSession creates an unauthenticated Session. Call Initialize to
+// authenticate it; the session is not usable until that returns.
 func NewSession(cfg SessionConfig) *Session {
 	if cfg.TickleInterval == 0 {
 		cfg.TickleInterval = 60 * time.Second
@@ -180,14 +193,19 @@ func NewSession(cfg SessionConfig) *Session {
 	}
 }
 
+// State reports the session's current lifecycle state.
 func (s *Session) State() SessionState {
 	return SessionState(atomic.LoadInt32(&s.state))
 }
 
 func (s *Session) setState(state SessionState) {
+	// #nosec G115 -- SessionState is a five-value iota enum (0-4) stored in an
+	// int32 field, so the conversion cannot overflow.
 	atomic.StoreInt32(&s.state, int32(state))
 }
 
+// Token returns the current session token and whether one is present. It
+// rotates on every tickle, so callers should not cache the value.
 func (s *Session) Token() (token string, ok bool) {
 	if SessionState(atomic.LoadInt32(&s.state)) != StateAuthenticated {
 		return "", false
@@ -200,6 +218,8 @@ func (s *Session) Token() (token string, ok bool) {
 	return s.token, true
 }
 
+// HTTPClient returns an http.Client bound to this session, carrying the
+// session cookie and CSRF token on every request.
 func (s *Session) HTTPClient() *http.Client {
 	return s.api.(*httpAPI).client
 }
@@ -214,6 +234,8 @@ func (s *Session) SetHTTPClient(c *http.Client) {
 	}
 }
 
+// Initialize authenticates the session and starts its tickle loop. It is not
+// safe to call concurrently, and calling it twice returns an error.
 func (s *Session) Initialize(ctx context.Context) error {
 	current := SessionState(atomic.LoadInt32(&s.state))
 	if current == StateAuthenticated {
@@ -435,6 +457,8 @@ func (s *Session) stopTickle() {
 	}
 }
 
+// Close stops the tickle loop and invalidates the session server-side. It is
+// idempotent.
 func (s *Session) Close(ctx context.Context) error {
 	current := SessionState(atomic.LoadInt32(&s.state))
 	if current == StateClosed || current == StateDisconnected {

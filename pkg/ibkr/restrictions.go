@@ -97,7 +97,7 @@ func (r *RESTRestrictions) MasterRestrictionIDs(ctx context.Context, username st
 		empTrack = &t
 	}
 	resp, err := r.surface.generated.GetMasterRestrictionIdsWithResponse(ctx, &client.GetMasterRestrictionIdsParams{
-		MasterUserName: client.MasterUserName(username),
+		MasterUserName: username,
 		IsEmpTrack:     empTrack,
 		Authorization:  auth,
 	})
@@ -132,7 +132,7 @@ func (r *RESTRestrictions) MasterListIDs(ctx context.Context, username string, a
 		empTrack = &t
 	}
 	resp, err := r.surface.generated.GetMasterListIdsWithResponse(ctx, &client.GetMasterListIdsParams{
-		MasterUserName: client.MasterUserName(username),
+		MasterUserName: username,
 		IsEmpTrack:     empTrack,
 		Authorization:  auth,
 	})
@@ -182,7 +182,7 @@ func (r *RESTRestrictions) ListDetails(ctx context.Context, username string, lis
 		empTrack = &t
 	}
 	resp, err := r.surface.generated.GetListDetailsWithResponse(ctx, &client.GetListDetailsParams{
-		MasterUserName: client.MasterUserName(username),
+		MasterUserName: username,
 		ListId:         listID,
 		IsEmpTrack:     empTrack,
 		Authorization:  auth,
@@ -243,7 +243,7 @@ func (r *RESTRestrictions) RestrictionDetails(ctx context.Context, username stri
 		empTrack = &t
 	}
 	resp, err := r.surface.generated.GetRestrictionDetailsWithResponse(ctx, &client.GetRestrictionDetailsParams{
-		MasterUserName: client.MasterUserName(username),
+		MasterUserName: username,
 		RestrictionId:  restrictionID,
 		IsEmpTrack:     empTrack,
 		Authorization:  auth,
@@ -287,7 +287,7 @@ func (r *RESTRestrictions) RestrictionScope(ctx context.Context, username string
 		empTrack = &t
 	}
 	resp, err := r.surface.generated.GetRestrictionScopeWithResponse(ctx, &client.GetRestrictionScopeParams{
-		MasterUserName: client.MasterUserName(username),
+		MasterUserName: username,
 		RestrictionId:  restrictionID,
 		IsEmpTrack:     empTrack,
 		Authorization:  auth,
@@ -327,7 +327,7 @@ func (r *RESTRestrictions) ApplyCSV(ctx context.Context, auth string, csvJWTCont
 	resp, err := r.surface.generated.ApplyCSVWithTextBodyWithResponse(
 		ctx,
 		&client.ApplyCSVParams{Authorization: auth},
-		client.ApplyCSVTextRequestBody(csvJWTContent),
+		csvJWTContent,
 	)
 	if err != nil {
 		e := wrapOp(op, err)

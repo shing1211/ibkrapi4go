@@ -310,11 +310,13 @@ func TestWS_SystemUpdates(t *testing.T) {
 	deadline := time.After(5 * time.Second)
 	for !gotStatus || !gotNotification {
 		select {
-		case u, ok := <-sub.Updates():
+		case _, ok := <-sub.Updates():
+			// Market data is not what this test is about: it covers subscribe
+			// and close. The branch used to filter on conid and field inside an
+			// empty body, which asserted nothing. Any update received on the
+			// way to Close is drained here so the loop still makes progress.
 			if !ok {
 				t.Fatal("Updates channel closed unexpectedly")
-			}
-			if u.ConID == 265598 && u.Field == FieldLastPrice {
 			}
 		case su, ok := <-sub.SystemUpdates():
 			if !ok {
