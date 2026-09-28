@@ -5,6 +5,48 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.19] - 2026-09-27
+
+A recommended quality gate was tested against the real code and withdrawn rather
+than shipped. The gap it was meant to prevent is closed by hand instead.
+
+### Fixed
+
+- **The remaining 7 of 28 monetary `json.Number` fields had no test proving they
+  keep their digits.** `balance`, `excessLiquidity`, `initialMargin`, `regTLoan`,
+  `regTMargin` and `securitiesGVP` on the account summary, and
+  `stockOptionMarketValue` on the ledger. Each is now asserted with a value a
+  `float32` would destroy, and each is mutation-verified: under a `float32` decode
+  they report `16777218`, `12345679` and `33554432` where the gateway sent
+  `16777217.89`, `12345678.91` and `33554432.55`.
+
+  `money_precision_test.go` is now exhaustive over the monetary `json.Number` fields
+  of the account summary, positions and ledger, and says so in a comment, so a field
+  added later without a lossy-value assertion is visibly out of place.
+
+### Withdrawn
+
+- **The proposed `check_money.py` precision gate is not shipped.** Two formulations
+  were prototyped against the real code. Scanning literals for money comparisons
+  flags 27 findings that are almost all false positives - `sum.TotalCashValue !=
+  "100.25"` is a string comparison on a `string`-typed field, where a `float32`
+  regression is a compile error rather than a silent round - while missing the one
+  real case, which sits on a fixture line rather than a comparison. Keying off the
+  `json.Number` type instead produces the correct invariant and 16 false negatives,
+  because table-driven assertions keep their literal in a `const` declared elsewhere.
+
+  A lint with 27 false positives teaches a team to ignore it; one with false
+  negatives teaches a team to trust it. Both are worse than the recurrence they
+  would prevent, and the second failure is invisible. `check_money.py` is unchanged.
+  A sound version would have to resolve the *type* of the field under assertion,
+  which means following the `toPublic` mappings - a small analysis rather than a
+  lint, and worth writing only if the recurrence rate justifies it.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-money-gate-retracted/`](./docs/runs/2026-09-27-money-gate-retracted/).
+
 ## [1.1.18] - 2026-09-27
 
 The account summary, positions and ledger decode their money fields as `json.Number`

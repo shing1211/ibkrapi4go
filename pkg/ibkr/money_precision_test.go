@@ -72,8 +72,14 @@ func TestAccountSummary_MoneyPrecision(t *testing.T) {
 			`"availableFunds":` + eq + `,` +
 			`"SMA":` + sma + `,` +
 			`"buyingPower":` + eq + `,` +
+			`"balance":` + nlv + `,` +
 			`"equityWithLoanValue":` + nlv + `,` +
+			`"excessLiquidity":` + sma + `,` +
+			`"initialMargin":` + eq + `,` +
 			`"maintenanceMargin":` + sma + `,` +
+			`"regTLoan":` + eq + `,` +
+			`"regTMargin":` + sma + `,` +
+			`"securitiesGVP":` + eq + `,` +
 			`"accruedInterest":` + fee + `,` +
 			`"cashBalances":[{"currency":"USD","balance":` + eq + `,"settledCash":` + nlv + `}]}`,
 	})
@@ -83,14 +89,24 @@ func TestAccountSummary_MoneyPrecision(t *testing.T) {
 		t.Fatalf("Account.Summary: %v", err)
 	}
 
+	// Every monetary json.Number field on accountSummaryRaw appears here. The set
+	// is deliberately exhaustive: a raw money field added without a lossy-value
+	// assertion is the exact shape of the gap this file exists to close, and
+	// leaving one out would reopen it silently.
 	for _, tc := range []struct{ name, got, want string }{
 		{"netLiquidationValue", sum.NetLiquidationValue, nlv},
 		{"totalCashValue", sum.TotalCashValue, sma},
 		{"availableFunds", sum.AvailableFunds, eq},
 		{"SMA", sum.SMA, sma},
 		{"buyingPower", sum.BuyingPower, eq},
+		{"balance", sum.Balance, nlv},
 		{"equityWithLoanValue", sum.EquityWithLoanValue, nlv},
+		{"excessLiquidity", sum.ExcessLiquidity, sma},
+		{"initialMargin", sum.InitialMargin, eq},
 		{"maintenanceMargin", sum.MaintenanceMargin, sma},
+		{"regTLoan", sum.RegTLoan, eq},
+		{"regTMargin", sum.RegTMargin, sma},
+		{"securitiesGVP", sum.SecuritiesGVP, eq},
 		{"accruedInterest", sum.AccruedInterest, fee},
 	} {
 		if tc.got != tc.want {
@@ -167,13 +183,14 @@ func TestPortfolioLedger_MoneyPrecision(t *testing.T) {
 	cli := newTestClient(t, gw)
 
 	const (
-		cash  = "16777217.89"
-		settl = "12345678.91"
-		nlv   = "33554432.55"
-		smv   = "67108865.13"
-		upl   = "12345.6789"
+		cash    = "16777217.89"
+		settl   = "12345678.91"
+		nlv     = "33554432.55"
+		smv     = "67108865.13"
+		optSVal = "12345.6789"
+		upl     = "12345.6789"
 	)
-	for _, lit := range []string{cash, settl, nlv, smv, upl} {
+	for _, lit := range []string{cash, settl, nlv, smv, optSVal, upl} {
 		float32Loses(t, lit)
 	}
 
@@ -185,6 +202,7 @@ func TestPortfolioLedger_MoneyPrecision(t *testing.T) {
 			`"settledcash":` + settl + `,` +
 			`"netliquidationvalue":` + nlv + `,` +
 			`"stockmarketvalue":` + smv + `,` +
+			`"stockoptionmarketvalue":` + optSVal + `,` +
 			`"unrealizedpnl":` + upl + `,` +
 			`"realizedpnl":` + cash + `}}`,
 	})
@@ -198,11 +216,13 @@ func TestPortfolioLedger_MoneyPrecision(t *testing.T) {
 	if !ok {
 		t.Fatalf("ledger = %+v; want a USD entry", ledger)
 	}
+	// Every monetary json.Number field on ledgerRaw appears here.
 	for _, tc := range []struct{ name, got, want string }{
 		{"cashbalance", usd.CashBalance, cash},
 		{"settledcash", usd.SettledCash, settl},
 		{"netliquidationvalue", usd.NetLiquidationValue, nlv},
 		{"stockmarketvalue", usd.StockMarketValue, smv},
+		{"stockoptionmarketvalue", usd.StockOptionMarketValue, optSVal},
 		{"unrealizedpnl", usd.UnrealizedPnL, upl},
 		{"realizedpnl", usd.RealizedPnL, cash},
 	} {
