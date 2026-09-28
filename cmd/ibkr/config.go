@@ -68,20 +68,18 @@ func saveConfig(cfg cliConfig) error {
 	return os.WriteFile(p, data, perm)
 }
 
-func runConfig() error {
-	args := os.Args[2:]
+func runConfig(e *env, args []string) error {
 	if len(args) == 0 {
-		return runConfigShow()
+		return runConfigShow(e)
 	}
 
 	switch args[0] {
 	case "show":
-		return runConfigShow()
+		return runConfigShow(e)
 	case "set":
-		os.Args = append(os.Args[:2], args[1:]...)
-		return runConfigSet()
+		return runConfigSet(e, args[1:])
 	case "-h", "--help", "help":
-		_, _ = fmt.Fprintf(os.Stderr, `Usage: ibkr config <subcommand>
+		_, _ = fmt.Fprintf(e.stderr, `Usage: ibkr config <subcommand>
 
 Subcommands:
   show        Display current configuration
@@ -100,13 +98,13 @@ Config file location: ~/.ibkr/config.json (or $IBKR_CONFIG)
 	}
 }
 
-func runConfigShow() error {
+func runConfigShow(e *env) error {
 	cfg, err := loadConfig()
 	if err != nil {
 		return err
 	}
 
-	w := os.Stdout
+	w := e.stdout
 	_, _ = fmt.Fprintf(w, "Config file: %s\n\n", configPath())
 	_, _ = fmt.Fprintf(w, "  gateway:     %s\n", cfg.GatewayURL)
 	_, _ = fmt.Fprintf(w, "  rest:        %s\n", cfg.RestGatewayURL)
@@ -114,8 +112,7 @@ func runConfigShow() error {
 	return nil
 }
 
-func runConfigSet() error {
-	args := os.Args[2:]
+func runConfigSet(e *env, args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("usage: ibkr config set <key> <value>")
 	}

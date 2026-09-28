@@ -5,23 +5,21 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
-func runPositions() error {
-	args := os.Args[2:]
+func runPositions(e *env, args []string) error {
 
 	var account string
 	for i := 0; i < len(args); i++ {
-		switch args[i] {
+		switch argAt(args, i) {
 		case "-account", "--account":
-			if i+1 < len(args) {
-				account = args[i+1]
+			if v, ok := argValue(args, i); ok {
+				account = v
 				i++
 			}
 		case "-h", "--help":
-			_, _ = fmt.Fprintf(os.Stderr, "Usage: ibkr positions [-account ACCOUNT]\n\nList positions for an account.\n")
+			_, _ = fmt.Fprintf(e.stderr, "Usage: ibkr positions [-account ACCOUNT]\n\nList positions for an account.\n")
 			return nil
 		}
 	}
@@ -31,30 +29,30 @@ func runPositions() error {
 		return err
 	}
 
-	cli, err := newClient()
+	cli, err := e.newClient()
 	if err != nil {
 		return err
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	positions, err := cli.Portfolio().Positions(ctx(), acct)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: list positions: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: list positions: %v\n", err)
 		return err
 	}
 
 	if len(positions) == 0 {
-		fmt.Println("no positions")
+		ibkrPrintln(e, "no positions")
 		return nil
 	}
 
 	// Print as table
-	w := os.Stdout
+	w := e.stdout
 	_, _ = fmt.Fprintf(w, "%-12s %-8s %-30s %-6s %-8s %-12s %-12s %-12s %-12s\n",
 		"ACCOUNT", "CONID", "DESCRIPTION", "CLASS", "QTY", "AVG_COST", "MKT_PRICE", "MKT_VALUE", "UNRL_PNL")
 	_, _ = fmt.Fprintf(w, "%s\n", strings.Repeat("-", 112))

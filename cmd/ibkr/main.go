@@ -38,20 +38,26 @@ func main() {
 }
 
 // run is the testable entry point. It takes its arguments and output streams as
-// parameters rather than reading os.Args and os.Stdout directly, so every command
-// in the dispatch table below can be exercised from a test without spawning a
-// process or mutating global state.
+// parameters rather than reading os.Args and os.Stdout directly, and hands every
+// subcommand an explicit env, so no command below this line touches the process.
 func run(args []string, stdout, stderr io.Writer) error {
+	e := newEnv(args, stdout, stderr)
 	if len(args) < 2 {
 		printUsage(stderr)
 		return nil
 	}
+	return dispatch(e, args[1])
+}
 
-	cmd := args[1]
+// dispatch routes a command name to its implementation. It is separate from run
+// so a test can reach the dispatch table with an env it built, without going
+// through argv parsing.
+func dispatch(e *env, cmd string) error {
+	stdout, stderr := e.stdout, e.stderr
 	switch cmd {
 	case "--help", "-h", "help":
-		if len(args) > 2 {
-			return printSubHelp(stderr, args[2])
+		if len(e.args) > 2 {
+			return printSubHelp(stderr, e.args[2])
 		}
 		printUsage(stderr)
 		return nil
@@ -59,19 +65,19 @@ func run(args []string, stdout, stderr io.Writer) error {
 		_, _ = fmt.Fprintf(stdout, "ibkr %s\n", Version)
 		return nil
 	case "completion":
-		return runCompletion(args[2:], stdout, stderr)
+		return runCompletion(e.arg(2), stdout, stderr)
 	case "config":
-		return runConfig()
+		return runConfig(e, e.arg(2))
 	case "accounts":
-		return runAccounts()
+		return runAccounts(e, e.arg(2))
 	case "positions":
-		return runPositions()
+		return runPositions(e, e.arg(2))
 	case "orders":
-		return runOrders()
+		return runOrders(e, e.arg(2))
 	case "stream":
-		return runStream()
+		return runStream(e, e.arg(2))
 	case "portfolio":
-		return runPortfolio()
+		return runPortfolio(e, e.arg(2))
 	default:
 		_, _ = fmt.Fprintf(stderr, "ibkr: unknown command %q\n\n", cmd)
 		printUsage(stderr)
@@ -79,9 +85,11 @@ func run(args []string, stdout, stderr io.Writer) error {
 	}
 }
 
-// newClient creates an ibkr.Client from global flags and config.
-func newClient() (*ibkr.Client, error) {
-	gateway, rest, account, insecure, _ := parseGlobalFlags(os.Args[1:])
+// newClientFromArgs creates an ibkr.Client from the global flags in args and the
+// config file. It takes argv as a parameter rather than reading os.Args, so a test
+// can build a client with chosen flags.
+func newClientFromArgs(args []string) (*ibkr.Client, error) {
+	gateway, rest, account, insecure, _ := parseGlobalFlags(args)
 
 	cfg, err := loadConfig()
 	if err != nil {
@@ -112,20 +120,20 @@ func newClient() (*ibkr.Client, error) {
 // so the parsing is reachable from a test without touching os.Args.
 func parseGlobalFlags(args []string) (gateway, rest, account string, insecure bool, cmdIdx int) {
 	for i := 0; i < len(args); i++ {
-		switch args[i] {
+		switch argAt(args, i) {
 		case "-gateway", "--gateway":
-			if i+1 < len(args) {
-				gateway = args[i+1]
+			if v, ok := argValue(args, i); ok {
+				gateway = v
 				i++
 			}
 		case "-rest", "--rest":
-			if i+1 < len(args) {
-				rest = args[i+1]
+			if v, ok := argValue(args, i); ok {
+				rest = v
 				i++
 			}
 		case "-account", "--account":
-			if i+1 < len(args) {
-				account = args[i+1]
+			if v, ok := argValue(args, i); ok {
+				account = v
 				i++
 			}
 		case "-insecure", "--insecure":
@@ -135,6 +143,32 @@ func parseGlobalFlags(args []string) (gateway, rest, account string, insecure bo
 		}
 	}
 	return gateway, rest, account, insecure, len(args)
+}
+
+// argAt returns args[i], or "" when i is out of range.
+//
+// Every command used to spell its bounds out inline as `if i+1 < len(args)` and
+// then index `args[i]` directly in the switch - sixteen times across five files.
+// gosec does not follow a bound held in a loop condition or a switch case, so it
+// reported the guarded access as a possible out-of-range read. A `//nolint`
+// silenced one lint profile and then tripped nolintlint in the other, where gosec
+// reported nothing at all. Keeping the check immediately above the index, inside
+// the helper, is the form gosec does verify - and it puts the bound in one place.
+func argAt(args []string, i int) string {
+	if i < 0 || i >= len(args) {
+		return ""
+	}
+	return args[i]
+}
+
+// argValue returns the argument following the flag at index i, and reports
+// whether one was actually there. The caller advances its own index so the value
+// is not read again as a flag.
+func argValue(args []string, i int) (string, bool) {
+	if i < 0 || i+1 >= len(args) {
+		return "", false
+	}
+	return args[i+1], true
 }
 
 // mustAccount returns the account ID from flag or config, or exits on error.

@@ -6,7 +6,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -30,26 +29,25 @@ var fieldAlias = map[string]ibkr.Field{
 	"symbol":   ibkr.FieldSymbol,
 }
 
-func runStream() error {
-	args := os.Args[2:]
+func runStream(e *env, args []string) error {
 
 	var conid int
 	var fieldsStr string
 
 	for i := 0; i < len(args); i++ {
-		switch args[i] {
+		switch argAt(args, i) {
 		case "-conid", "--conid":
-			if i+1 < len(args) {
-				conid, _ = strconv.Atoi(args[i+1])
+			if v, ok := argValue(args, i); ok {
+				conid, _ = strconv.Atoi(v)
 				i++
 			}
 		case "-fields", "--fields":
-			if i+1 < len(args) {
-				fieldsStr = args[i+1]
+			if v, ok := argValue(args, i); ok {
+				fieldsStr = v
 				i++
 			}
 		case "-h", "--help":
-			fmt.Fprintf(os.Stderr, `Usage: ibkr stream -conid CONID [-fields FIELDS]
+			_, _ = fmt.Fprintf(e.stderr, `Usage: ibkr stream -conid CONID [-fields FIELDS]
 
 Subscribe to a market data snapshot for a contract.
 
@@ -69,24 +67,24 @@ Flags:
 
 	fields := parseFields(fieldsStr)
 
-	cli, err := newClient()
+	cli, err := e.newClient()
 	if err != nil {
 		return err
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	snapshots, err := cli.MarketData().Snapshot(ctx(), []ibkr.ConID{ibkr.ConID(conid)}, fields)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: market data snapshot: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: market data snapshot: %v\n", err)
 		return err
 	}
 
-	enc := json.NewEncoder(os.Stdout)
+	enc := json.NewEncoder(e.stdout)
 	enc.SetIndent("", "  ")
 	return enc.Encode(snapshots)
 }

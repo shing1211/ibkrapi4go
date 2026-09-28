@@ -5,6 +5,78 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.14] - 2026-09-27
+
+The CLI could not be tested, and the reason turned out to be a bug rather than an
+oversight: dispatching an order rewrote the process argument vector.
+
+### Fixed
+
+- **The CLI corrupted `os.Args` when dispatching a subcommand.** `runOrders`,
+  `runPortfolio` and `runConfig` passed a subcommand's arguments down with
+  `os.Args = append(os.Args[:2], args[1:]...)`. That `append` writes into the
+  backing array `os.Args` itself points at, so every command overwrote the
+  arguments every later command would see. Two commands run in one process
+  corrupted each other, and the test harness reads that same array - which is why
+  these commands had no tests at all. The expression is removed rather than
+  repaired.
+
+  `cmd/ibkr` now takes an explicit `env` carrying argv, stdout, stderr and a
+  client factory from `run` down, so no subcommand reads the process. `dispatch`
+  is split out of `run` so the routing table is reachable directly, and
+  `newClient` is a field, so a test can substitute a factory. Direct `os`
+  references now exist only in `main.go` and `env.go`.
+
+  The public API is unchanged: `pkg/ibkr` was not touched, and `cmd/ibkr` is a
+  binary.
+
+### Added
+
+- **20 tests for `cmd/ibkr`**, covering each leaf's help path, each parent's
+  unknown-subcommand error, the dispatch table, and the bounds on flag parsing.
+  `TestOrders_ArgsAreNotLeakedBetweenInvocations` asserts on `os.Args` itself
+  before and after two invocations; reinserting the original `append` makes it
+  fail.
+  `TestArgParsing_ConsecutiveFlagsBothApply` guards a subtler variant: the loops
+  skip a consumed value by advancing their own index, and rewriting them as
+  `for i, a := range args` compiles and looks equivalent, but assigning to a range
+  variable does not advance the iteration - so `-gateway g -rest r positions` would
+  parse `gateway=g` and silently discard `-rest r`. The mutation is caught.
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-cli-testability/`](./docs/runs/2026-09-27-cli-testability/).
+
+### Changed
+
+- **CI coverage floor raised from 58% to 60%**, against 63.5% actual. Total
+  coverage went from 62.0% to 63.5% as `cmd/ibkr` became testable. The floor was
+  ratcheted up in steps (35 → 48 → 58) while the suite could not grow, because the
+  one obviously untestable package was untestable for a reason.
+
+- Sixteen copies of `if i+1 < len(args)` across the flag parsers collapsed into
+  two bounds-checked helpers, `argAt` and `argValue`. This replaces two `gosec`
+  G602 findings structurally rather than with `//nolint`: a suppression silenced
+  the normal lint profile and then made `nolintlint` report the directive as unused
+  in the `--tests=false` profile, where `gosec` reported nothing at all. Both
+  profiles are now clean with no suppression.
+
+### Not included
+
+Both remaining gaps are blocked on credentials and are unchanged by this release:
+
+- **D15 live verification** - `year` is omitted for
+  `listTaxDocumentsAvailable`, as the spec marks it optional. Confirming the
+  gateway accepts the request needs a real account.
+- **`submitModelPortfolioOrder` stays unrouted**, because its path collides with
+  `submitNewOrder`. Routing it would send portfolio orders to the wrong endpoint,
+  so confirming the collision requires an FA-enabled paper account. 191 of 192
+  unique fixture operations are routed; the duplicate `getTradingSchedule` row is a
+  fixture artifact, not a gap.
+
+WebSocket `contextcheck` remains excluded: `Subscription.Close()` takes no context
+by design, as it is commonly called from a `defer`, and adding one is a breaking
+API change.
+
 ## [1.1.13] - 2026-09-27
 
 A money-moving request was rounding the caller's amount, eleven public SDK

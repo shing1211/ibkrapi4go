@@ -6,28 +6,23 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 )
 
-func runPortfolio() error {
-	args := os.Args[2:]
+func runPortfolio(e *env, args []string) error {
 	if len(args) == 0 {
-		return runPortfolioSummary()
+		return runPortfolioSummary(e, args[1:])
 	}
 
 	switch args[0] {
 	case "summary":
-		os.Args = append(os.Args[:2], args[1:]...)
-		return runPortfolioSummary()
+		return runPortfolioSummary(e, args[1:])
 	case "ledger":
-		os.Args = append(os.Args[:2], args[1:]...)
-		return runPortfolioLedger()
+		return runPortfolioLedger(e, args[1:])
 	case "allocation":
-		os.Args = append(os.Args[:2], args[1:]...)
-		return runPortfolioAllocation()
+		return runPortfolioAllocation(e, args[1:])
 	case "-h", "--help", "help":
-		_, _ = fmt.Fprintf(os.Stderr, `Usage: ibkr portfolio <subcommand> [-account ACCOUNT]
+		_, _ = fmt.Fprintf(e.stderr, `Usage: ibkr portfolio <subcommand> [-account ACCOUNT]
 
 Subcommands:
   summary     Portfolio summary
@@ -40,14 +35,13 @@ Subcommands:
 	}
 }
 
-func parseAccountFlag() (string, error) {
-	args := os.Args[2:]
+func parseAccountFlag(args []string) (string, error) {
 	var account string
 	for i := 0; i < len(args); i++ {
-		switch args[i] {
+		switch argAt(args, i) {
 		case "-account", "--account":
-			if i+1 < len(args) {
-				account = args[i+1]
+			if v, ok := argValue(args, i); ok {
+				account = v
 				i++
 			}
 		case "-h", "--help":
@@ -57,8 +51,8 @@ func parseAccountFlag() (string, error) {
 	return account, nil
 }
 
-func runPortfolioSummary() error {
-	account, err := parseAccountFlag()
+func runPortfolioSummary(e *env, args []string) error {
+	account, err := parseAccountFlag(args)
 	if err != nil {
 		return nil
 	}
@@ -67,24 +61,24 @@ func runPortfolioSummary() error {
 		return err
 	}
 
-	cli, err := newClient()
+	cli, err := e.newClient()
 	if err != nil {
 		return err
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	summary, err := cli.Portfolio().Summary(ctx(), acct)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: portfolio summary: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: portfolio summary: %v\n", err)
 		return err
 	}
 
-	w := os.Stdout
+	w := e.stdout
 	_, _ = fmt.Fprintf(w, "Portfolio Summary — %s\n", acct)
 	_, _ = fmt.Fprintf(w, "%s\n", strings.Repeat("-", 60))
 	for k, v := range summary {
@@ -100,8 +94,8 @@ func runPortfolioSummary() error {
 	return nil
 }
 
-func runPortfolioLedger() error {
-	account, err := parseAccountFlag()
+func runPortfolioLedger(e *env, args []string) error {
+	account, err := parseAccountFlag(args)
 	if err != nil {
 		return nil
 	}
@@ -110,30 +104,30 @@ func runPortfolioLedger() error {
 		return err
 	}
 
-	cli, err := newClient()
+	cli, err := e.newClient()
 	if err != nil {
 		return err
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	ledger, err := cli.Portfolio().Ledger(ctx(), acct)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: portfolio ledger: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: portfolio ledger: %v\n", err)
 		return err
 	}
 
-	enc := json.NewEncoder(os.Stdout)
+	enc := json.NewEncoder(e.stdout)
 	enc.SetIndent("", "  ")
 	return enc.Encode(ledger)
 }
 
-func runPortfolioAllocation() error {
-	account, err := parseAccountFlag()
+func runPortfolioAllocation(e *env, args []string) error {
+	account, err := parseAccountFlag(args)
 	if err != nil {
 		return nil
 	}
@@ -142,24 +136,24 @@ func runPortfolioAllocation() error {
 		return err
 	}
 
-	cli, err := newClient()
+	cli, err := e.newClient()
 	if err != nil {
 		return err
 	}
-	defer cli.Close()
+	defer func() { _ = cli.Close() }()
 
 	if err := cli.Session().Initialize(ctx()); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: session initialize: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
 	alloc, err := cli.Portfolio().Allocation(ctx(), acct)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "error: portfolio allocation: %v\n", err)
+		_, _ = fmt.Fprintf(e.stderr, "error: portfolio allocation: %v\n", err)
 		return err
 	}
 
-	enc := json.NewEncoder(os.Stdout)
+	enc := json.NewEncoder(e.stdout)
 	enc.SetIndent("", "  ")
 	return enc.Encode(alloc)
 }
