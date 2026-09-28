@@ -5,6 +5,56 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.17] - 2026-09-27
+
+The fault injection the SDK's retry tests depend on was almost entirely untested,
+and a defect in it fails quietly rather than loudly.
+
+### Fixed
+
+- **The mock gateway's fault injection had no tests.** `pkg/ibkr`'s retry,
+  error-classification and order-reply tests all inject faults through
+  `Scenario.SetPolicy` and `applyScenario`. Before this release `SetPolicy` had
+  three uncovered statements, `applyScenario` had eleven, and `scenario.go` as a
+  whole was at 30.2%.
+
+  If that path had stopped injecting, the client would have received a clean
+  fixture where it expected a 500, and a retry test would have passed for the wrong
+  reason with nothing reporting a broken mock.
+
+  `scenario_test.go` now pins the resolution order - policy, then per-op, then
+  global, then nothing - and that a policy declining *defers* rather than
+  suppressing. All four injection modes are asserted end to end, because a unit
+  test of the resolver alone would not prove anything reaches the client: an
+  injected status replaces the fixture and `Clear` restores it, a status-only fault
+  still returns parseable JSON, latency is measured rather than trusted with a
+  per-fault delay winning over the global one, a dropped connection is observed
+  through a real TCP connection, and a timeout must honour the client's context.
+
+- **The request recorder was untested, and every "what was sent" assertion depends
+  on it.** `Recorder.clone` exists so a recorded snapshot is not mutated once
+  routing enriches the live request. A shallow copy would mean every such assertion
+  in the suite was asserting against a structure that changes under it. Each field
+  is now checked independently, so a partial regression is distinguishable, along
+  with the nil guards, the slice copy, reset, concurrent access, and the
+  documented contract that a snapshot carries no route parameters.
+
+- **The stream frame and field parsers are now covered** across both wire shapes
+  the mock accepts - the JSON control frame and the legacy `smd+`/`umd+` text
+  protocol - including the negative cases. An unknown method must be ignored, since
+  treating one as a subscribe would push frames at a client that never asked for
+  them.
+
+`scenario.go` reaches 100% and `recorder.go` 96.9%; the package goes 75.5% to
+**86.6%**, and overall coverage 65.4% to 66.3%. Fifteen mutations are caught,
+covering fault precedence, every injection mode, each recorder aliasing field, and
+each parser branch.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-fault-injection/`](./docs/runs/2026-09-27-fault-injection/).
+
 ## [1.1.16] - 2026-09-27
 
 The mock gateway's coverage was high on the code that maps paths and near-zero on
