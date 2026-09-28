@@ -24,6 +24,9 @@ type fakeAPI struct {
 	tickleFn      func(ctx context.Context) (*http.Response, error)
 	logoutFn      func(ctx context.Context) error
 	logoutCalls   atomic.Int64
+	// tickleCalls counts served tickle rounds, so a test can wait for the loop
+	// to have run rather than sleeping and hoping.
+	tickleCalls atomic.Int64
 }
 
 func (f *fakeAPI) initSession(ctx context.Context) (*http.Response, error) {
@@ -33,7 +36,9 @@ func (f *fakeAPI) authStatus(ctx context.Context) (*http.Response, error) {
 	return f.authStatusFn(ctx)
 }
 func (f *fakeAPI) tickle(ctx context.Context) (*http.Response, error) {
-	return f.tickleFn(ctx)
+	resp, err := f.tickleFn(ctx)
+	f.tickleCalls.Add(1)
+	return resp, err
 }
 func (f *fakeAPI) logout(ctx context.Context) error {
 	f.logoutCalls.Add(1)
@@ -90,7 +95,11 @@ func TestSession_HappyPath(t *testing.T) {
 		t.Errorf("State = %v; want AUTHENTICATED", s.State())
 	}
 
-	time.Sleep(20 * time.Millisecond)
+	// The session token is written only by a tickle round - Initialize does not
+	// set it - so the caller-visible token exists once a round has run. This used
+	// to sleep 20ms against a 1ms interval and hope one had landed. Driving the
+	// round directly makes it exact and instant.
+	s.tickleRound()
 
 	token, ok := s.Token()
 	if !ok || token != "test-token-abc" {
@@ -156,7 +165,18 @@ func TestSession_TickleFailure_Expires(t *testing.T) {
 		t.Fatalf("Initialize: %v", err)
 	}
 
-	time.Sleep(250 * time.Millisecond)
+	// Drive exactly the number of failing rounds the expiry threshold needs.
+	//
+	// This used to sleep 250ms - five times the 50ms tickle interval - and then
+	// assert on whatever state the loop happened to reach. A loaded machine
+	// could see fewer than two rounds and fail for a reason unrelated to the
+	// code. Calling tickleRound is what the loop itself does once per tick, so
+	// the threshold logic is exercised exactly, with no timing involved.
+	//
+	// The loop's own wiring is covered separately, by the goroutine tests below.
+	for i := 0; i < 2; i++ {
+		s.tickleRound()
+	}
 
 	if s.State() != StateExpired {
 		t.Errorf("State = %v; want EXPIRED after tickle failures", s.State())
@@ -379,7 +399,10 @@ func TestSession_ReauthorizeAfterTickleFailure(t *testing.T) {
 		t.Fatalf("Initialize: %v", err)
 	}
 
-	time.Sleep(250 * time.Millisecond)
+	// One failing round must not expire the session: the threshold is two.
+	// Driven directly rather than by sleeping through the 50ms interval, which
+	// is what this test used to do.
+	s.tickleRound()
 
 	if s.State() == StateExpired {
 		t.Errorf("State = EXPIRED after 1 failure; want AUTHENTICATED (threshold=2)")
@@ -409,7 +432,11 @@ func TestSession_TokenCopy(t *testing.T) {
 	if err := s.Initialize(ctx); err != nil {
 		t.Fatalf("Initialize: %v", err)
 	}
-	time.Sleep(20 * time.Millisecond)
+
+	// The token the caller reads is the one the tickle loop most recently
+	// fetched, so drive one round and then read it. This used to sleep 20ms
+	// against a 1ms interval and hope a round had landed.
+	s.tickleRound()
 
 	tok1, ok := s.Token()
 	if !ok || tok1 != "tok1" {
@@ -430,7 +457,8 @@ func TestSession_StartTickle_Idempotent(t *testing.T) {
 		},
 		logoutFn: func(ctx context.Context) error { return nil },
 	}
-	s := &Session{api: api, state: int32(StateAuthenticated), logger: testLogger}
+	clock, mt := newManualClock()
+	s := &Session{api: api, clock: clock, state: int32(StateAuthenticated), logger: testLogger}
 	ctx := context.Background()
 	defer settleGoroutines(t)
 	defer s.Close(ctx)
@@ -438,14 +466,23 @@ func TestSession_StartTickle_Idempotent(t *testing.T) {
 	s.startTickle()
 	s.startTickle() // idempotent
 
-	time.Sleep(20 * time.Millisecond)
+	// The second startTickle must not have replaced the running loop, so exactly
+	// one loop exists and one tick produces one round.
+	//
+	// This previously slept 20ms and compared two token reads, which asserted
+	// nothing: tickleFn always returned the same token, so the reads were equal
+	// whether or not a second loop had been started. The manual clock gives each
+	// loop its own channel, so a second loop would consume the same tick and the
+	// count would be 2.
+	mt.waitForTicker(t)
+	mt.tick()
+	waitForTickles(t, api, 1)
 
-	// Both should have the same token
-	tok1, _ := s.Token()
-	s.startTickle()
-	tok2, _ := s.Token()
-	if tok1 != tok2 {
-		t.Errorf("Token changed after second startTickle: %q vs %q", tok1, tok2)
+	if got := mt.count(); got != 1 {
+		t.Errorf("tickers = %d; want 1 - a second startTickle must not start a second loop", got)
+	}
+	if got := api.tickleCalls.Load(); got != 1 {
+		t.Errorf("tickle rounds = %d; want 1", got)
 	}
 }
 
@@ -477,5 +514,11 @@ func TestSession_TickleGoroutine_NoLeak(t *testing.T) {
 		t.Fatalf("Initialize: %v", err)
 	}
 
-	time.Sleep(20 * time.Millisecond)
+	// Wait for the loop to have actually served a round, so the leak check that
+	// Close triggers has a live goroutine to account for. The previous version
+	// slept 20ms against a 1ms tickle interval, which is the right idea and the
+	// wrong mechanism: it could wake before any round had run, and it could not
+	// tell a slow loop from a broken one. This fails with a specific message
+	// instead of passing vacuously.
+	waitForTickles(t, api, 1)
 }

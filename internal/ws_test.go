@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -272,6 +273,13 @@ func (s *fakeSink) Fail(err error) {
 // non-flaky and a stronger claim - it asserts the update really was delivered,
 // not merely that some time passed.
 func (s *fakeSink) waitForUpdate(ctx context.Context) ([]WSUpdate, error) {
+	if s.notify == nil {
+		// Selecting on a nil channel blocks forever, so without this a sink built
+		// as a bare struct literal would hang until the context expired and
+		// report a delivery timeout, which reads like a product bug rather than
+		// a test-wiring mistake.
+		return nil, fmt.Errorf("fakeSink has no notify channel; construct it with newFakeSink")
+	}
 	for {
 		s.mu.Lock()
 		n := len(s.updates)
@@ -291,6 +299,36 @@ func (s *fakeSink) waitForUpdate(ctx context.Context) ([]WSUpdate, error) {
 	}
 }
 
+// waitForUpdates blocks until at least n updates have been delivered, or ctx
+// expires. It is waitForUpdate generalised to a count, for tests that assert on
+// an exact number of deliveries.
+func (s *fakeSink) waitForUpdates(ctx context.Context, n int) ([]WSUpdate, error) {
+	if s.notify == nil {
+		return nil, fmt.Errorf("fakeSink has no notify channel; construct it with newFakeSink")
+	}
+	for {
+		s.mu.Lock()
+		got := len(s.updates)
+		errs := append([]error(nil), s.errs...)
+		s.mu.Unlock()
+		if got >= n {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return append([]WSUpdate(nil), s.updates...), nil
+		}
+		if len(errs) > 0 {
+			return nil, errs[0]
+		}
+		select {
+		case <-s.notify:
+		case <-ctx.Done():
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return append([]WSUpdate(nil), s.updates...), ctx.Err()
+		}
+	}
+}
+
 func (s *fakeSink) updatesSnapshot() []WSUpdate {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -301,14 +339,58 @@ type fakeSystemSink struct {
 	mu     sync.Mutex
 	frames []WSSystemFrame
 	errs   []error
+	// notify is signalled on every system frame, so a test can wait for a frame
+	// to arrive instead of sleeping a fixed interval and hoping. nil is safe:
+	// the non-blocking send falls through to the default arm.
+	notify chan struct{}
+}
+
+func newFakeSystemSink() *fakeSystemSink {
+	return &fakeSystemSink{notify: make(chan struct{}, 64)}
 }
 
 func (s *fakeSystemSink) WantsSystem() bool { return true }
 
 func (s *fakeSystemSink) DeliverSystem(f WSSystemFrame) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.frames = append(s.frames, f)
+	s.mu.Unlock()
+	if s.notify == nil {
+		return
+	}
+	select {
+	case s.notify <- struct{}{}:
+	default:
+	}
+}
+
+// waitForSystemFrames blocks until at least n system frames have been delivered,
+// or ctx expires.
+func (s *fakeSystemSink) waitForSystemFrames(ctx context.Context, n int) ([]WSSystemFrame, error) {
+	for {
+		s.mu.Lock()
+		got := len(s.frames)
+		errs := append([]error(nil), s.errs...)
+		s.mu.Unlock()
+		if got >= n {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return append([]WSSystemFrame(nil), s.frames...), nil
+		}
+		if len(errs) > 0 {
+			return nil, errs[0]
+		}
+		if s.notify == nil {
+			return nil, fmt.Errorf("fakeSystemSink has no notify channel; construct it with newFakeSystemSink")
+		}
+		select {
+		case <-s.notify:
+		case <-ctx.Done():
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return append([]WSSystemFrame(nil), s.frames...), ctx.Err()
+		}
+	}
 }
 
 func (s *fakeSystemSink) Fail(err error) {
@@ -380,8 +462,8 @@ func TestWS_SubscribeDeliversToCorrectSink(t *testing.T) {
 	}
 	defer conn.Close()
 
-	sinkA := &fakeSink{conids: map[int]bool{111: true}}
-	sinkB := &fakeSink{conids: map[int]bool{222: true}}
+	sinkA := newFakeSink(111)
+	sinkB := newFakeSink(222)
 
 	_, err = conn.Subscribe(ctx, sinkA, nil, []int{111}, []string{"31"})
 	if err != nil {
@@ -396,10 +478,15 @@ func TestWS_SubscribeDeliversToCorrectSink(t *testing.T) {
 	hub.Push(mockgateway.Tick{ConID: 222, Field: "31", Value: "200.00"})
 	hub.Push(mockgateway.Tick{ConID: 333, Field: "31", Value: "300.00"})
 
-	select {
-	case <-time.After(500 * time.Millisecond):
-	case <-ctx.Done():
-		t.Fatalf("timeout")
+	// Wait for each sink to receive rather than sleeping 500ms. The three pushes
+	// are broadcast to every subscriber, so a fixed wait was only ever a guess
+	// about how long delivery took - and the guess could fail on a slow machine
+	// even though delivery was correct.
+	if _, err := sinkA.waitForUpdate(ctx); err != nil {
+		t.Fatalf("sinkA received no update: %v", err)
+	}
+	if _, err := sinkB.waitForUpdate(ctx); err != nil {
+		t.Fatalf("sinkB received no update: %v", err)
 	}
 
 	sinkA.mu.Lock()
@@ -438,23 +525,17 @@ func TestWS_SystemFrameDeliversToSystemSink(t *testing.T) {
 	}
 	defer conn.Close()
 
-	sysSink := &fakeSystemSink{}
-	_, err = conn.Subscribe(ctx, &fakeSink{conids: map[int]bool{265598: true}}, sysSink, []int{265598}, []string{"31"})
+	sysSink := newFakeSystemSink()
+	_, err = conn.Subscribe(ctx, newFakeSink(265598), sysSink, []int{265598}, []string{"31"})
 	if err != nil {
 		t.Fatalf("Subscribe: %v", err)
 	}
 
-	select {
-	case <-time.After(500 * time.Millisecond):
-	case <-ctx.Done():
-		t.Fatalf("timeout waiting for system frame")
-	}
-
-	sysSink.mu.Lock()
-	got := len(sysSink.frames)
-	sysSink.mu.Unlock()
-	if got == 0 {
-		t.Errorf("expected at least one system frame")
+	// The gateway sends the status frame as part of the subscribe handshake, so
+	// this used to sleep 500ms and then look. Waiting for the frame is both
+	// faster and the stronger claim.
+	if _, err := sysSink.waitForSystemFrames(ctx, 1); err != nil {
+		t.Fatalf("expected at least one system frame: %v", err)
 	}
 }
 

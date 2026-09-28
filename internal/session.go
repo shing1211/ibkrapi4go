@@ -271,30 +271,33 @@ func (s *Session) Initialize(ctx context.Context) error {
 		if clock == nil {
 			clock = &Clock{}
 		}
-		clock.Sleep(1 * time.Second)
 		ticker := clock.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 		for {
+			// Poll first, wait second. The loop used to sleep a full second
+			// before its first auth_status call, so every Initialize paid a fixed
+			// one-second penalty before it could discover a session that was
+			// already established. Checking immediately converges at the same
+			// rate - a session that is not up yet simply falls through to the
+			// wait below - and takes the second off the happy path.
+			bs, err := s.fetchAuthStatus(pollCtx)
+			if err != nil {
+				s.logger.Warn("ibkr.session auth_status error", "err", err)
+			} else if bs.Established && bs.Authenticated {
+				s.setState(StateAuthenticated)
+				s.logger.Info("ibkr.session authenticated", "connected", bs.Connected)
+				s.startTickle()
+				return nil
+			} else if bs.Fail != "" {
+				s.setState(StateDisconnected)
+				return fmt.Errorf("ibkr: session init: server rejected: %s", bs.Fail)
+			}
+
 			select {
 			case <-pollCtx.Done():
 				s.setState(StateDisconnected)
 				return fmt.Errorf("ibkr: session init: timeout waiting for established: %w", pollCtx.Err())
 			case <-ticker.C:
-				bs, err := s.fetchAuthStatus(pollCtx)
-				if err != nil {
-					s.logger.Warn("ibkr.session auth_status error", "err", err)
-					continue
-				}
-				if bs.Established && bs.Authenticated {
-					s.setState(StateAuthenticated)
-					s.logger.Info("ibkr.session authenticated", "connected", bs.Connected)
-					s.startTickle()
-					return nil
-				}
-				if bs.Fail != "" {
-					s.setState(StateDisconnected)
-					return fmt.Errorf("ibkr: session init: server rejected: %s", bs.Fail)
-				}
 			}
 		}
 	}

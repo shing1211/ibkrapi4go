@@ -6,6 +6,7 @@ package internal
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -319,22 +320,21 @@ func TestWS_DuplicateUpdatedSequence(t *testing.T) {
 	}
 	defer conn.Close()
 
-	sink := &fakeSink{conids: map[int]bool{conid: true}}
+	sink := newFakeSink(conid)
 	_, err = conn.Subscribe(ctx, sink, nil, []int{conid}, []string{"31"})
 	if err != nil {
 		t.Fatalf("Subscribe: %v", err)
 	}
 
-	select {
-	case <-time.After(1 * time.Second):
-	case <-ctx.Done():
-		t.Fatalf("context cancelled")
+	// The assertion is that both duplicates arrive, so wait for two rather
+	// than sleeping a second and looking. This test was the source of an
+	// intermittent failure: on a loaded machine the second update had not
+	// been delivered within the fixed wait.
+	updates, err := sink.waitForUpdates(ctx, 2)
+	if err != nil {
+		t.Fatalf("expected 2 updates (no dedup): %v", err)
 	}
-
-	sink.mu.Lock()
-	got := len(sink.updates)
-	sink.mu.Unlock()
-	if got != 2 {
+	if got := len(updates); got != 2 {
 		t.Errorf("expected 2 updates (no dedup), got %d", got)
 	}
 }
@@ -371,16 +371,15 @@ func TestWS_OutOfOrderSequence(t *testing.T) {
 	}
 	defer conn.Close()
 
-	sink := &fakeOutOfOrderSink{conids: map[int]bool{conid: true}}
+	sink := &fakeOutOfOrderSink{conids: map[int]bool{conid: true}, done: make(chan struct{}, 64)}
 	_, err = conn.Subscribe(ctx, sink, nil, []int{conid}, []string{"31"})
 	if err != nil {
 		t.Fatalf("Subscribe: %v", err)
 	}
 
-	select {
-	case <-time.After(1 * time.Second):
-	case <-ctx.Done():
-		t.Fatalf("context cancelled")
+	// Wait for the three scripted frames rather than sleeping a second.
+	if err := sink.waitFor(ctx, 3); err != nil {
+		t.Fatalf("expected 3 updates: %v", err)
 	}
 
 	sink.mu.Lock()
@@ -403,6 +402,10 @@ type fakeOutOfOrderSink struct {
 	errs          []error
 	conids        map[int]bool
 	receivedOrder []string
+	// done is signalled on every delivery so a test can wait for the scripted
+	// frames instead of sleeping. nil is safe: the non-blocking send falls
+	// through to the default arm.
+	done chan struct{}
 }
 
 func (s *fakeOutOfOrderSink) Wants(conid int) bool {
@@ -413,9 +416,36 @@ func (s *fakeOutOfOrderSink) Wants(conid int) bool {
 
 func (s *fakeOutOfOrderSink) Deliver(u WSUpdate) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.updates = append(s.updates, u)
 	s.receivedOrder = append(s.receivedOrder, u.Value)
+	s.mu.Unlock()
+	if s.done == nil {
+		return
+	}
+	select {
+	case s.done <- struct{}{}:
+	default:
+	}
+}
+
+// waitFor blocks until n frames have been delivered, or ctx expires.
+func (s *fakeOutOfOrderSink) waitFor(ctx context.Context, n int) error {
+	if s.done == nil {
+		return fmt.Errorf("fakeOutOfOrderSink has no done channel")
+	}
+	for {
+		s.mu.Lock()
+		got := len(s.receivedOrder)
+		s.mu.Unlock()
+		if got >= n {
+			return nil
+		}
+		select {
+		case <-s.done:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
 func (s *fakeOutOfOrderSink) Fail(err error) {
@@ -549,24 +579,19 @@ func TestWS_NTFAndSORFrames(t *testing.T) {
 	}
 	defer conn.Close()
 
-	sysSink := &fakeSystemSink{}
-	_, err = conn.Subscribe(ctx, &fakeSink{conids: map[int]bool{265598: true}}, sysSink, []int{265598}, []string{"31"})
+	sysSink := newFakeSystemSink()
+	_, err = conn.Subscribe(ctx, newFakeSink(265598), sysSink, []int{265598}, []string{"31"})
 	if err != nil {
 		t.Fatalf("Subscribe: %v", err)
 	}
 
-	select {
-	case <-time.After(1 * time.Second):
-	case <-ctx.Done():
-		t.Fatalf("context cancelled")
-	}
-
-	sysSink.mu.Lock()
-	frames := sysSink.frames
-	sysSink.mu.Unlock()
-
-	if len(frames) == 0 {
-		t.Fatalf("expected system frames, got none")
+	// The status and notification frames are part of the subscribe
+	// handshake, so waiting for them is both faster than the 1s sleep this
+	// used and the stronger claim. This was observed failing under parallel
+	// load with "expected system frames, got none".
+	frames, err := sysSink.waitForSystemFrames(ctx, 2)
+	if err != nil {
+		t.Fatalf("expected system frames: %v", err)
 	}
 
 	var hasSTS, hasNTF bool

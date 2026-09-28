@@ -5,6 +5,54 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.12] - 2026-09-27
+
+Audits every fixed wait in the test suite. Eleven of twenty-six were defects, one
+of those tests was not flaky but vacuous, and the slow tests turned out to be
+pointing at a production latency cost.
+
+### Fixed
+
+- **`Session.Initialize` waited a full second before its first poll.** The loop
+  slept for one second and only then started polling `auth_status`, so every
+  session initialization paid a fixed one-second penalty before it could discover
+  a session that was already established. It now polls first and waits second,
+  which converges at the same rate and takes the second off the happy path.
+- **Eleven tests waited a fixed interval for an event that was already
+  guaranteed**, and could therefore only fail when the machine was slow. They now
+  drive the code under test, or wait for a signal it emits. Six were in
+  `session_test.go` (two of them sleeping 250 ms against a 50 ms tickle interval —
+  five times the interval, a bare guess) and five were `select` blocks whose only
+  arms were `time.After` and `ctx.Done()`, which a grep for `time.Sleep` does not
+  find.
+- **`TestSession_StartTickle_Idempotent` could not fail.** It slept, then compared
+  two reads of a token that `tickleFn` always returned identically, so the reads
+  matched whether or not a second tickle loop had been started. It now injects a
+  manual clock whose tickers each get their own channel, ticks once, and asserts
+  exactly one ticker and one round — so a double-start is detected. Confirmed by
+  breaking the idempotency guard in `startTickle`.
+
+  The remaining fifteen fixed waits are legitimate and are unchanged: circuit
+  breaker cooldowns, injected latency in the fault-injection and timeout tests,
+  the OAuth test's deliberate window proving a call did *not* return early, and
+  the goroutine-leak settle.
+
+### Changed
+
+- `fakeSink`, `fakeSystemSink` and `fakeOutOfOrderSink` gained buffered notify
+  channels so tests can wait for a delivery instead of a duration. A nil channel
+  is still safe for tests that only inspect the recorded slices, and the wait
+  helpers now fail with a clear message on a nil channel rather than hanging until
+  the context expires.
+- `Clock.Sleep` and its `sleepFunc` hook are removed, unused since `Initialize`
+  stopped sleeping.
+
+### Verified
+
+Full suite, race detector, 10 full-repo runs at `GOMAXPROCS=2`, 25 runs of the
+goroutine-owning session tests, and 12 race runs at `GOMAXPROCS=1` all pass. A
+script confirms no bare fixed waits remain. Coverage is unchanged at 60.0%.
+
 ## [1.1.11] - 2026-09-27
 
 Closes the *class* of defect fixed narrowly in 1.1.9, and deletes the dead code
@@ -1215,7 +1263,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.11...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.12...HEAD
+[1.1.12]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.11...v1.1.12
 [1.1.11]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.8...v1.1.9

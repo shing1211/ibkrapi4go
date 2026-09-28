@@ -11,7 +11,6 @@ type Clock struct {
 	nowFunc    func() time.Time
 	tickerFunc func(time.Duration) *Ticker
 	afterFunc  func(time.Duration) <-chan time.Time
-	sleepFunc  func(time.Duration)
 }
 
 // Ticker holds a channel that fires on each tick.
@@ -50,13 +49,4 @@ func (c *Clock) After(d time.Duration) <-chan time.Time {
 		return c.afterFunc(d)
 	}
 	return time.After(d)
-}
-
-// Sleep pauses the current goroutine for d.
-func (c *Clock) Sleep(d time.Duration) {
-	if c.sleepFunc != nil {
-		c.sleepFunc(d)
-		return
-	}
-	time.Sleep(d)
 }
