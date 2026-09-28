@@ -212,6 +212,34 @@ type fakeSink struct {
 	updates []WSUpdate
 	errs    []error
 	conids  map[int]bool
+	// notify is signalled on every delivery or failure so a test can block until
+	// an event rather than sleeping for a fixed interval. It is buffered and
+	// signalled non-blockingly, so the WebSocket read loop is never held up by a
+	// test that is not waiting.
+	//
+	// A nil channel is safe: a non-blocking send on nil takes the default branch
+	// and does nothing, so the many tests that only inspect the slices after the
+	// fact need no change.
+	notify chan struct{}
+}
+
+// newFakeSink returns a sink that can also be waited on.
+func newFakeSink(conids ...int) *fakeSink {
+	set := make(map[int]bool, len(conids))
+	for _, c := range conids {
+		set[c] = true
+	}
+	return &fakeSink{conids: set, notify: make(chan struct{}, 64)}
+}
+
+func (s *fakeSink) signal() {
+	if s.notify == nil {
+		return
+	}
+	select {
+	case s.notify <- struct{}{}:
+	default:
+	}
 }
 
 func (s *fakeSink) Wants(conid int) bool {
@@ -222,14 +250,51 @@ func (s *fakeSink) Wants(conid int) bool {
 
 func (s *fakeSink) Deliver(u WSUpdate) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.updates = append(s.updates, u)
+	s.mu.Unlock()
+	s.signal()
 }
 
 func (s *fakeSink) Fail(err error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.errs = append(s.errs, err)
+	s.mu.Unlock()
+	s.signal()
+}
+
+// waitForUpdate blocks until at least one update has been delivered, the sink has
+// failed, or ctx expires. It returns the updates seen so far.
+//
+// This replaces a fixed sleep. Sleeping for a fixed interval and then asserting
+// "something arrived" is a race: the assertion can only fail when the machine is
+// slow, which is precisely when a suite most needs to be telling the truth about
+// something else. Waiting on the event with a bounded deadline is both
+// non-flaky and a stronger claim - it asserts the update really was delivered,
+// not merely that some time passed.
+func (s *fakeSink) waitForUpdate(ctx context.Context) ([]WSUpdate, error) {
+	for {
+		s.mu.Lock()
+		n := len(s.updates)
+		errs := append([]error(nil), s.errs...)
+		s.mu.Unlock()
+		if n > 0 {
+			return s.updatesSnapshot(), nil
+		}
+		if len(errs) > 0 {
+			return nil, errs[0]
+		}
+		select {
+		case <-s.notify:
+		case <-ctx.Done():
+			return s.updatesSnapshot(), ctx.Err()
+		}
+	}
+}
+
+func (s *fakeSink) updatesSnapshot() []WSUpdate {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]WSUpdate(nil), s.updates...)
 }
 
 type fakeSystemSink struct {
@@ -271,24 +336,27 @@ func TestWS_DialAndSubscribe(t *testing.T) {
 	}
 	defer conn.Close()
 
-	sink := &fakeSink{conids: map[int]bool{265598: true}}
+	sink := newFakeSink(265598)
 	handle, err := conn.Subscribe(ctx, sink, nil, []int{265598}, []string{"31"})
 	if err != nil {
 		t.Fatalf("Subscribe: %v", err)
 	}
 	defer handle.Close()
 
-	select {
-	case <-time.After(500 * time.Millisecond):
-	case <-ctx.Done():
-		t.Fatalf("timeout waiting for tick")
+	// The mock gateway emits the scripted ticks as it handles the subscribe
+	// frame, so an update is guaranteed to be on the wire by the time Subscribe
+	// returns. The test waits for it to be delivered rather than sleeping a fixed
+	// 500ms and hoping: the deadline is the 5s context, so a real regression still
+	// fails promptly while a slow machine no longer fails at all.
+	updates, err := sink.waitForUpdate(ctx)
+	if err != nil {
+		t.Fatalf("no update delivered: %v", err)
 	}
-
-	sink.mu.Lock()
-	got := len(sink.updates)
-	sink.mu.Unlock()
-	if got == 0 {
-		t.Errorf("expected at least one update after 500ms")
+	if len(updates) == 0 {
+		t.Fatalf("expected at least one update, got none")
+	}
+	if got := updates[0].ConID; got != 265598 {
+		t.Errorf("first update conid = %d; want 265598", got)
 	}
 }
 

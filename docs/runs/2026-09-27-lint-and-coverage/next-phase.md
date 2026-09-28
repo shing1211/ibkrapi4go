@@ -2,15 +2,6 @@
 
 ## Worth doing
 
-### `TestWS_DialAndSubscribe` is a wall-clock flake
-
-It asserts "at least one update after 500ms" and misses under parallel load; it
-passes 4/4 in isolation. It is not safe to simply widen the window - the window is
-the assertion. The right fix is to wait on a condition with a deadline and treat
-the deadline as the failure, rather than sleeping a fixed interval and hoping, and
-to make sure the mock actually guarantees a delivery rather than leaving it to
-timing. Until then this test will keep costing a red build at random.
-
 ### `contextcheck` is disabled for the WebSocket layer, not satisfied
 
 The rule is off for `internal/ws.go` and `pkg/ibkr/ws.go` because satisfying it
@@ -31,6 +22,20 @@ tested without a gateway. That is mechanical but touches all six files.
 
 ## Settled, no action
 
+- **`TestWS_DialAndSubscribe` is no longer a flake** (fixed in v1.1.10). It slept a
+  fixed 500ms and then asserted an update had arrived, but the mock gateway emits
+  its scripted ticks synchronously while handling the subscribe frame, so the
+  update was already on the wire before `Subscribe` returned. The sleep was not
+  waiting for anything and the assertion could only fail on a slow machine.
+  `fakeSink` now signals deliveries on a non-blocking channel and the test waits
+  for the event with the context deadline as its bound. It runs in about 10ms
+  instead of 500ms and additionally asserts the delivered `ConID`, which the old
+  version never checked. Verified over 15 consecutive runs and 4 runs under
+  `-race` with `GOMAXPROCS=2`.
+- **The other `time.Sleep` sites in the suite are not the same defect**, and were
+  left alone. `oauth_test.go` waits to prove a call did *not* return early, which
+  cannot be expressed as a wait on an event; the circuit-breaker tests wait for a
+  real cooldown; the fault-injection tests sleep to simulate latency.
 - **The 193-vs-191 fixture count is not a gap.** 193 SPEC rows are 192 unique
   operation IDs (`getTradingSchedule` appears under two methods); 191 have fixture
   bodies because `submitModelPortfolioOrder` is deliberately unrouted, pinned by

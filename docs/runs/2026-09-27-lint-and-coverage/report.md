@@ -168,10 +168,16 @@ diagnostic naming the defect, restored.
 
 ## Known remaining
 
-- **`TestWS_DialAndSubscribe` is a wall-clock flake.** It asserts "at least one
-  update after 500ms" and misses under parallel load. It passes 4/4 in isolation.
-  Not caused by this run, and not fixed here: loosening the window would mask a
-  real delivery regression. It is a test-design problem, not a code one.
+- **`TestWS_DialAndSubscribe` was a wall-clock flake; fixed in v1.1.10.** It
+  asserted "at least one update after 500ms" and missed under parallel load. The
+  cause was that the sleep stood in for a wait on an event that was already
+  guaranteed: the mock gateway emits its scripted ticks synchronously while
+  handling the subscribe frame, so the update was on the wire before `Subscribe`
+  returned. The test now waits for the delivery event with the context deadline as
+  its bound, runs in about 10ms instead of 500ms, and asserts the delivered
+  `ConID`, which it previously did not. Verified over 15 consecutive runs and 4
+  runs under `-race` with `GOMAXPROCS=2`. The other `time.Sleep` sites in the
+  suite are not the same defect and were deliberately left alone.
 - **D15 has not been confirmed against a live gateway** (carried from v1.1.8).
 - **`contextcheck` is disabled for the WebSocket layer** rather than satisfied.
   Making it pass means adding a `ctx` parameter to the public `Close()`.

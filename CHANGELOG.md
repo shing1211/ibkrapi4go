@@ -5,6 +5,38 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.10] - 2026-09-27
+
+Tests only. No production code, no generated code, no API change, no dependency
+change: the sole file touched is `internal/ws_test.go`.
+
+### Fixed
+
+- **`TestWS_DialAndSubscribe` no longer depends on machine speed.** It slept a
+  fixed 500ms and then asserted that at least one market-data update had arrived.
+  The mock gateway emits its scripted ticks synchronously while handling the
+  subscribe frame, so the update is already on the wire before `Subscribe`
+  returns; the sleep was not waiting for anything, and the assertion could only
+  fail when the machine was slow. The test now waits for the delivery event with
+  the context deadline as its bound.
+
+  This makes the test both non-flaky and stronger. It runs in about 10ms instead
+  of 500ms, and it now also asserts that the first update's `ConID` is the one
+  that was subscribed - a claim the previous version never made.
+
+  Verified over 15 consecutive runs, and over 4 runs under `-race` with
+  `GOMAXPROCS=2`, which is the contention that previously broke it.
+
+### Not changed
+
+The other `time.Sleep` and `time.After` call sites in the test suite are not the
+same defect and were deliberately left alone. `oauth_test.go` waits 200ms to
+prove a call did *not* return early, which cannot be expressed as a wait on an
+event; the circuit-breaker tests sleep for a cooldown, which is a genuine
+time-based state transition; and the fault-injection tests sleep to simulate
+injected latency. Widening any of those would make the suite slower without
+making it more truthful.
+
 ## [1.1.9] - 2026-09-27
 
 The lint gate now runs, and it found five real defects that nothing else was
@@ -1139,7 +1171,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.9...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.10...HEAD
+[1.1.10]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.6...v1.1.7
