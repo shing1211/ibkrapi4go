@@ -5,6 +5,61 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.16] - 2026-09-27
+
+The mock gateway's coverage was high on the code that maps paths and near-zero on
+the code that decides who gets in. And the coverage number itself was not counting
+that package.
+
+### Fixed
+
+- **The mock gateway's auth gatekeepers were almost untested.** `session.go` was at
+  4.3% and `oauth.go` at 1.1%, while the route tables sat at 100%. If either store
+  had been more permissive than the real gateway, `pkg/ibkr` tests would have passed
+  against requests the gateway would reject, with nothing here saying so.
+
+  `session_test.go` covers the session store and the gate, including
+  `isSessionOp` - an allowlist in which every entry is an *unauthenticated*
+  endpoint, so the exact set is pinned and a representative set of protected
+  operations is asserted to stay protected. It also pins the rule that a correct
+  token is still refused until a session is established, and that a logout revokes
+  access rather than merely returning 200.
+
+  `oauth_test.go` covers all three grant flows, JWT assertion shape checking, token
+  issue/validate/expiry including eviction, bearer scheme extraction, and the
+  end-to-end property that a token the endpoint issued is one the bearer surface
+  accepts.
+
+  `session.go` is now at 100% and `oauth.go` at 95.6%; the package went 57.2% to
+  75.5%. Eight mutations, including a protected operation slipped into the
+  auth-bypass allowlist, are caught.
+
+- **The coverage metric did not count the shipped mock gateway.** CI computed
+  coverage with `-coverpkg=./pkg/ibkr,./internal,./cmd/...`, which is `./internal`
+  and not `./internal/...` - so the mock gateway's 823 statements were outside the
+  metric, while the mock gateway ships as `cmd/ibkr-mock-gateway`. The effect was
+  visible: the package gained 18 points of coverage and the reported total did not
+  move, because none of it was measured.
+
+  Corrected to `./internal/...`. The real figure is **65.4%**, and the floor moves
+  from 60% to 62%.
+
+### Changed
+
+- **WebSocket `contextcheck` is closed, not deferred.** The carried-forward note
+  described satisfying the linter as a breaking `ctx` parameter on the public
+  `Subscription.Close()`. Running the linter with the exclusion removed shows 7
+  findings, none of which is a lost cancellation: two tag a connection-scoped gauge
+  with the connection's context on purpose - the inherited context is the
+  per-subscription one, cancelled when the subscription ends - and the rest are
+  inside `Close`, which waits on nothing. Its one potentially blocking call reaches
+  `WSConn.send`, which enqueues onto a buffered channel and selects on the
+  connection's context rather than writing to the socket, so it cannot strand on a
+  wedged peer. The exclusion stays, with the verified reasoning recorded.
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-mock-gateway-auth/`](./docs/runs/2026-09-27-mock-gateway-auth/).
+
 ## [1.1.15] - 2026-09-27
 
 A published claim about operation coverage was ambiguous enough to be read as "one

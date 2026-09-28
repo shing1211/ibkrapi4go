@@ -112,13 +112,24 @@ linters:
       - path: _test\.go
         linters:
           - contextcheck
-      # contextcheck in the WebSocket layer. Close() takes no context by design -
-      # it is a public API on Subscription, and adding a ctx parameter would be a
-      # breaking change. The linter's remaining complaints are that the
-      # close/teardown goroutines and the connection's own lifetime context do
-      # not thread a caller's context, which is the intended behaviour for a
-      # handle that must be closeable from a defer. It stays enabled for the REST
-      # and OAuth paths, where a dropped context would actually strand a request.
+      # contextcheck in the WebSocket layer, for two distinct reasons.
+      #
+      # internal/ws.go:244,269 - Subscribe tags a connection-scoped gauge with
+      # setGauge(c.ctx, ...). The context it is asked to pass instead is the
+      # per-subscription one, which is cancelled as soon as the subscription ends.
+      # Inheriting it would tie a connection lifetime metric to a call-scoped
+      # lifetime, so the non-inherited context is the correct choice.
+      #
+      # pkg/ibkr/ws.go - Close takes no context, and needs none. It closes channels
+      # under a sync.Once and cancels; it does not wait. Its one call that could
+      # block, s.handle.Close(), reaches WSConn.send, which enqueues onto the
+      # buffered c.out and selects on stopCh, the caller's ctx, and the
+      # connection's c.ctx - it never writes to the socket, so it cannot strand on
+      # a wedged peer, and the teardown that triggers it is what releases c.ctx.
+      # There is no lost cancellation to recover, so Subscription.Close(ctx) would
+      # be a public API change that buys nothing. contextcheck stays enabled for
+      # the REST and OAuth paths, where a dropped context really would strand a
+      # request.
       - path: internal/ws\.go
         linters:
           - contextcheck

@@ -66,17 +66,17 @@ jobs:
 
       - name: Run tests with coverage
         if: steps.hasmod.outputs.present == 'yes'
-        run: go test -coverprofile=coverage.out -covermode=atomic -coverpkg=./pkg/ibkr,./internal,./cmd/... ./...
+        run: go test -coverprofile=coverage.out -covermode=atomic -coverpkg=./pkg/ibkr,./internal/...,./cmd/... ./...
 
       - name: Check coverage threshold
         if: steps.hasmod.outputs.present == 'yes'
         run: |
           TOTAL=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub(/%/,"",$NF); print $NF}')
           echo "Total coverage: $TOTAL%"
-          if ! awk -v total="$TOTAL" -v min=60 'BEGIN { exit !(total < min) }'; then
+          if ! awk -v total="$TOTAL" -v min=62 'BEGIN { exit !(total < min) }'; then
             :
           else
-            echo "::error::Coverage ($TOTAL%) is below the 60% threshold"
+            echo "::error::Coverage ($TOTAL%) is below the 62% threshold"
             exit 1
           fi
 
