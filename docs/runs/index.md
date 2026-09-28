@@ -14,6 +14,7 @@
 | 2026-09-27 | [sleep-audit](./2026-09-27-sleep-audit/) | BUILD | complete | `cc343ab` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-27 | [remaining-gaps](./2026-09-27-remaining-gaps/) | BUILD | complete | `ddaf9b5` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-27 | [cli-testability](./2026-09-27-cli-testability/) | BUILD | complete | `c09e01d` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
+| 2026-09-27 | [opid-coverage](./2026-09-27-opid-coverage/) | BUILD | complete | `ead8dab` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 
 Older runs are archived under
 [`../archive/runs/index.md`](../archive/runs/index.md).

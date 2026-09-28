@@ -5,6 +5,48 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.15] - 2026-09-27
+
+A published claim about operation coverage was ambiguous enough to be read as "one
+operation is unimplemented", which is false. The ambiguity came from a real gap in
+the test suite: nothing checked operation coverage by opId.
+
+### Fixed
+
+- **Operation coverage is now checked by opId, not only by method and path.** The
+  existing coverage tests match a SPEC row against the route table on normalized
+  method and path. An operation that shares a path with another one therefore
+  satisfies them through the other one's route, and no test says the operation is
+  unroutable. `TestEveryOpIDIsRoutedOrExplained` closes that: every distinct
+  operation in `docs/SPEC.md` must either be registered in the route table or
+  appear in `pathCollisionOps` naming the operation that shadows it.
+
+  The exception is verified rather than trusted. An entry fails the build if the
+  operation is actually routed (a stale excuse), if the shadowing operation has no
+  route either (an entry hiding a genuinely missing route), or if the two do not
+  really share a method and normalized path (a false reason). All four branches,
+  plus the deletion of the entry itself, are mutation-verified.
+
+  `sharedOpIDs` does the same job in the other direction, for operations the spec
+  labels with more than one route - one opId serving two endpoints would otherwise
+  have them share a single fixture silently. A new one must be declared, and a
+  declared one that no longer applies must be removed.
+
+  The test reports the real figures rather than leaving them to be inferred:
+  **192 distinct operations, 191 routed, 1 explained by a path collision**
+  (`submitModelPortfolioOrder`).
+
+- **Corrected the 1.1.14 changelog entry**, which described that collision in a way
+  that read as an unimplemented operation. The SDK implements and tests
+  `SubmitModelPortfolioOrder`; all 193 operations in `docs/SPEC.md` are implemented.
+  The gap is confined to the mock gateway's path-based router, and the correction
+  is recorded inline in the 1.1.14 entry.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-opid-coverage/`](./docs/runs/2026-09-27-opid-coverage/).
+
 ## [1.1.14] - 2026-09-27
 
 The CLI could not be tested, and the reason turned out to be a bug rather than an
@@ -67,11 +109,20 @@ Both remaining gaps are blocked on credentials and are unchanged by this release
 - **D15 live verification** - `year` is omitted for
   `listTaxDocumentsAvailable`, as the spec marks it optional. Confirming the
   gateway accepts the request needs a real account.
-- **`submitModelPortfolioOrder` stays unrouted**, because its path collides with
-  `submitNewOrder`. Routing it would send portfolio orders to the wrong endpoint,
-  so confirming the collision requires an FA-enabled paper account. 191 of 192
-  unique fixture operations are routed; the duplicate `getTradingSchedule` row is a
-  fixture artifact, not a gap.
+- **`submitModelPortfolioOrder` has no route in the mock gateway**, because its
+  path collides with `submitNewOrder`. Routing it would send portfolio orders to
+  the wrong endpoint, so confirming the collision requires an FA-enabled paper
+  account.
+
+  > **Corrected in 1.1.15.** The 1.1.14 wording of this entry said "191 of 192
+  > unique fixture operations are routed", and called the duplicate
+  > `getTradingSchedule` row "a fixture artifact". Both statements invited the
+  > reading that an operation was unimplemented, which is wrong: the SDK
+  > implements and tests `SubmitModelPortfolioOrder`
+  > (`pkg/ibkr/models.go`, `TestModels_SubmitModelPortfolioOrder`). All 193
+  > operations in `docs/SPEC.md` are implemented. The gap is confined to the mock
+  > gateway's path-based router. 1.1.15 adds a test that reports these numbers
+  > directly instead of leaving them to be inferred.
 
 WebSocket `contextcheck` remains excluded: `Subscription.Close()` takes no context
 by design, as it is commonly called from a `defer`, and adding one is a breaking
