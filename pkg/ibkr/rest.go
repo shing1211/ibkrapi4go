@@ -896,13 +896,6 @@ type TaxVoucherState struct {
 	RequestState string
 }
 
-func float32ToStr(p *float32) string {
-	if p == nil {
-		return ""
-	}
-	return strconv.FormatFloat(float64(*p), 'f', -1, 32)
-}
-
 // escapeQuotes applies the escaping RFC 7578 requires inside a multipart
 // Content-Disposition filename parameter: a backslash or a double quote would
 // otherwise terminate the quoted string early. mime/multipart's own

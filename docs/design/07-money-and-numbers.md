@@ -63,12 +63,29 @@ insufficient.
 
 - Where the spec would generate `float64` for a monetary field, add an
   `x-go-type` override to `string` (recorded in `scripts/patch_spec.py` or
-  `oapi-codegen.yaml`).
-- `scripts/check_money.py` (run by `make check`) enforces this on `pkg/ibkr`:
-  it fails the build if any exported struct field under `pkg/ibkr` is `float32`/`float64`
-  and its name matches money patterns (`Price`, `Amount`, `Qty`, `Quantity`,
-  `Balance`, `Cash`, `NetLiq`). A review checklist item: any `float64` on a
-  money/price/quantity field is a bug.
+  `oapi-codegen.yaml`). Where the gateway sends the field as a bare JSON number,
+  the override is `json.Number` instead: `string` would fail to decode, because
+  Go cannot unmarshal a number into a string.
+- `scripts/check_money.py` (run by `make check` and in CI) enforces this on
+  `pkg/ibkr` and `internal` with two rules.
+
+  **No exported money field is a binary float.** Any exported field on an
+  exported struct that is `float32`/`float64` fails the build, with a short
+  allowlist for the observability aggregates and one non-monetary request field.
+  There is no name matching: every exported float field has to be justified.
+
+  **Money is not rendered through a float.** The field rule inspects
+  declarations, so it cannot see function bodies - and that is where the
+  tax-voucher defect lived, where a decoded `float32` was re-rendered with
+  `strconv.FormatFloat` and the cents silently vanished above 2^24. The gate
+  therefore also rejects `strconv.FormatFloat` in production `pkg/ibkr` code, and
+  any helper that takes a binary float and returns a string, which is how the
+  same defect returns once the direct call is removed. The only sanctioned
+  sources of a money string are a quoted `string` field and `json.Number` via
+  `rawToString`/`jsonNumberToStr`; both preserve the gateway's own digits.
+
+  A genuine need for float formatting is an explicit entry in
+  `ALLOWED_FLOAT_FORMATS` in that script, which has to say why.
 
 ## Formatting vs. value
 

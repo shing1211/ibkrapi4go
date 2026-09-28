@@ -5,6 +5,50 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.11] - 2026-09-27
+
+Closes the *class* of defect fixed narrowly in 1.1.9, and deletes the dead code
+that was left behind by it.
+
+### Added
+
+- **`check_money.py` now rejects rendering money through a binary float.** The
+  existing rule only inspected exported struct fields, so it was structurally
+  blind to function bodies — and the 1.1.9 tax-voucher defect lived entirely
+  inside one, where a decoded `float32` was re-rendered with
+  `strconv.FormatFloat` and the cents silently vanished above 2^24. Two vectors
+  are now rejected in production `pkg/ibkr` code: a direct `strconv.FormatFloat`
+  call, and any helper that takes a binary float and returns a string, which is
+  how the same defect returns once the direct call is removed. Both were
+  confirmed by reintroducing each and watching the gate fail with the specific
+  diagnostic. A genuine need is an explicit entry in `ALLOWED_FLOAT_FORMATS`,
+  which has to state why; the list is empty today.
+
+  This matters because the generated client still contains 426 `float32` fields,
+  198 of them monetary. None of them currently reaches a caller — `rawToString`
+  extracts money through `json.Number`, which preserves the gateway's digits —
+  so this is preventative rather than a fix for live corruption. But nothing
+  previously stopped the next person from routing one of them through a float.
+
+### Changed
+
+- `docs/design/07-money-and-numbers.md` now describes what the gate actually
+  does. It claimed the check matched money field *name* patterns
+  (`Price`, `Amount`, `Qty`, …); it does not — it rejects every exported float
+  field and carries a small explicit allowlist. It also did not mention the
+  float-formatting rule.
+
+### Removed
+
+- **`float32ToStr`, and its test.** After 1.1.9 retargeted the tax-voucher fields
+  at `json.Number`, the helper had no production caller left. It survived as
+  dead code because `run.tests: true` in the lint config means `unused` counts a
+  function as used when only a test references it — so the one thing keeping it
+  alive was a test that asserted the rounding loss it existed to cause
+  (`16777217` → `"16777216"`). The new gate closes that blind spot for this
+  shape: a float-to-string helper in production `pkg/ibkr` now fails the build
+  whether or not anything calls it.
+
 ## [1.1.10] - 2026-09-27
 
 Tests only. No production code, no generated code, no API change, no dependency
@@ -1171,7 +1215,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.10...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.11...HEAD
+[1.1.11]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.7...v1.1.8
