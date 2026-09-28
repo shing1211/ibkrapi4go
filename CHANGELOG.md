@@ -5,6 +5,43 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.20] - 2026-09-27
+
+Closes the last of the `json.Number` class: every such field that reaches a caller
+as a string now has a test that would notice if it stopped preserving digits.
+
+### Fixed
+
+- **Historical bar prices had no precision test.** `MarketData().History` decodes
+  open, high, low, close and volume as `json.Number` in a single anonymous struct
+  and stringifies each one. A `float32` regression would round all five silently.
+  Volume is included because it travels the identical path, even though it is a
+  count rather than a price.
+
+- **Option strike prices had no precision test, and a slice is a different decode
+  target from a scalar.** `Trade().Strikes` decodes `Call []json.Number` and
+  `Put []json.Number`. An element that regressed would leave the surrounding
+  structure intact, so the assertions check the values *and* the length - a slice
+  that silently lost an element would otherwise satisfy a value-only check.
+
+- **The contract multiplier had no precision test.** A scale factor rather than a
+  price, so a rounding error would misstate the *size* of a contract rather than its
+  cost - a quieter failure than a wrong price, and worth pinning for that reason.
+
+All three are mutation-verified on the assertion: under a `float32` decode they
+report `16777218` for `16777217.89`, `67108864` for `67108865.13`, and `12345.679`
+for `12345.6789`. The new file reuses the `float32Loses` guard from the money
+tests, so a value that a `float32` renders unchanged is rejected at authoring time
+rather than accepted as a test that proves nothing.
+
+No `json.Number` field reaching a caller as a string is now left without a
+`float32`-changing assertion.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-number-precision/`](./docs/runs/2026-09-27-number-precision/).
+
 ## [1.1.19] - 2026-09-27
 
 A recommended quality gate was tested against the real code and withdrawn rather
