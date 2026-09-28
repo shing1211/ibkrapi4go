@@ -989,7 +989,7 @@ func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []Cas
 		if isDeposit {
 			depositInstr := client.DepositFundsInstruction{
 				AccountId:             string(req.AccountID),
-				Amount:                strToDecimal(req.Amount),
+				Amount:                moneyToNumber(req.Amount),
 				BankInstructionMethod: client.DepositFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
 				ClientInstructionId:   strToInt(req.ClientInstructionID),
 				Currency:              req.Currency,
@@ -1001,7 +1001,7 @@ func (m *RESTExternalCashTransfers) TransferBulk(ctx context.Context, reqs []Cas
 		} else {
 			withdrawInstr := client.WithdrawFundsInstruction{
 				AccountId:             string(req.AccountID),
-				Amount:                strToDecimal(req.Amount),
+				Amount:                moneyToNumber(req.Amount),
 				BankInstructionMethod: client.WithdrawFundsInstructionBankInstructionMethod(req.BankInstructionMethod),
 				BankInstructionName:   derefStr(req.BankInstructionName),
 				ClientInstructionId:   strToInt(req.ClientInstructionID),
@@ -1095,7 +1095,7 @@ func (m *RESTInternalCashTransfers) Transfer(ctx context.Context, req InternalCa
 	}
 
 	instr := client.InternalCashTransferInstruction{
-		Amount:              strToDecimal(req.Amount),
+		Amount:              moneyToNumber(req.Amount),
 		ClientInstructionId: strToInt(req.ClientInstructionID),
 		Currency:            req.Currency,
 		SourceAccountId:     string(req.SourceAccountID),
@@ -1143,7 +1143,7 @@ func (m *RESTInternalCashTransfers) TransferBulk(ctx context.Context, reqs []Int
 
 	for i, req := range reqs {
 		instr := client.InternalCashTransferInstruction{
-			Amount:              strToDecimal(req.Amount),
+			Amount:              moneyToNumber(req.Amount),
 			ClientInstructionId: strToInt(req.ClientInstructionID),
 			Currency:            req.Currency,
 			SourceAccountId:     string(req.SourceAccountID),

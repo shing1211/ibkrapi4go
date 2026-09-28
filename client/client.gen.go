@@ -11909,7 +11909,7 @@ type DepositFundsInstruction struct {
 	// Amount Monetary amount for the transaction.
 	//
 	// Example: 100
-	Amount float32 `json:"amount"`
+	Amount json.Number `json:"amount"`
 
 	// BankInstructionMethod Funding method / payment rail for the bank instruction.
 	//
@@ -13775,7 +13775,7 @@ type InternalCashTransferInstruction struct {
 	// Amount Monetary amount for the transaction.
 	//
 	// Example: 123
-	Amount float32 `json:"amount"`
+	Amount json.Number `json:"amount"`
 
 	// ClientInstructionId Client-assigned identifier for this instruction; must be a positive number and unique within the request.
 	//
@@ -17006,7 +17006,7 @@ type WithdrawFundsInstruction struct {
 	// Amount Monetary amount for the transaction.
 	//
 	// Example: 100
-	Amount float32 `json:"amount"`
+	Amount json.Number `json:"amount"`
 
 	// BankInstructionMethod Funding method / payment rail for the bank instruction.
 	//

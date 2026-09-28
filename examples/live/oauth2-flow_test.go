@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"errors"
-	"net/http"
 	"testing"
 
 	"github.com/shing1211/ibkrapi4go/pkg/ibkr"
@@ -74,31 +73,5 @@ func TestHandleAuthError_AuthErrorOnClosedClient(t *testing.T) {
 	}
 	if !errors.Is(err, ibkr.ErrClosed) {
 		t.Errorf("handleAuthError error = %v, want it to wrap ErrClosed", err)
-	}
-}
-
-func TestHTTPStatusCheck(t *testing.T) {
-	tests := []struct {
-		name   string
-		status int
-		want   bool
-	}{
-		{"ok", http.StatusOK, false},
-		{"created", http.StatusCreated, false},
-		{"bad request", http.StatusBadRequest, true},
-		{"unauthorized", http.StatusUnauthorized, true},
-		{"server error", http.StatusInternalServerError, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp := &http.Response{StatusCode: tt.status}
-			if got := httpStatusCheck(resp); got != tt.want {
-				t.Errorf("httpStatusCheck(%d) = %v, want %v", tt.status, got, tt.want)
-			}
-		})
-	}
-
-	if httpStatusCheck(nil) {
-		t.Error("httpStatusCheck(nil) = true, want false")
 	}
 }

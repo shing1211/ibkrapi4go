@@ -1219,12 +1219,12 @@ func TestRESTExternalCashTransfers_TransferBulk_Deposit(t *testing.T) {
 	var body struct {
 		InstructionType string `json:"instructionType"`
 		Instructions    []struct {
-			AccountID             string  `json:"accountId"`
-			Amount                float32 `json:"amount"`
-			BankInstructionMethod string  `json:"bankInstructionMethod"`
-			BankInstructionName   *string `json:"bankInstructionName"`
-			ClientInstructionID   int     `json:"clientInstructionId"`
-			Currency              string  `json:"currency"`
+			AccountID             string          `json:"accountId"`
+			Amount                json.RawMessage `json:"amount"`
+			BankInstructionMethod string          `json:"bankInstructionMethod"`
+			BankInstructionName   *string         `json:"bankInstructionName"`
+			ClientInstructionID   int             `json:"clientInstructionId"`
+			Currency              string          `json:"currency"`
 		} `json:"instructions"`
 	}
 	decodeRequestBody(t, req, &body)
@@ -1241,10 +1241,12 @@ func TestRESTExternalCashTransfers_TransferBulk_Deposit(t *testing.T) {
 	if got.ClientInstructionID != 1 {
 		t.Errorf("clientInstructionId = %d; want 1", got.ClientInstructionID)
 	}
-	// The generated deposit model declares amount as a JSON number, so the
-	// wrapper's string input is converted to float32 and lands as 1000.5.
-	if got.Amount != 1000.5 {
-		t.Errorf("amount = %v; want 1000.5 as a JSON number", got.Amount)
+	// The spec declares amount as a JSON number, so it must go out as a bare
+	// number - carrying the caller's digits. It is a json.Number now rather than
+	// a float32; 1000.50 is exactly representable as a float32, so the previous
+	// assertion passed whether or not the amount had been rounded.
+	if got, want := string(got.Amount), "1000.50"; got != want {
+		t.Errorf("amount = %s; want the bare number %s", got, want)
 	}
 	if got.BankInstructionMethod != "ACH" {
 		t.Errorf("bankInstructionMethod = %q; want ACH", got.BankInstructionMethod)
@@ -1315,12 +1317,12 @@ func TestRESTExternalCashTransfers_TransferBulk_Withdrawal(t *testing.T) {
 	var body struct {
 		InstructionType string `json:"instructionType"`
 		Instructions    []struct {
-			AccountID             string  `json:"accountId"`
-			Amount                float32 `json:"amount"`
-			BankInstructionMethod string  `json:"bankInstructionMethod"`
-			BankInstructionName   string  `json:"bankInstructionName"`
-			ClientInstructionID   int     `json:"clientInstructionId"`
-			Currency              string  `json:"currency"`
+			AccountID             string          `json:"accountId"`
+			Amount                json.RawMessage `json:"amount"`
+			BankInstructionMethod string          `json:"bankInstructionMethod"`
+			BankInstructionName   string          `json:"bankInstructionName"`
+			ClientInstructionID   int             `json:"clientInstructionId"`
+			Currency              string          `json:"currency"`
 		} `json:"instructions"`
 	}
 	decodeRequestBody(t, req, &body)
@@ -1331,8 +1333,8 @@ func TestRESTExternalCashTransfers_TransferBulk_Withdrawal(t *testing.T) {
 		t.Fatalf("instructions = %+v; want one", body.Instructions)
 	}
 	got := body.Instructions[0]
-	if got.Amount != 250.75 {
-		t.Errorf("amount = %v; want 250.75 as a JSON number", got.Amount)
+	if got, want := string(got.Amount), "250.75"; got != want {
+		t.Errorf("amount = %s; want the bare number %s", got, want)
 	}
 	// The withdrawal model declares bankInstructionName as a required string, so
 	// derefStr has to flatten the caller's pointer; a non-nil pointer is
@@ -1427,12 +1429,12 @@ func TestRESTInternalCashTransfers_TransferBulk(t *testing.T) {
 	var body struct {
 		InstructionType string `json:"instructionType"`
 		Instructions    []struct {
-			Amount              float32 `json:"amount"`
-			ClientInstructionID int     `json:"clientInstructionId"`
-			ClientNote          *string `json:"clientNote"`
-			Currency            string  `json:"currency"`
-			SourceAccountID     string  `json:"sourceAccountId"`
-			TargetAccountID     string  `json:"targetAccountId"`
+			Amount              json.RawMessage `json:"amount"`
+			ClientInstructionID int             `json:"clientInstructionId"`
+			ClientNote          *string         `json:"clientNote"`
+			Currency            string          `json:"currency"`
+			SourceAccountID     string          `json:"sourceAccountId"`
+			TargetAccountID     string          `json:"targetAccountId"`
 		} `json:"instructions"`
 	}
 	decodeRequestBody(t, req, &body)
@@ -1443,8 +1445,8 @@ func TestRESTInternalCashTransfers_TransferBulk(t *testing.T) {
 		t.Fatalf("instructions = %+v; want two", body.Instructions)
 	}
 	first := body.Instructions[0]
-	if first.Amount != 500.25 {
-		t.Errorf("instructions[0].amount = %v; want 500.25 as a JSON number", first.Amount)
+	if got, want := string(first.Amount), "500.25"; got != want {
+		t.Errorf("instructions[0].amount = %s; want the bare number %s", got, want)
 	}
 	if first.ClientInstructionID != 1 {
 		t.Errorf("instructions[0].clientInstructionId = %d; want 1", first.ClientInstructionID)

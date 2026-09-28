@@ -905,6 +905,27 @@ func escapeQuotes(s string) string {
 	return strings.NewReplacer("\\", "\\\\", `"`, "\\\"").Replace(s)
 }
 
+// moneyToNumber converts a caller's decimal string into a json.Number for a
+// request field the spec declares as a JSON number, preserving the caller's digits
+// exactly.
+//
+// It replaces a float32 parse, which silently rounded any amount above 2^24
+// (16777216): a caller moving "12345678.91" put 12345679 on the wire. A
+// json.Number marshals as a bare number, which is what the spec describes.
+//
+// An empty or unparseable value yields "0" rather than an empty json.Number,
+// which encoding/json rejects outright. That matches the previous behaviour,
+// where an empty amount produced 0 on the wire rather than a failure.
+func moneyToNumber(s string) json.Number {
+	if s == "" {
+		return json.Number("0")
+	}
+	if _, err := strconv.ParseFloat(s, 64); err != nil {
+		return json.Number("0")
+	}
+	return json.Number(s)
+}
+
 // jsonNumberToStr renders a money field the gateway sent as a JSON number.
 //
 // Unlike float32ToStr it returns the gateway's own digits verbatim rather than

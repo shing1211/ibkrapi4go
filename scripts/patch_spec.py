@@ -307,12 +307,30 @@ def patch(spec: dict) -> collections.Counter:
     #    it silently rounds any amount above 2^24 (16777216) - reachable for
     #    aggregate dividend and withholding figures on a tax voucher. json.Number
     #    keeps the gateway's own digits, per ADR 0008.
+    #
+    #    The three bank-instruction schemas are the same defect in the *request*
+    #    direction. Their `amount` is `type: number` with `multipleOf: 0.01`, so
+    #    the wire really is a JSON number, and `string` would be wrong to send.
+    #    But the wrapper takes the caller's amount as a decimal string and was
+    #    converting it with a float32 parse, so a caller asking to move
+    #    "12345678.91" put 12345679 on the wire. json.Number marshals as a bare
+    #    number, which is what the spec describes, while carrying the caller's
+    #    digits unaltered.
     NUMBER_MONEY_SCHEMAS = {
         "TaxVoucherDTO": frozenset([
             "fee",
             "divAmount",
             "withHeldAmount",
             "quantity",
+        ]),
+        "DepositFundsInstruction": frozenset([
+            "amount",
+        ]),
+        "WithdrawFundsInstruction": frozenset([
+            "amount",
+        ]),
+        "InternalCashTransferInstruction": frozenset([
+            "amount",
         ]),
     }
 

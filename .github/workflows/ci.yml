@@ -186,6 +186,15 @@ jobs:
       - name: Run golangci-lint
         run: golangci-lint run ./pkg/... ./internal/... ./cmd/... ./scripts/...
 
+      # A second pass with test files excluded. The normal run has
+      # `run.tests: true`, which makes `unused` count a function as used when only
+      # a test references it - so production code kept alive solely by its own test
+      # is invisible. `float32ToStr` survived that way for a release: a lossy
+      # money formatter, held open by a test that asserted the rounding it caused.
+      # This pass closes the class rather than that one instance.
+      - name: Run golangci-lint without test files
+        run: golangci-lint run --tests=false ./pkg/... ./internal/... ./cmd/... ./scripts/...
+
   dco:
     name: DCO check
     runs-on: ubuntu-latest

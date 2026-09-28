@@ -28,7 +28,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -129,6 +128,15 @@ func main() {
 	_, err = invalidREST.Token(ctx)
 	if err != nil {
 		fmt.Printf("  Expected error received: %v\n", err)
+		// An auth failure is recoverable: a stale token can be re-acquired
+		// without rebuilding the client. handleAuthError shows the pattern, and
+		// classifies the error first so a network failure is not mistaken for a
+		// credentials problem.
+		if authErr := handleAuthError(ctx, err, rest); authErr != nil {
+			fmt.Printf("  Re-acquisition failed (expected for invalid credentials): %v\n", authErr)
+		} else {
+			fmt.Println("  Token re-acquired after an auth error")
+		}
 	} else {
 		fmt.Println("  WARNING: Invalid credentials did not fail — check token caching")
 	}
@@ -208,7 +216,10 @@ func handleAuthError(ctx context.Context, err error, rest *ibkr.RESTSurface) err
 	return nil
 }
 
-// httpStatusCheck is a helper that returns true for 4xx and 5xx responses.
-func httpStatusCheck(resp *http.Response) bool {
-	return resp != nil && resp.StatusCode >= 400
-}
+// httpStatusCheck is deliberately absent.
+//
+// It used to sit here, returning true for any 4xx or 5xx response. The SDK does
+// not expose raw responses - a failed call returns an *ibkr.Error carrying
+// HTTPStatus - so a reader copying that helper would be reaching for a
+// *http.Response they never receive. isAuthError and handleAuthError below, which
+// classify an actual error, are the pattern worth copying.

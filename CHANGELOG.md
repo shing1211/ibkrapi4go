@@ -5,6 +5,54 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.13] - 2026-09-27
+
+A money-moving request was rounding the caller's amount, eleven public SDK
+methods had no test at all, and the linter could be fooled by a test.
+
+### Fixed
+
+- **Bank instructions sent a rounded amount.** The deposit, withdraw and internal
+  cash transfer request bodies declared `amount` as a `float32`, and the wrapper
+  filled them by parsing the caller's decimal string through a float. A caller
+  moving `12345678.91` put `12345679` on the wire. These are the same defect
+  1.1.9 fixed for tax vouchers, in the request direction.
+
+  The spec declares the field as `type: number`, so it must go out as a bare JSON
+  number — retyping it to `string` would break the send. It is now a
+  `json.Number`, which marshals as a number and carries the caller's digits
+  unaltered. An unset amount still becomes `0`, because a zero-value
+  `json.Number` is the empty string and `encoding/json` refuses to marshal it.
+
+  The three existing assertions on this field used `250.75`, `500.25` and
+  `1000.50` — all exactly representable as a `float32`, so they passed whether or
+  not the amount had been rounded. They now compare the literal on the wire.
+
+### Added
+
+- **Tests for eleven previously untested `ModelManager` methods.** The
+  model-portfolio configuration API — presets, accounts in a model, invested
+  accounts, model listing, target positions, model orders — had no coverage at
+  all; the four existing model tests covered rebalance, invest/divest, the cash
+  analyzer and the portfolio-order collision. One of the new tests is a
+  cross-check rather than a smoke test: `ModelsPager` must agree with the
+  `AllModels` it wraps, since the models example now uses the pager.
+- **A second golangci-lint pass in CI with test files excluded.** The normal pass
+  runs with `run.tests: true`, which makes `unused` count a function as used when
+  only a test references it — so production code kept alive solely by its own test
+  was invisible. `float32ToStr` survived that way for a release: a lossy money
+  formatter held open by a test that asserted the rounding it caused.
+
+### Changed
+
+- `examples/live` now demonstrates the error recovery it described.
+  `handleAuthError` and `isAuthError` classify an auth failure and re-acquire the
+  token; the example's step 4 previously just printed the error and moved on.
+- `httpStatusCheck` is removed from that example. It took a raw
+  `*http.Response`, which the SDK never returns, so a reader copying it would
+  reach for something they do not get — `Error.HTTPStatus` is the actual
+  mechanism.
+
 ## [1.1.12] - 2026-09-27
 
 Audits every fixed wait in the test suite. Eleven of twenty-six were defects, one
@@ -1263,7 +1311,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.12...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.13...HEAD
+[1.1.13]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.12...v1.1.13
 [1.1.12]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.11...v1.1.12
 [1.1.11]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.9...v1.1.10
