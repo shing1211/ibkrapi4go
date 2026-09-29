@@ -90,6 +90,20 @@ func TestParseGlobalFlags_StopsAtFirstNonFlag(t *testing.T) {
 	}
 }
 
+// TestParseGlobalFlags_NoCommandReturnsLen is the one case where the returned
+// index is not one past a command: with no non-flag in args there is no command,
+// and the index is len(args) - the position a command would have to be inserted
+// at. It is documented on the function and has no production caller, so it is
+// pinned here rather than left to the table above, whose "no command at all" row
+// uses nil args and so only covers the zero case.
+func TestParseGlobalFlags_NoCommandReturnsLen(t *testing.T) {
+	args := []string{"-insecure", "-gateway", "https://g:1"}
+	_, _, _, _, idx := parseGlobalFlags(args)
+	if idx != len(args) {
+		t.Errorf("cmdIdx = %d; want %d (len(args))", idx, len(args))
+	}
+}
+
 // TestParseGlobalFlags_RepeatedFlag pins that the last occurrence wins, so a
 // change to that behaviour is deliberate.
 func TestParseGlobalFlags_RepeatedFlag(t *testing.T) {

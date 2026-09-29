@@ -122,9 +122,15 @@ func newClientFromArgs(args []string) (*ibkr.Client, error) {
 	return ibkr.NewClient(opts...)
 }
 
-// parseGlobalFlags extracts the global flags from args and returns the index of
-// the first non-flag argument. It takes the arguments as a parameter, like run,
-// so the parsing is reachable from a test without touching os.Args.
+// parseGlobalFlags extracts the global flags from args and returns the index one
+// past the first non-flag argument, which is where that command's own arguments
+// begin. It takes the arguments as a parameter, like run, so the parsing is
+// reachable from a test without touching os.Args.
+//
+// When args contains no non-flag at all, the index is len(args): there is no
+// command, so the position after the last argument is where one would have to be
+// inserted. No production caller reads the index today - newClientFromArgs
+// discards it - so the value is pinned by tests rather than depended upon.
 func parseGlobalFlags(args []string) (gateway, rest, account string, insecure bool, cmdIdx int) {
 	for i := 0; i < len(args); i++ {
 		switch argAt(args, i) {

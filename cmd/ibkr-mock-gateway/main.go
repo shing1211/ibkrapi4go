@@ -25,6 +25,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/big"
 	"net"
@@ -44,56 +45,93 @@ import (
 const shutdownTimeout = 5 * time.Second
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
 		fmt.Fprintf(os.Stderr, "ibkr-mock-gateway: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	addr := flag.String("addr", ":5001", "listen address (host:port)")
-	scenario := flag.String("scenario", "none", "fault scenario: none|expired|ratelimited|flaky")
-	latency := flag.Duration("latency", 0, "fixed delay added to every response (e.g. 25ms)")
-	seed := flag.Int64("seed", 1, "deterministic seed for generated values")
-	useTLS := flag.Bool("tls", false, "serve TLS with an in-memory self-signed certificate for loopback")
-	verbose := flag.Bool("verbose", false, "log every request")
-	authRequired := flag.Bool("auth-required", false, "reject protected CPAPI routes until ssodh/init establishes a session")
-	flag.Parse()
+// options is the parsed command line. Each field is a flag the operator can set,
+// and the defaults are the ones the program has always used.
+type options struct {
+	addr         string
+	scenario     string
+	latency      time.Duration
+	seed         int64
+	useTLS       bool
+	verbose      bool
+	authRequired bool
+}
 
-	if *latency < 0 {
-		return fmt.Errorf("invalid -latency %s: must not be negative", *latency)
+// parseFlags reads options from args.
+//
+// It builds its own FlagSet rather than using the package-level flag functions.
+// Those register against the global CommandLine and flag.Parse reads os.Args, so
+// a test could not supply a different command line without mutating process
+// state - which is the same coupling that made cmd/ibkr untestable, documented in
+// cmd/ibkr/env.go. A local FlagSet takes its arguments as a parameter, so the
+// flag surface is reachable from a test. ContinueOnError means a bad flag
+// returns an error instead of calling os.Exit.
+func parseFlags(args []string, out io.Writer) (options, error) {
+	fs := flag.NewFlagSet("ibkr-mock-gateway", flag.ContinueOnError)
+	fs.SetOutput(out)
+
+	var o options
+	fs.StringVar(&o.addr, "addr", ":5001", "listen address (host:port)")
+	fs.StringVar(&o.scenario, "scenario", "none", "fault scenario: none|expired|ratelimited|flaky")
+	fs.DurationVar(&o.latency, "latency", 0, "fixed delay added to every response (e.g. 25ms)")
+	fs.Int64Var(&o.seed, "seed", 1, "deterministic seed for generated values")
+	fs.BoolVar(&o.useTLS, "tls", false, "serve TLS with an in-memory self-signed certificate for loopback")
+	fs.BoolVar(&o.verbose, "verbose", false, "log every request")
+	fs.BoolVar(&o.authRequired, "auth-required", false, "reject protected CPAPI routes until ssodh/init establishes a session")
+
+	if err := fs.Parse(args); err != nil {
+		return options{}, err
 	}
-	scn, err := buildScenario(*scenario)
+	if o.latency < 0 {
+		return options{}, fmt.Errorf("invalid -latency %s: must not be negative", o.latency)
+	}
+	return o, nil
+}
+
+// newServer builds the HTTP server for the given options, without serving it.
+//
+// Splitting this out of run is what makes the flag wiring testable: the parts
+// worth asserting on - which mockgateway options are derived, whether -verbose
+// wraps the handler, whether -tls produced a TLS config and an https base URL -
+// are all decided here, and none of them require a listening socket.
+func newServer(o options) (*http.Server, string, error) {
+	scn, err := buildScenario(o.scenario)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	opts := []mockgateway.Option{
-		mockgateway.WithSeed(*seed),
+		mockgateway.WithSeed(o.seed),
 		mockgateway.WithScenario(scn),
-		mockgateway.WithAuthRequired(*authRequired),
+		mockgateway.WithAuthRequired(o.authRequired),
 	}
-	if *latency > 0 {
-		opts = append(opts, mockgateway.WithLatency(*latency))
+	if o.latency > 0 {
+		opts = append(opts, mockgateway.WithLatency(o.latency))
 	}
 	mock := mockgateway.New(opts...)
 
 	var handler = mock.Handler()
-	if *verbose {
+	if o.verbose {
 		handler = requestLogger(handler)
 	}
 
 	httpSrv := &http.Server{
-		Addr:              *addr,
+		Addr:              o.addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	scheme := "http"
-	if *useTLS {
+	if o.useTLS {
 		cert, err := selfSignedCert()
 		if err != nil {
-			return fmt.Errorf("generate self-signed certificate: %w", err)
+			return nil, "", fmt.Errorf("generate self-signed certificate: %w", err)
 		}
 		// MinVersion is set explicitly. Go's zero value already defaults a
 		// server to TLS 1.2, but relying on that is implicit and gosec (G402)
@@ -105,15 +143,27 @@ func run() error {
 		scheme = "https"
 	}
 
-	base := baseURL(*addr, scheme)
-	printBanner(base, *seed, *scenario, *useTLS)
+	return httpSrv, baseURL(o.addr, scheme), nil
+}
+
+func run(args []string, stdout, stderr io.Writer) error {
+	o, err := parseFlags(args, stderr)
+	if err != nil {
+		return err
+	}
+
+	httpSrv, base, err := newServer(o)
+	if err != nil {
+		return err
+	}
+	printBanner(stdout, base, o.seed, o.scenario, o.useTLS)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	errCh := make(chan error, 1)
 	go func() {
-		if *useTLS {
+		if o.useTLS {
 			errCh <- httpSrv.ListenAndServeTLS("", "")
 			return
 		}
@@ -128,7 +178,7 @@ func run() error {
 		return nil
 	case <-ctx.Done():
 		stop()
-		fmt.Fprintln(os.Stderr, "\nshutting down...")
+		_, _ = fmt.Fprintln(stderr, "\nshutting down...")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
 		if err := httpSrv.Shutdown(shutdownCtx); err != nil {
@@ -188,22 +238,31 @@ func baseURL(addr, scheme string) string {
 }
 
 // printBanner writes the exposed surfaces and example environment variables.
-func printBanner(base string, seed int64, scenario string, tlsOn bool) {
+//
+// It takes a writer rather than printing to the process stdout, so a test can
+// assert on the URLs the operator is told to point the SDK at. Those are the
+// whole point of the banner: a wrong scheme or a dropped port sends the reader to
+// a URL that does not serve anything.
+func printBanner(w io.Writer, base string, seed int64, scenario string, tlsOn bool) {
 	wsBase := "ws" + strings.TrimPrefix(base, "http")
-	fmt.Printf("ibkr-mock-gateway listening on %s (seed=%d, scenario=%s, tls=%t)\n", base, seed, scenario, tlsOn)
-	fmt.Printf("  CPAPI            %s/v1/api\n", base)
-	fmt.Printf("  CPAPI WebSocket  %s/v1/api/ws\n", wsBase)
-	fmt.Printf("  IB REST          %s/gw/api/v1 and %s/gw/api/v2\n", base, base)
-	fmt.Printf("  OAuth2 token     %s/oauth2/api/v1/token\n", base)
-	fmt.Println()
-	fmt.Println("Point the SDK at this gateway:")
-	fmt.Printf("  export IBKR_GATEWAY_URL=%s\n", base)
-	fmt.Printf("  export IBKR_REST_GATEWAY_URL=%s\n", base)
+	// The write errors are discarded rather than returned. A banner is written
+	// once at startup to a terminal or a pipe: if the operator's stdout is closed
+	// there is nothing useful left to do, and the server is still worth starting.
+	// This is the same `_ =` convention the rest of the CLI uses for its messages.
+	_, _ = fmt.Fprintf(w, "ibkr-mock-gateway listening on %s (seed=%d, scenario=%s, tls=%t)\n", base, seed, scenario, tlsOn)
+	_, _ = fmt.Fprintf(w, "  CPAPI            %s/v1/api\n", base)
+	_, _ = fmt.Fprintf(w, "  CPAPI WebSocket  %s/v1/api/ws\n", wsBase)
+	_, _ = fmt.Fprintf(w, "  IB REST          %s/gw/api/v1 and %s/gw/api/v2\n", base, base)
+	_, _ = fmt.Fprintf(w, "  OAuth2 token     %s/oauth2/api/v1/token\n", base)
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w, "Point the SDK at this gateway:")
+	_, _ = fmt.Fprintf(w, "  export IBKR_GATEWAY_URL=%s\n", base)
+	_, _ = fmt.Fprintf(w, "  export IBKR_REST_GATEWAY_URL=%s\n", base)
 	if tlsOn {
-		fmt.Println("  export IBKR_INSECURE_SKIP_VERIFY=true   # self-signed loopback certificate")
+		_, _ = fmt.Fprintln(w, "  export IBKR_INSECURE_SKIP_VERIFY=true   # self-signed loopback certificate")
 	}
-	fmt.Println()
-	fmt.Printf("Run the example:  IBKR_GATEWAY_URL=%s go run ./examples/mock\n", base)
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintf(w, "Run the example:  IBKR_GATEWAY_URL=%s go run ./examples/mock\n", base)
 }
 
 // requestLogger logs one line per request. The wrapper preserves http.Hijacker

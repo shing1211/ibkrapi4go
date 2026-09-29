@@ -11,6 +11,12 @@ import (
 	"runtime"
 )
 
+// defaultGatewayURL is used when the config file is missing or names no
+// gateway. It is a constant rather than a literal repeated at both defaulting
+// sites so the two cannot drift - a client built against one default and a
+// config file written by the other would silently disagree.
+const defaultGatewayURL = "https://localhost:5000"
+
 // cliConfig holds the persistent CLI configuration.
 type cliConfig struct {
 	GatewayURL     string `json:"gateway_url"`
@@ -37,7 +43,7 @@ func loadConfig() (cliConfig, error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			return cliConfig{
-				GatewayURL: "https://localhost:5000",
+				GatewayURL: defaultGatewayURL,
 			}, nil
 		}
 		return cfg, fmt.Errorf("read config: %w", err)
@@ -46,7 +52,7 @@ func loadConfig() (cliConfig, error) {
 		return cfg, fmt.Errorf("parse config: %w", err)
 	}
 	if cfg.GatewayURL == "" {
-		cfg.GatewayURL = "https://localhost:5000"
+		cfg.GatewayURL = defaultGatewayURL
 	}
 	return cfg, nil
 }
@@ -140,6 +146,10 @@ func runConfigSet(e *env, args []string) error {
 		return err
 	}
 
-	fmt.Printf("config set: %s = %s\n", key, value)
+	// To the injected writer, not the process stdout. fmt.Printf here wrote
+	// straight past env, so the confirmation was uncapturable by a test and
+	// invisible to anything consuming the command's output - the same defect
+	// that was fixed for the orders cancel message.
+	_, _ = fmt.Fprintf(e.stdout, "config set: %s = %s\n", key, value)
 	return nil
 }
