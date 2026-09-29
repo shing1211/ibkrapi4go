@@ -5,6 +5,57 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.21] - 2026-09-27
+
+The stream hub fans every tick out to every client. Three of its behaviours were
+untested, and the fourth turned out not to be testable in a way worth shipping.
+
+### Fixed
+
+- **The stream hub's fan-out had no test.** `Broadcast` sends to every registered
+  connection and returns how many it wrote to. The count alone proves nothing -
+  returning the connection count without sending anything satisfied it - so each
+  client now has to actually read the frame. A mutation that skipped one connection
+  reports `Broadcast() = 1; want 2`, and one that counts without writing leaves
+  clients with no frame.
+
+- **`sendFrame`'s silent skip was undocumented and untested.** On an already-closed
+  connection it returns nil rather than an error, so the connection is skipped
+  without complaint. That is what makes `Broadcast`'s return value an **attempt
+  count, not a delivery count**, which is easy to read the other way.
+
+- **`closeAll`'s effect on the hub was misunderstood, and the test caught it.** It
+  marks connections closed and calls `CloseNow`, and the first draft asserted it
+  does not deregister them. It does - `CloseNow` unblocks the connection handler,
+  whose defer is what removes them. The test now pins the observable drain: the hub
+  reaches zero subscribers, and a subsequent `Broadcast` returns 0. A mutation that
+  never closes the socket leaves all three registered and is caught.
+
+`internal/mockgateway` coverage 86.6% -> 87.5%; overall 66.3% -> 66.5%. Four
+mutations, all caught on the assertion.
+
+### Not tested, and recorded as such
+
+- **The hub lock discipline is a review rule, not a test.** `Broadcast` and
+  `closeAll` snapshot the connection set under the mutex and act outside it, because
+  holding it across a socket write would let one unresponsive client stall every
+  other one. Three attempts to test it were made and abandoned: probing with a
+  synthetic connection panics the in-flight broadcast on a nil socket; probing with
+  `Subscribers()` needs a genuinely blocked write, and the write fails in tens of
+  milliseconds rather than running to the 5s timeout, so any timing budget either
+  always passes or is too tight to survive a loaded machine; and shrinking the client
+  receive buffer is unavailable because `coder/websocket`'s `NetConn` wrapper does
+  not expose `SetReadBuffer`, so the test skipped rather than failed.
+
+  The first two of those passed with the lock deliberately held, so the requirement
+  and the three dead ends are now documented on `Broadcast` and `closeAll`
+  themselves, labelled as weaker than a test.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-stream-hub/`](./docs/runs/2026-09-27-stream-hub/).
+
 ## [1.1.20] - 2026-09-27
 
 Closes the last of the `json.Number` class: every such field that reaches a caller

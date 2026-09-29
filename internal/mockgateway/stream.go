@@ -152,6 +152,20 @@ func (h *StreamHub) Push(t Tick) int {
 // the number of successful writes. Use the StatusFrame, NotificationFrame,
 // UserFrame, and OrderFrame helpers for the `sts`/`ntf`/`usr`/`sor` frame
 // families.
+// Broadcast sends frame to every registered connection and returns the number of
+// connections it wrote to.
+//
+// The connection set is snapshotted under the lock and the sends happen outside it.
+// That ordering is required, not incidental: sendFrame can block on a stalled peer
+// for up to streamWriteTimeout, so holding the hub mutex across the send loop would
+// let one unresponsive client stall every other client and every hub operation.
+//
+// It is a review rule rather than a tested one. A test that proved it needed the
+// write to block, and the write fails in tens of milliseconds against a client that
+// is not reading rather than running to the timeout - so any timing budget either
+// always passes or is too tight to survive a loaded machine. The three behaviours
+// that are observable (the fan-out count, the closed-connection skip, and
+// closeAll draining the hub) are covered in stream_hub_test.go; this one is not.
 func (h *StreamHub) Broadcast(frame any) int {
 	h.mu.Lock()
 	conns := make([]*streamConn, 0, len(h.conns))
@@ -188,6 +202,14 @@ func (h *StreamHub) remove(sc *streamConn) {
 // context is context.Background, so there is no cancellation path into it.
 // CloseNow returns immediately and the handler unwinds on its own, which is why
 // callers still need a bounded settle after this returns.
+// closeAll marks every registered connection closed and closes its socket.
+//
+// Like Broadcast, it snapshots the set under the lock and acts outside it, for the
+// same reason: teardown can block on a wedged socket.
+//
+// Removal is deliberately not done here. CloseNow unblocks each handler's read
+// loop, and serveWS's deferred remove is what drops the connection from the hub, so
+// the map drains as a consequence of closing rather than inside this call.
 func (h *StreamHub) closeAll() {
 	h.mu.Lock()
 	conns := make([]*streamConn, 0, len(h.conns))
