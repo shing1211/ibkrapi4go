@@ -5,6 +5,94 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.28] - 2026-09-30
+
+Test and tooling work. No production code, no generated code, no dependency change, and
+no public API change — every change is to test files, CI configuration, or documentation.
+
+### Fixed
+
+- **`ibkr config set` no longer writes past the command's output stream.** Its confirmation
+  used `fmt.Printf`, which writes to the process stdout, bypassing the `env` seam every other
+  message in the CLI goes through. The message was therefore uncapturable by a test and
+  invisible to anything consuming the command's output. This is the same defect that was
+  fixed for the `orders cancel` message in an earlier release.
+
+- **The mock gateway's startup banner now reports the port it actually bound.** With
+  `-addr 127.0.0.1:0`, the OS assigns any free port and only the bound listener knows which.
+  The banner was derived from the *requested* address, so it printed a URL with port `0` —
+  a port nothing was listening on. The banner exists for exactly one reason, which is
+  telling the operator where to point the SDK. Binding is now an explicit `net.Listen` and
+  the banner is derived from `ln.Addr()`.
+
+### Added
+
+- **Tests for `cmd/ibkr-mock-gateway`, previously at 0.0% coverage.** Now 90.4%.
+  Coverage alone is not the claim; the reachable surface is. The server construction is
+  split out of `run` so the flag wiring is testable without a listening socket, and the
+  serve loop takes its `context.Context` as a parameter so the graceful-shutdown branch —
+  the one carrying the `ErrServerClosed` filter, the shutdown timeout and the error
+  wrapping — can be reached without sending the test process `SIGINT`. The self-signed
+  certificate is asserted to complete a real TLS handshake and to carry a SAN covering
+  loopback, and `statusRecorder` is asserted to forward `Hijack` and `Flush`, since a
+  wrapper that did not would break every WebSocket upgrade in a way no status-code
+  assertion can see.
+
+- **Tests for the `config` subcommand, previously at 0%.** It is the only command that
+  writes to the user's own filesystem, so every test points `IBKR_CONFIG` at `t.TempDir()`;
+  the seam already existed in `configPath` and nothing used it. The file mode is asserted to
+  be `0600` on POSIX, and a rejected key or a missing value is asserted to leave no file
+  behind.
+
+- **Tests for `ibkrPrintln`'s nil guard and `truncate`'s boundary.** `truncate` is now
+  pinned to never return more than the requested width, which is the invariant the
+  fixed-width positions table depends on.
+
+### Changed
+
+- **`check_i18n.py` now checks release versions (rule 7).** Five translated READMEs claimed
+  release `v1.1.7` for twenty releases while every one of their `Last synced:` banners said
+  `v1.1.27`, and the gate was green throughout: the existing rule compared badge *URLs*, and
+  the badge URLs carry no version, so the prose status table was never compared at all. The
+  new rule requires the status table and the banner to agree within a file and every
+  translation to name the same version as the English README. The five translations and
+  `docs/ROADMAP.md` are corrected to `v1.1.28`.
+
+- **`docs/ARCHITECTURE.md` regenerated from the current code graph** — 458 files, 8,165
+  symbols, 701 execution flows and 171 clusters, replacing a snapshot that was 43 commits
+  stale and whose cluster table no longer matched the tree.
+
+### Added (CI and tooling)
+
+- **OpenSpec project workflows** under `.opencode/`, `.claude/`, `.agents/`, `.cursor/`
+  and `openspec/`, for spec-driven change management.
+
+- **The `lint & security` job is green.** It was failing on every push with findings in
+  library code, and `.golangci.yml` was failing `config verify`, which silently discarded its
+  linter settings. Both are fixed: the config validates, the CLI timeout contexts return
+  their `CancelFunc`, and the remaining findings are gone.
+
+- **The `spec-drift` workflow runs again.** Its heredoc made the YAML unparseable, so
+  GitHub created a synthetic zero-second failed run on every push and no job ever executed.
+  A manual dispatch now completes green in 12s.
+
+- **`ci.yml` no longer interpolates the pull-request title directly into a shell script**,
+  which actionlint correctly flags as a script-injection vector; the value is now passed
+  through `env:`.
+
+### Notes
+
+- `main()` in `cmd/ibkr-mock-gateway` remains uncovered. It is three lines that hand
+  `os.Args` to `run` and exit non-zero, and is reachable only via a subprocess.
+- The `ErrServerClosed` filter in the serve loop is recorded in the code as untested, which
+  it is: deleting it leaves the suite green, because the context-cancelled branch returns
+  without reading the error channel. It is a guard for a shutdown path a future caller could
+  add, and the comment says so rather than letting a coverage number imply otherwise.
+- One defect in this release's own test code was caught only by CI's `-race` job: the serve
+  tests polled a `strings.Builder` that another goroutine was writing to. `CGO_ENABLED` is 0
+  on the development host, so the race detector could not run locally. It is recorded here
+  because "the tests passed locally" was true and the tests were still wrong.
+
 ## [1.1.27] - 2026-09-29
 
 The 2.0s-per-invocation defect fixed in 1.1.26 passed every gate in this repository for
@@ -2036,7 +2124,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.13...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.28...HEAD
+[1.1.28]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.27...v1.1.28
 [1.1.13]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.12...v1.1.13
 [1.1.12]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.11...v1.1.12
 [1.1.11]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.10...v1.1.11

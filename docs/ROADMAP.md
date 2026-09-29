@@ -253,9 +253,22 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.7`**.
+**`v1.1.28`**.
 
-The `v1.1.7` patch is documentation and tooling only — no production code, no
+The `v1.1.28` patch is test and tooling work — no production code, no generated
+code, no dependency change, and no public API change. It covers the last two
+unmeasured parts of the CLI: `ibkr-mock-gateway` was at 0.0% coverage and the
+`config` subcommand at 0%, the latter being the only command that writes to the
+user's own filesystem. Both were uncovered for the same reason the rest of the CLI
+once was — they read process state — so the mock gateway now parses its flags
+into a local `FlagSet` and the serve loop takes its context as a parameter.
+Coverage reaches 90.4% and 84.3%. Two real defects are fixed along the way:
+`ibkr config set` wrote its confirmation past the output writer, and the mock
+gateway's startup banner advertised the *requested* port rather than the bound
+one, so `-addr 127.0.0.1:0` printed a URL nothing was listening on.
+
+Earlier entries follow. The `v1.1.7` patch is documentation and tooling only — no
+production code, no
 generated code, no dependency change. Its subject is a guardrail that existed but
 was not enforced. `check_design` compares each design document against the code it
 describes, and until now it ran only when a maintainer typed `make docs-check`:
