@@ -23,6 +23,7 @@ a new ADR, not editing the old one.
 | [0015](./0015-stability.md) | Public API surface and stability contract | Accepted |
 | [0016](./0016-error-taxonomy.md) | Error handling philosophy | Accepted |
 | [0017](./0017-logging.md) | Logging interface | Accepted |
+| [0018](./0018-auth-rate-limit.md) | Auth rate limiting is a client-side precaution, and is configurable | Accepted (open question) |
 
 Template:
 

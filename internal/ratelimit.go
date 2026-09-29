@@ -77,6 +77,32 @@ func (l *Limiter) SetMetrics(m Metrics) {
 	l.metrics = m
 }
 
+// SetAuthRateLimit replaces the fixed 1 req/s auth bucket. rps<=0 disables auth
+// pacing entirely. It is safe to call after construction and before concurrent
+// use.
+//
+// The default is unchanged - 1 req/s, burst 1 - so nothing moves for a caller who
+// does nothing. It exists because the bucket is a client-side precaution rather
+// than a measured gateway property, and a short-lived process pays for it on every
+// invocation: a CLI that initialises a session and exits spent ~1s waiting for a
+// token before its auth status poll, for no informational gain, since the poll
+// succeeds first try against a local gateway.
+func (l *Limiter) SetAuthRateLimit(rps float64, burst int) {
+	if l == nil {
+		return
+	}
+	if rps <= 0 {
+		l.auth = nil
+		return
+	}
+	if burst < 1 {
+		burst = 1
+	}
+	l.mu.Lock()
+	l.auth = rate.NewLimiter(rate.Limit(rps), burst)
+	l.mu.Unlock()
+}
+
 // SetClock installs a clock. Nil uses the real clock. It is safe to call after
 // construction and before concurrent use.
 func (l *Limiter) SetClock(c *Clock) {
@@ -122,7 +148,7 @@ func (l *Limiter) needsWait(method, path string) bool {
 	if l.global != nil && l.global.Tokens() < 1 {
 		return true
 	}
-	if isAuthPath(path) {
+	if l.auth != nil && isAuthPath(path) {
 		return l.auth.Tokens() < 1
 	}
 	if l.rps <= 0 {
@@ -137,7 +163,7 @@ func (l *Limiter) wait(ctx context.Context, method, path string) error {
 			return err
 		}
 	}
-	if isAuthPath(path) {
+	if l.auth != nil && isAuthPath(path) {
 		return l.auth.Wait(ctx)
 	}
 	if l.rps <= 0 {
@@ -213,10 +239,16 @@ func isDynamicSegment(s string) bool {
 }
 
 // isAuthPath reports whether the path is a session/auth endpoint paced at 1 rps.
+//
+// /v1/api/logout is deliberately not here. Session.Close documents its logout as
+// best-effort and discards the result, so pacing it bought nothing while blocking
+// process exit: a logout issued right after a session init waited ~997ms for a
+// token, on every process that used the SDK. It touches no credential, and a 429 on
+// a call whose result is thrown away costs nothing, so it uses the ordinary
+// per-endpoint bucket and WithRateLimit governs it.
 func isAuthPath(path string) bool {
 	return strings.Contains(path, "/iserver/auth/") ||
 		strings.Contains(path, "/v1/api/tickle") ||
-		strings.Contains(path, "/v1/api/logout") ||
 		strings.Contains(path, "/sso/validate")
 }
 

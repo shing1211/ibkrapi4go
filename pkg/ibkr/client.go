@@ -59,6 +59,8 @@ type config struct {
 	rateLimit          float64
 	rateBurst          int
 	globalRateLimit    float64
+	authRateLimit      float64
+	authRateBurst      int
 	retry              internal.RetryPolicy
 	telemetry          internal.Telemetry
 	metrics            internal.Metrics
@@ -74,6 +76,9 @@ type config struct {
 const (
 	DefaultPerEndpointRPS = 10
 	DefaultGlobalRPS      = 50
+	// DefaultAuthRateLimit paces auth/session endpoints. It is a client-side
+	// precaution, not a measured gateway property - see ADR 0018.
+	DefaultAuthRateLimit = 1
 )
 
 // Option customizes a Client during construction. Options are applied in order;
@@ -162,6 +167,35 @@ func WithRateLimit(rps float64, burst int) Option {
 		}
 		c.rateLimit = rps
 		c.rateBurst = burst
+		return nil
+	}
+}
+
+// WithAuthRateLimit sets the request rate and burst for auth and session
+// endpoints (`/iserver/auth/*`, `/tickle`, `/sso/validate`). rps<=0 disables auth
+// pacing; burst<=0 defaults to 1.
+//
+// The default is unchanged at 1 req/s with burst 1, so a caller who does nothing
+// gets today's behaviour. This exists for short-lived processes: a client that
+// initialises a session and exits spends about a second waiting for a token before
+// its auth status poll, and against a local gateway that poll succeeds first try,
+// so the wait buys no information. A long-running client should leave it alone.
+//
+// It is a precaution, not a measured gateway property, and ADR 0018 records that as
+// the open question. `/v1/api/logout` is not paced here: a best-effort teardown
+// should not block process exit.
+//
+// Note that the limiter is only built when per-endpoint or global limiting is
+// enabled, so WithRateLimit(0) together with WithGlobalRateLimit(0) removes auth
+// pacing as well. This option can relax that pacing; it cannot add it to a client
+// that has turned the limiter off entirely.
+func WithAuthRateLimit(rps float64, burst int) Option {
+	return func(c *config) error {
+		if rps < 0 {
+			return &ConfigError{Field: "AuthRateLimit", Message: "must not be negative"}
+		}
+		c.authRateLimit = rps
+		c.authRateBurst = burst
 		return nil
 	}
 }
@@ -366,7 +400,7 @@ type Client struct {
 // variables and then compiled-in defaults. It performs no I/O and does not
 // authenticate; call Session().Initialize to start the session.
 func NewClient(opts ...Option) (*Client, error) {
-	cfg := config{rateLimit: -1, globalRateLimit: -1}
+	cfg := config{rateLimit: -1, globalRateLimit: -1, authRateLimit: -1, authRateBurst: -1}
 	for _, o := range opts {
 		if err := o(&cfg); err != nil {
 			return nil, err
@@ -391,6 +425,12 @@ func NewClient(opts ...Option) (*Client, error) {
 	}
 	if cfg.globalRateLimit < 0 {
 		cfg.globalRateLimit = DefaultGlobalRPS
+	}
+	if cfg.authRateLimit < 0 {
+		cfg.authRateLimit = DefaultAuthRateLimit
+	}
+	if cfg.authRateBurst < 0 {
+		cfg.authRateBurst = 1
 	}
 	if cfg.retry.MaxAttempts == 0 {
 		cfg.retry = internal.DefaultRetryPolicy()
@@ -419,6 +459,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	var limiter *internal.Limiter
 	if cfg.rateLimit > 0 || cfg.globalRateLimit > 0 {
 		limiter = internal.NewLimiter(cfg.rateLimit, cfg.rateBurst, cfg.globalRateLimit)
+		limiter.SetAuthRateLimit(cfg.authRateLimit, cfg.authRateBurst)
 		limiter.Logger = cfg.logger
 		limiter.SetMetrics(cfg.metrics)
 	}

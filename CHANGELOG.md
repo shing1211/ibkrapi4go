@@ -5,6 +5,62 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.26] - 2026-09-29
+
+Every CLI invocation cost ~2.0s, and half of that was a best-effort call blocking
+process exit.
+
+### Fixed
+
+- **A best-effort logout no longer blocks process exit for a second.** `Session.Close`
+  documents its logout as best-effort and discards the result, then waited for a
+  rate-limit token before issuing a call whose answer is thrown away. `/v1/api/logout`
+  is no longer treated as an auth endpoint, so it uses the ordinary per-endpoint bucket
+  where `WithRateLimit` governs it. It touches no credential and a 429 on it costs
+  nothing. Measured: `Close` 998ms -> 1ms, for every user of the SDK and with no opt-in.
+
+- **Auth rate limiting is now configurable, via `WithAuthRateLimit(rps, burst)`.** The
+  1 req/s burst-1 auth bucket was hardcoded, and `RATE-LIMITING.md` listed it as
+  `fixed`. The default is **unchanged**, so nothing moves for a caller who does nothing.
+
+  It exists for short-lived processes. Against a gateway that answers instantly, the
+  wait before the auth status poll buys no information - the poll succeeds first try -
+  so a client that initialises a session and exits pays ~1s for a precaution that bought
+  nothing. Measured for an initialize-then-close cycle: **2.002s -> 0.004s**.
+
+  A long-running client should leave the default alone; it is not making auth calls back
+  to back. The limiter is only built when per-endpoint or global limiting is enabled, so
+  `WithRateLimit(0)` together with `WithGlobalRateLimit(0)` removes auth pacing as well -
+  this option can relax pacing, not add it.
+
+  `TestLimiter_AuthPathsAreSlow` is unchanged and still passes, which is the check that
+  the default really did not move. It is now paired with
+  `TestLimiter_LogoutIsNotAuthPaced`, so the paths that stay in the bucket and the path
+  that left it are each pinned.
+
+### Added
+
+- **[ADR 0018](docs/adr/0018-auth-rate-limit.md): the auth limit is a client-side
+  precaution, and its premise is unverified.** `RATE-LIMITING.md` asserts that "IBKR
+  enforces request pacing" without a source. The spec is silent, the mock gateway
+  imposes no limit, and no ADR stated it. The ADR is Accepted with the question open:
+  if auth endpoints turn out not to be specially limited, the correct change is to drop
+  the bucket rather than raise its rate.
+
+  The default was deliberately **not** raised. Doing so trades a 2s CLI for 429s against
+  a real gateway on no evidence either way.
+
+### Changed
+
+- `RATE-LIMITING.md` listed `/logout` among the auth paths, which contradicted the code
+  after the fix above. The table, algorithm list and testing list are updated, and a
+  "Short-lived processes" section records the measured cost and the opt-out.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-29-auth-rate-limit/`](./docs/runs/2026-09-29-auth-rate-limit/).
+
 ## [1.1.25] - 2026-09-29
 
 Not one global flag had ever been read. The CLI could only be pointed at a different

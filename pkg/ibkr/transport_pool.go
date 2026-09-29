@@ -91,6 +91,7 @@ func NewTransportPool(opts ...Option) (*TransportPool, error) {
 	var limiter *internal.Limiter
 	if cfg.rateLimit > 0 || cfg.globalRateLimit > 0 {
 		limiter = internal.NewLimiter(cfg.rateLimit, cfg.rateBurst, cfg.globalRateLimit)
+		limiter.SetAuthRateLimit(cfg.authRateLimit, cfg.authRateBurst)
 		limiter.Logger = cfg.logger
 		limiter.SetMetrics(cfg.metrics)
 	}

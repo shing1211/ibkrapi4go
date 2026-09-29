@@ -40,6 +40,7 @@ func (c *Client) REST() (*RESTSurface, error) {
 	var limiter *internal.Limiter
 	if c.cfg.rateLimit > 0 || c.cfg.globalRateLimit > 0 {
 		limiter = internal.NewLimiter(c.cfg.rateLimit, c.cfg.rateBurst, c.cfg.globalRateLimit)
+		limiter.SetAuthRateLimit(c.cfg.authRateLimit, c.cfg.authRateBurst)
 		limiter.Logger = c.cfg.logger
 		limiter.SetMetrics(c.cfg.metrics)
 	}
