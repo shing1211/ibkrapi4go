@@ -22,6 +22,7 @@
 | 2026-09-27 | [number-precision](./2026-09-27-number-precision/) | BUILD | complete | `560611f` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-27 | [stream-hub](./2026-09-27-stream-hub/) | BUILD | complete | `3573421` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-27 | [breaker-clock](./2026-09-27-breaker-clock/) | BUILD | complete | `2bc985c` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
+| 2026-09-27 | [internal-refs-gate](./2026-09-27-internal-refs-gate/) | BUILD | complete | `2d11db4` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 
 Older runs are archived under
 [`../archive/runs/index.md`](../archive/runs/index.md).

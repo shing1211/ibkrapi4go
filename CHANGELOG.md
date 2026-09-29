@@ -5,6 +5,61 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.23] - 2026-09-27
+
+A package under `internal/` can be unreachable for the life of the module and no
+linter will say so. That is now a build failure.
+
+### Added
+
+- **`internal-refs-check`: every package under `internal/` must be imported.** A
+  package there that nothing imports is dead code shipped in the module, and
+  `internal/` is not importable from outside it, so no user can reach it. `unused`
+  does not report it, because every identifier such a package declares is exported and
+  the problem is at package granularity rather than symbol granularity.
+
+  The rule is deliberately unconditional - every package appears in at least one
+  import, with no thresholds and no judgement about intent. That is what separates it
+  from the precision gate proposed and withdrawn in 1.1.19, whose two formulations
+  produced 27 false positives and then 16 false negatives: a gate with judgement
+  calls in it gets ignored the first time it is wrong. Package paths are read from
+  `go.mod` so comparison is exact, since a prefix match would treat `internal/a` and
+  `internal/a/deeper` as the same package and pass a package nobody imports. A
+  test-only importer counts, because that is a legitimate consumer.
+
+  `internal/fake` is on the `ALLOWED` list with its reason recorded, so the exception
+  is printed on every run rather than being an oversight. If the decision to delete or
+  rewire it goes the other way, the entry goes with it.
+
+  Wired into `make check`, a CI step beside the money-types check, and AGENTS.md rule
+  8 - including why `unused` cannot catch it, which is the part a future reader would
+  otherwise have to rediscover.
+
+### Fixed
+
+- **The checker missed real imports, twice, and only running it against a real file
+  showed that.** A single multiline regex found `"testing"` in a grouped import block
+  and missed the module's own import on the next line, because the blank line between
+  the stdlib and third-party groups defeated `^` under `re.M` with a greedy `\s*` - the
+  shape a gofmt'd file has. The obvious repair, an optional alias group, is also
+  wrong: it matches the path's own leading word characters, cannot satisfy its
+  trailing `\s+`, and then fails expecting a quote where a letter is. The working form
+  needs two alternatives and per-line matching.
+
+  A synthetic test string without a blank line, or with a short path, passes both
+  broken versions. The gate is now verified against the real tree with a synthetic
+  package: unreferenced fails and names it, referenced by a test passes, removal
+  restores green.
+
+  A third reported failure was the probe's fault rather than the checker's - the probe
+  had written an import line with no closing quote, which is not an import. The probe
+  now asserts its own input is well formed.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-internal-refs-gate/`](./docs/runs/2026-09-27-internal-refs-gate/).
+
 ## [1.1.22] - 2026-09-27
 
 A package in the module has been unreachable and untested since the day it was

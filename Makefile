@@ -43,10 +43,13 @@ coverage: ## Write coverage.out and coverage.html
 		echo "wrote coverage.out and coverage.html"; \
 	else echo "no go.mod yet; skipping"; fi
 
-check: fmt vet money-check design-check test ## Format, vet, check money types and design docs, and test
+check: fmt vet money-check internal-refs-check design-check test ## Format, vet, check money types and internal package references, check design docs, and test
 
 money-check: ## Fail if pkg/ibkr exposes float money fields (ADR 0008)
 	python3 scripts/check_money.py
+
+internal-refs-check: ## Fail if a package under internal/ is imported by nothing
+	python3 scripts/check_internal_refs.py
 
 design-check: ## Fail if a design doc disagrees with the code it describes
 	go run ./scripts/check_design

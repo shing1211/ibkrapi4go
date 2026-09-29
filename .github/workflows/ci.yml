@@ -121,6 +121,9 @@ jobs:
       - name: Check money types against ADR 0008
         run: python3 scripts/check_money.py
 
+      - name: Check that every internal/ package is imported
+        run: python3 scripts/check_internal_refs.py
+
       - name: Verify SPDX headers
         run: make license-check
 

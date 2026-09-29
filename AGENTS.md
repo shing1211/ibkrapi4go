@@ -19,7 +19,7 @@ repository.
 
 ```bash
 make help            # list targets
-make check           # gofmt + go vet + tests
+make check           # gofmt + go vet + tests + checker gates
 make codegen         # fetch/patch spec, regenerate client/
 make codegen-verify  # fail if generated code differs from committed
 make license         # apply SPDX headers
@@ -49,9 +49,14 @@ make mock-gateway    # run the standalone mock IBKR gateway
 6. **One canonical count.** Endpoint/schema numbers come from
    `docs/SPEC.md`. Do not hand-edit counts elsewhere.
 7. **No dangling doc links.** If you add a reference to a doc, create it.
-8. **README translations stay in lockstep.** Update the switcher in **every**
-   `README*.md` and the `Last synced:` banner; run `make docs-check`. English is
-   canonical. See [TRANSLATING.md](./TRANSLATING.md).
+8. **No unreferenced packages under `internal/`.** A package there that nothing
+   imports is dead code shipped in the module, and `internal/` is not importable
+   from outside it, so no user can reach it. `unused` will not report it, because
+   every identifier it declares is exported. `make internal-refs-check` fails the
+   build; a deliberate exception goes in `ALLOWED` in
+   `scripts/check_internal_refs.py` with a reason.
+9. **README translations stay in lockstep.** Update the switcher in **every**   `README*.md` and the `Last synced:` banner; run `make docs-check`. English is
+     canonical. See [TRANSLATING.md](./TRANSLATING.md).
 
 ## Where things live
 
