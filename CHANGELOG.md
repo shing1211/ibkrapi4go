@@ -5,6 +5,38 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.27] - 2026-09-29
+
+The 2.0s-per-invocation defect fixed in 1.1.26 passed every gate in this repository for
+two releases. This adds the signal that catches it, and no production change.
+
+### Added
+
+- **A session-pacing regression test.** A client that initialises a session and closes it
+  makes four requests, and the test asserts on the rate limiter's own
+  `ibkr.ratelimit.waits` counter. Exactly one wait is expected with the default auth
+  pacing - the deliberate one - and none when the caller raises the auth rate.
+
+  Both cases also assert the four requests, so neither can pass by doing nothing. A
+  zero-wait assertion over an empty run is trivially true.
+
+  This is mutation-verified: reintroducing `/v1/api/logout` into the auth path set
+  reports `rate-limit waits = 2; want 1` and fails. Notably the *opted-out* case does
+  **not** catch that regression - a burst of 10 absorbs both auth calls - so the
+  default case is the one that does, and the two are ordered so it runs first.
+
+- **No wall-clock assertion, deliberately.** A latency test that fails on a loaded CI
+  runner gets muted rather than fixed, and this repository has retracted `check_money.py`
+  twice for that reason. A counter is exact and free.
+
+- **No new CI step.** The test lives in the normal `go test ./...` sweep. A gate that
+  exists in only one CI job is a gate someone eventually drops.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-29-session-pacing-gate/`](./docs/runs/2026-09-29-session-pacing-gate/).
+
 ## [1.1.26] - 2026-09-29
 
 Every CLI invocation cost ~2.0s, and half of that was a best-effort call blocking

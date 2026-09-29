@@ -26,6 +26,7 @@
 | 2026-09-27 | [error-budget-recovery](./2026-09-27-error-budget-recovery/) | BUILD | complete | `f95f4c4` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-29 | [cli-subcommand-coverage](./2026-09-29-cli-subcommand-coverage/) | BUILD | complete | `f95f4c4` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 | 2026-09-29 | [auth-rate-limit](./2026-09-29-auth-rate-limit/) | BUILD | complete | `e1fe64d` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
+| 2026-09-29 | [session-pacing-gate](./2026-09-29-session-pacing-gate/) | BUILD | complete | `46d4535` | this run | `plan.md`, `todos.md`, `report.md`, `next-phase.md` |
 
 Older runs are archived under
 [`../archive/runs/index.md`](../archive/runs/index.md).
