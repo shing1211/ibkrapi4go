@@ -31,10 +31,9 @@ The main design boundaries are:
 
 ## Knowledge-graph snapshot
 
-The graph was read from these resources. The MCP resource reader was unusable
-in the generating session (its LadybugDB storage engine is v40 while the
-analyzer writes v42), so every read below was taken through the documented CLI
-fallback, `gitnexus cypher -r ibkrapi4go`, against the same index.
+The graph was read from these resources. Structural queries used the GitNexus
+CLI fallback where the host FTS extension is unavailable; the index is the
+same local `.gitnexus` store.
 
 - `gitnexus://repo/ibkrapi4go/context`
 - `gitnexus://repo/ibkrapi4go/clusters`
@@ -44,11 +43,11 @@ fallback, `gitnexus cypher -r ibkrapi4go`, against the same index.
 
 | Metric | Value |
 |--------|-------|
-| Indexed files | 314 |
-| Indexed symbols | 6,055 |
-| Execution flows | 522 |
-| Functional clusters | 135 |
-| Index commit | `df4e0b8` (matches `HEAD`) |
+| Indexed files | 458 |
+| Indexed symbols | 8,165 |
+| Execution flows | 701 |
+| Functional clusters | 171 |
+| Index commit | `e3a0dd2` (source tree before this document-only update) |
 
 ### Known graph limitations
 
@@ -60,36 +59,36 @@ These bound what the clusters and flows below can claim:
   semantic.
 - **`client/client.gen.go` is not indexed.** It exceeds the 512 KB analyzer cap.
   The generated layer is therefore absent from every cluster and flow below.
-- **Flow discovery is truncated.** The analyzer reports 522 flows while
-  reporting 313 candidate entry points never ranked, 169 deduplicated flows
-  dropped at `maxProcesses`, and 1,245 callees skipped at `maxBranching`. An
-  absent flow does not mean the code path does not exist.
+- **Flow discovery is truncated.** The analyzer reports 701 flows while
+  reporting 484 candidate entry points never ranked, 153 deduplicated flows
+  dropped at `maxProcesses`, 1,511 callees skipped at `maxBranching`, and 8
+  walks cut by the per-entry trace budget. An absent flow does not mean the
+  code path does not exist.
 - **`heuristicLabel` is not meaningful for this codebase.** The labels collapse
-  to `Ibkr` / `Internal` / `Mockgateway` because the graph is derived from Go
-  package names. Functional areas below are therefore named from actual cluster
-  membership, not from graph labels.
+  to package-shaped names such as `Ibkr`, `Internal`, and `Mockgateway`.
+  Functional areas below are therefore named from actual cluster membership,
+  not from graph labels.
 
-Re-index with `gitnexus analyze --index-only --force` before relying on the
-graph for code-impact decisions.
+Re-index with `node .gitnexus/run.cjs analyze --index-only --force` before
+relying on the graph for code-impact decisions.
 
 ## Functional areas
 
-Areas are the largest Leiden clusters, named from their member files rather
-than from the graph's degenerate labels. Symbol counts are the graph's own
-`members` counts for that cluster.
+Areas below are the current largest Leiden clusters. The graph labels are
+retained for traceability, while responsibilities are derived from dominant
+member files.
 
-| Area | Symbols | Dominant files | Responsibility |
-|------|---------|----------------|----------------|
-| Public SDK surface | 117 | `pkg/ibkr/trade.go`, `marketdata.go`, `portfolio.go`, `account.go`, `contract.go`, `scanner.go`, `alerts.go` | Public managers, request/response types, and the domain model behind the stability contract. |
-| REST adapters | 90 | `pkg/ibkr/rest*.go`, `client.go`, `internal/observability.go` | Generated-client adaptation, REST surfaces, and response decoding. |
-| Client and managers | 62 | `pkg/ibkr/client.go`, `ws.go`, `pagination.go`, `trade.go` plus example and integration callers | Client construction, manager wiring, and the public call surface consumed by `cmd/`, `examples/`, and `test/`. |
-| Mock gateway and E2E | 57 | `internal/mockgateway/*`, `pkg/ibkr/*_test.go`, `examples/multi-account` | In-process gateway, fault injection, multi-client and end-to-end coverage. |
-| Transport and resilience | 33 | `internal/ratelimit.go`, `retry.go`, `breaker.go`, `session.go`, `pkg/ibkr/transport_pool.go` | RoundTripper chain, per-endpoint and global limiting, safe-method retry, circuit breaking, session state. |
-| WebSocket runtime | 33 | `internal/ws.go`, `internal/metrics.go`, `internal/mockgateway/stream.go` | Dial, read/write loops, heartbeat, sequence tracking, reconnect, and subscription replay. |
-| HTTP transport core | 31 | `internal/transport.go` | Middleware assembly, response-size bounds, timeout/body cancellation, error-envelope decoding. |
-| Session state | 29 | `internal/session.go` | Session lifecycle, tickle loop, and state transitions. |
-| CLI | 23 | `cmd/ibkr/*.go` | `run` dispatch, config loading, and the accounts/orders/positions/portfolio/stream commands. |
-| OAuth2 surface | 19 | `pkg/ibkr/oauth.go`, `internal/oauth.go`, `internal/jwt.go` | Token acquisition, single-flight refresh, rotation, and JWT assertion signing. |
+| Area | Symbols | Cohesion | Dominant files | Responsibility |
+|------|---------|----------|----------------|----------------|
+| Public SDK and CLI (`Ibkr`) | 823 | 74% | `pkg/ibkr/*.go`, `cmd/ibkr/*.go`, `examples/` | Public managers, REST/domain types, client lifecycle, CLI commands, and examples. |
+| Runtime internals (`Internal`) | 396 | 75% | `internal/ws.go`, `session.go`, `transport.go`, `oauth.go`, `ratelimit.go`, `retry.go`, `breaker.go` | Transport, session state, OAuth/JWT, resilience, metrics, and WebSocket runtime. |
+| Design checkers (`Check_design`) | 259 | 80% | `scripts/check_design/*.go` | AST/mutation checks that keep design documents aligned with code. |
+| Mock gateway and E2E (`Mockgateway`) | 186 | 77% | `internal/mockgateway/*.go`, `cmd/ibkr/gateway_test.go` | In-process gateway, fixtures, fault injection, stream hub, and end-to-end coverage. |
+| Repository scripts (`Scripts`) | 39 | 100% | `scripts/patch_spec.py`, `check_money.py`, `check_internal_refs.py`, `check_links.py` | Codegen, money, internal-reference, documentation, and benchmark gates. |
+| OpenTelemetry adapter (`Otel`) | 18 | 91% | `contrib/otel/otel.go` | Optional metrics and tracing bridge without a core dependency. |
+| Mock-gateway command (`Ibkr-mock-gateway`) | 8 | 74% | `cmd/ibkr-mock-gateway/main.go`, `internal/mockgateway/options.go` | Standalone gateway binary and runtime options. |
+| Discussion seeder (`Seed-discussions`) | 6 | 100% | `cmd/seed-discussions/main.go` | Repository discussion-seeding utility. |
+| Live OAuth2 example (`Live`) | 5 | 73% | `examples/live/oauth2-flow.go` | Live OAuth2 flow example and its tests. |
 
 ## System diagram
 
