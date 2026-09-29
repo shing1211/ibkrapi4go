@@ -26,12 +26,43 @@
 
 ## Available next, no credentials needed
 
-- **`stream.go`'s remaining gap** - `serveWS` branches and the `handleSubscribe` family.
-- **`cmd/ibkr` at 33%** - the largest number, and a design change: every non-help path
-  builds a live client, so it needs a client-factory seam first.
+- **`cmd/ibkr` at 33.0%** - the largest real number, and **not** the design change
+  carried forward from `breaker-clock`. That note said every non-help path builds a
+  live client and "needs a client-factory seam first". The seam exists: `env.go` has
+  `newClient func() (*ibkr.Client, error)`, doc-commented as "the seam a test replaces
+  to point the command at a mock gateway", and all **9** call sites go through
+  `e.newClient()` - `accounts.go`, `orders.go` (x3), `portfolio.go` (x3), `positions.go`
+  and `stream.go`. `newClientFromArgs` already honours `--gateway`, so a test can aim it
+  at an `httptest` server.
+
+  The real gap is that **no test replaces it** - zero references to `newClient` in
+  `cmd/ibkr/*_test.go`. Everything past client construction in those 6 files is
+  therefore unexecuted. The blocker is smaller than the previous run recorded: build the
+  tests, not the seam.
+- **`internal/mockgateway` is ready to back them** at 89.4%, and `internal` is at
+  80.4%, so the pieces under `cmd/ibkr` are the well-covered ones.
+- **The `stream.go` gap recorded by `breaker-clock` does not exist.** There is no
+  `internal/stream.go`, and `serveWS` and `handleSubscribe` are not defined anywhere in
+  `internal/`, `pkg/ibkr/` or `cmd/` - the name matches neither the WebSocket code in
+  `internal/ws.go` (737 lines, with 908 + 528 lines of existing tests beside it) nor
+  `cmd/ibkr/stream.go`, which is the 98-line `stream` CLI command. Superseded, not
+  carried forward.
 
 ## Process notes carried forward
 
+- **Verify a claim against the tree before carrying it into the next backlog.** Two of
+  the five items inherited from `breaker-clock` were wrong on arrival: one pointed at a
+  file that does not exist and named two functions that do not exist, and one called for
+  a seam that had existed since 1.1.14. A backlog is a list of assumptions about the
+  current state, and an unverified one is worse than a short one - it makes the next run
+  spend its budget re-deriving what is true. Cheap to check, and this run's own output
+  was the second occurrence of the failure.
+
+  The correction to the item above is itself an instance. Its first draft said "all 5
+  call sites" and listed five files, read off a truncated search that stopped at twelve
+  matches. The real count is 9 across 6 files. A wrong number in a backlog is not a
+  smaller error than a wrong claim about a file's existence - both are guesses that
+  read like measurements, and a reader cannot tell them apart.
 - **Prove the behaviour before reasoning about the source.** Three runs in a row
   described this defect by reading `errorBudget` and got the cause wrong the same way.
   A 15-line probe settled in one run what three readings did not.
