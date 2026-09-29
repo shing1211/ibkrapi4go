@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -561,7 +562,7 @@ func TestRun_UnreachableAddr(t *testing.T) {
 // http.ErrServerClosed that Shutdown provokes internally.
 func TestServe_GracefulShutdown(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	var stdout, stderr strings.Builder
+	var stdout, stderr syncBuffer
 
 	done := make(chan error, 1)
 	go func() {
@@ -600,7 +601,7 @@ func TestServe_GracefulShutdown(t *testing.T) {
 func TestServe_ServesWhileRunning(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var stdout, stderr strings.Builder
+	var stdout, stderr syncBuffer
 
 	done := make(chan error, 1)
 	go func() {
@@ -630,7 +631,7 @@ func TestServe_ServesWhileRunning(t *testing.T) {
 // would leave the plain-HTTP tests green.
 func TestServe_TLS(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	var stdout, stderr strings.Builder
+	var stdout, stderr syncBuffer
 
 	done := make(chan error, 1)
 	go func() {
@@ -660,7 +661,7 @@ func TestServe_TLS(t *testing.T) {
 // TestServe_BadScenario covers the error path through serve rather than run, so
 // it is reached without a signal handler in the way.
 func TestServe_BadScenario(t *testing.T) {
-	var stdout, stderr strings.Builder
+	var stdout, stderr syncBuffer
 	err := serve(context.Background(), options{addr: "127.0.0.1:0", scenario: "nope"}, &stdout, &stderr)
 	if err == nil {
 		t.Fatal("serve with a bogus scenario = nil; want an error")
@@ -672,10 +673,35 @@ func TestServe_BadScenario(t *testing.T) {
 	}
 }
 
+// syncBuffer is an io.Writer that can be read while another goroutine writes to
+// it.
+//
+// A plain strings.Builder is not safe for this. The serve tests hand the writer
+// to serve, which runs on its own goroutine, and then poll it from the test
+// goroutine - an unsynchronized read concurrent with a write. The race detector
+// found it on CI under -race; it does not fire without a race-enabled build, so
+// a local run is not evidence either way. See waitFor for why polling is needed.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf strings.Builder
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
+
 // waitFor polls a writer until it contains want, or fails the test. Polling beats
 // a fixed sleep because the serve loop binds its socket asynchronously and the
 // delay is unbounded on a loaded CI runner.
-func waitFor(t *testing.T, w *strings.Builder, want string) string {
+func waitFor(t *testing.T, w *syncBuffer, want string) string {
 	t.Helper()
 	deadline := time.Now().Add(30 * time.Second)
 	for time.Now().Before(deadline) {
