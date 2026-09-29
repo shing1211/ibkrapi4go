@@ -5,6 +5,58 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.22] - 2026-09-27
+
+A package in the module has been unreachable and untested since the day it was
+written, and the reason is a design change nobody propagated.
+
+### Fixed
+
+- **`internal/fake` was orphaned by a change to the seam it was written for.** It is
+  a set of test doubles - a controllable clock, a rate limiter, a session machine, a
+  token provider, a transport and a WebSocket - and nothing in the module imports it,
+  no test uses it, and `internal/` means nothing outside the module can either.
+
+  The reason is not neglect. `internal.Clock` is a struct with unexported function
+  fields and no exported constructor, so `Breaker.SetClock` accepts only a clock that
+  code **inside** `internal` can build. `internal/fake.Clock` is a different type
+  whose doc comment says it "implements internal.Clock" - but `internal.Clock` is a
+  struct, not an interface, so there is nothing to implement and nothing that can be
+  passed to it. The seam moved from an interface to a struct and the fake was never
+  updated.
+
+  Nothing detects this: `unused` does not report it, because every identifier the
+  package declares is exported and the problem is at package granularity.
+
+- **The breaker tests waited on wall-clock time when a clock seam existed to prevent
+  it.** `Breaker.SetClock` has been unused; the tests slept 60ms against a 40ms
+  cooldown, which is slower and racy under load. The new tests drive an in-package
+  clock and sleep not at all, pinning the full closed → open → half-open → closed
+  cycle including both sides of the cooldown boundary, that a failed probe restarts
+  the cooldown, and that the error budget can trip the circuit below the consecutive
+  threshold.
+
+- **The error budget's documented behaviour does not match its implementation.**
+  `errorBudget` is described as a sliding window and `evict` as removing "entries
+  that have slid out of the window", but `evict` is passed `now` and never reads it:
+  it bounds the slice by count only. The budget is a count of recent failures with no
+  time component.
+
+  That matters operationally - "5 failures in 60s" currently means "5 failures out of
+  the last N", however far apart they were - so the present behaviour is now pinned
+  by `TestErrorBudget_CountsFailuresNotElapsedTime` and the discrepancy is recorded.
+  Changing it alters when a trading client trips its circuit breaker, which needs an
+  ADR rather than a patch.
+
+  The existing `TestErrorBudget_EvictsOldEntries` is named for the opposite of what it
+  asserts - its body checks that entries are **not** evicted - which is the likely
+  source of that misreading.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-breaker-clock/`](./docs/runs/2026-09-27-breaker-clock/).
+
 ## [1.1.21] - 2026-09-27
 
 The stream hub fans every tick out to every client. Three of its behaviours were
