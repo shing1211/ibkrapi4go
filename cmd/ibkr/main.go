@@ -86,8 +86,10 @@ func dispatch(e *env, cmd string) error {
 }
 
 // newClientFromArgs creates an ibkr.Client from the global flags in args and the
-// config file. It takes argv as a parameter rather than reading os.Args, so a test
-// can build a client with chosen flags.
+// config file. It takes the subcommand's arguments, not the full argv, so that the
+// global flags after the command name are the ones that are read. It takes argv as
+// a parameter rather than reading os.Args, so a test can build a client with chosen
+// flags.
 func newClientFromArgs(args []string) (*ibkr.Client, error) {
 	gateway, rest, account, insecure, _ := parseGlobalFlags(args)
 
@@ -107,6 +109,11 @@ func newClientFromArgs(args []string) (*ibkr.Client, error) {
 		cfg.AccountID = account
 	}
 
+	// rest is deliberately not forwarded. cfg.RestGatewayURL is parsed, stored,
+	// printed by `ibkr config` and settable by `ibkr config set`, but pkg/ibkr
+	// exposes no option to receive it - the only URL option is WithGatewayURL,
+	// which covers both API surfaces. So the flag is accepted and inert, and the
+	// honest fix is either an SDK option or its removal, not a second one here.
 	opts := []ibkr.Option{
 		ibkr.WithGatewayURL(cfg.GatewayURL),
 		ibkr.WithInsecureSkipVerify(insecure),

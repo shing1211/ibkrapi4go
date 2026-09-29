@@ -32,13 +32,25 @@ type env struct {
 
 	// newClient builds the SDK client. Production reads the global flags and the
 	// config file; a test substitutes a client wired to the mock gateway.
-	newClient func() (*ibkr.Client, error)
+	//
+	// It takes the subcommand's own arguments because that is where the global
+	// flags live: the documented form is `ibkr <command> [subcommand] [flags]`, so
+	// --gateway sits after the command name, not at argv[0]. Parsing from index 0
+	// of the full argv stopped at the program name - the default branch of
+	// parseGlobalFlags returns on the first non-flag - which meant no global flag
+	// was ever honoured and `ibkr --gateway URL accounts` was rejected outright.
+	//
+	// Taking the slice also settles -account, which is both a global flag and a
+	// flag that positions, portfolio and orders parse themselves. Each command
+	// passes what it parsed, so the value that reaches the client is the one that
+	// reached mustAccount.
+	newClient func(args []string) (*ibkr.Client, error)
 }
 
 // newEnv builds the production environment.
 func newEnv(args []string, stdout, stderr io.Writer) *env {
 	e := &env{args: args, stdout: stdout, stderr: stderr}
-	e.newClient = func() (*ibkr.Client, error) { return newClientFromArgs(e.args) }
+	e.newClient = func(args []string) (*ibkr.Client, error) { return newClientFromArgs(args) }
 	return e
 }
 

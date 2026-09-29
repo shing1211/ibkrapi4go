@@ -29,7 +29,7 @@ func runPositions(e *env, args []string) error {
 		return err
 	}
 
-	cli, err := e.newClient()
+	cli, err := e.newClient(args)
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,7 @@ func runAccounts(e *env, args []string) error {
 		}
 	}
 
-	cli, err := e.newClient()
+	cli, err := e.newClient(args)
 	if err != nil {
 		return err
 	}

@@ -14,12 +14,12 @@ import (
 
 func runOrders(e *env, args []string) error {
 	if len(args) == 0 {
-		return runOrdersList(e)
+		return runOrdersList(e, nil)
 	}
 
 	switch args[0] {
 	case "list":
-		return runOrdersList(e)
+		return runOrdersList(e, args[1:])
 	case "submit":
 		return runOrdersSubmit(e, args[1:])
 	case "cancel":
@@ -38,8 +38,11 @@ Subcommands:
 	}
 }
 
-func runOrdersList(e *env) error {
-	cli, err := e.newClient()
+// runOrdersList lists open orders. It takes the subcommand's arguments because the
+// global flags arrive after the subcommand name - `ibkr orders list --gateway URL` -
+// and it has to hand them to the client factory like every other command.
+func runOrdersList(e *env, args []string) error {
+	cli, err := e.newClient(args)
 	if err != nil {
 		return err
 	}
@@ -77,6 +80,7 @@ func runOrdersSubmit(e *env, args []string) error {
 
 	var conid int
 	var side, qty, orderType, price, stopPrice, tif, coid string
+	var account string
 	var outsideRTH bool
 
 	for i := 0; i < len(args); i++ {
@@ -84,6 +88,14 @@ func runOrdersSubmit(e *env, args []string) error {
 		case "-conid", "--conid":
 			if v, ok := argValue(args, i); ok {
 				conid, _ = strconv.Atoi(v)
+				i++
+			}
+		case "-account", "--account":
+			// Parsed here rather than left to the config fallback. This loop used
+			// to ignore -account, so `ibkr orders submit --account U1 ...` was
+			// accepted and silently used whatever account_id the config file held.
+			if v, ok := argValue(args, i); ok {
+				account = v
 				i++
 			}
 		case "-side", "--side":
@@ -151,12 +163,12 @@ Flags:
 		return fmt.Errorf("--qty is required")
 	}
 
-	acct, err := mustAccount("")
+	acct, err := mustAccount(account)
 	if err != nil {
 		return err
 	}
 
-	cli, err := e.newClient()
+	cli, err := e.newClient(args)
 	if err != nil {
 		return err
 	}
@@ -198,13 +210,18 @@ Flags:
 
 func runOrdersCancel(e *env, args []string) error {
 
-	var orderID string
+	var orderID, account string
 
 	for i := 0; i < len(args); i++ {
 		switch argAt(args, i) {
 		case "-orderid", "--orderid", "-order-id", "--order-id":
 			if v, ok := argValue(args, i); ok {
 				orderID = v
+				i++
+			}
+		case "-account", "--account":
+			if v, ok := argValue(args, i); ok {
+				account = v
 				i++
 			}
 		case "-h", "--help":
@@ -217,12 +234,12 @@ func runOrdersCancel(e *env, args []string) error {
 		return fmt.Errorf("--orderid is required")
 	}
 
-	acct, err := mustAccount("")
+	acct, err := mustAccount(account)
 	if err != nil {
 		return err
 	}
 
-	cli, err := e.newClient()
+	cli, err := e.newClient(args)
 	if err != nil {
 		return err
 	}
@@ -238,6 +255,6 @@ func runOrdersCancel(e *env, args []string) error {
 		return err
 	}
 
-	fmt.Printf("order %s cancelled\n", orderID)
+	ibkrPrintln(e, fmt.Sprintf("order %s cancelled", orderID))
 	return nil
 }

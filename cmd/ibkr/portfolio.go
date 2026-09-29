@@ -11,7 +11,9 @@ import (
 
 func runPortfolio(e *env, args []string) error {
 	if len(args) == 0 {
-		return runPortfolioSummary(e, args[1:])
+		// args[1:] on an empty slice is a bounds panic, and runOrders' equivalent
+		// branch passes nothing. The default subcommand is summary.
+		return runPortfolioSummary(e, nil)
 	}
 
 	switch args[0] {
@@ -61,7 +63,7 @@ func runPortfolioSummary(e *env, args []string) error {
 		return err
 	}
 
-	cli, err := e.newClient()
+	cli, err := e.newClient(args)
 	if err != nil {
 		return err
 	}
@@ -104,7 +106,7 @@ func runPortfolioLedger(e *env, args []string) error {
 		return err
 	}
 
-	cli, err := e.newClient()
+	cli, err := e.newClient(args)
 	if err != nil {
 		return err
 	}
@@ -136,7 +138,7 @@ func runPortfolioAllocation(e *env, args []string) error {
 		return err
 	}
 
-	cli, err := e.newClient()
+	cli, err := e.newClient(args)
 	if err != nil {
 		return err
 	}

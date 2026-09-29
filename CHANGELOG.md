@@ -5,6 +5,73 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.25] - 2026-09-29
+
+Not one global flag had ever been read. The CLI could only be pointed at a different
+gateway by editing its config file.
+
+### Fixed
+
+- **`--gateway`, `--rest`, `--insecure` and global `--account` were all inert.**
+  `parseGlobalFlags` was only ever called as `parseGlobalFlags(e.args)`, and its `default`
+  branch returns on the first argument that is not a global flag - which is `e.args[0]`,
+  the program name. The loop returned at `i=0` and read nothing.
+
+  | Invocation | Behaviour before |
+  |------------|-------------------|
+  | `ibkr --gateway URL accounts` | `unknown command "--gateway"` |
+  | `ibkr accounts --gateway URL` | runs, connects to `https://localhost:5000` |
+  | `ibkr accounts` | same |
+
+  So a CLI whose whole purpose is talking to a gateway could only be redirected by editing
+  `~/.ibkr/config.json`. The parser's own tests pass because they call it with argv *minus*
+  the program name, so the shape that ships was never the shape under test.
+
+  The client factory now takes the subcommand's own arguments - the ones the documented
+  `ibkr <command> [subcommand] [flags]` puts the global flags in - so subcommand depth
+  stops mattering and the flag path is finally covered.
+
+- **`ibkr orders submit` and `ibkr orders cancel` ignored `-account`.** Both called
+  `mustAccount("")` and never parsed the flag, unlike every other command. So
+  `ibkr orders submit --account U999 ...` was accepted, printed no complaint, and placed
+  the order against whatever `account_id` the config held - or failed with
+  `account ID required` when the config had none.
+
+- **`ibkr portfolio` panicked with no arguments.** `runPortfolio` did `args[1:]` inside its
+  `len(args) == 0` branch, a `slice bounds out of range [1:0]`. `runOrders` has the
+  identical shape and handles it correctly.
+
+- **`ibkr orders cancel` wrote its confirmation to the process stdout.** `fmt.Printf` where
+  every other message in the CLI goes through the injected `e.stdout`. The message was
+  uncapturable and invisible to anything consuming the command's output, and it was the
+  only output path that ignored the `env` contract.
+
+### Added
+
+- **`cmd/ibkr` subcommand coverage: 33.0% -> 76.1%.** All 9 client-construction call sites
+  in `accounts.go`, `orders.go`, `portfolio.go`, `positions.go` and `stream.go` were
+  unexecuted, because `subcommands_test.go` deliberately stopped short of needing a
+  gateway and no test ever replaced the `newClient` seam. They now run against
+  `internal/mockgateway` via `httptest`, on the happy path and on the error paths -
+  unreachable gateway, 401 not swallowed, and an unusable account id rejected before any
+  request.
+
+  The seam itself was not the work and never needed to be: it has existed since 1.1.14.
+  Total coverage 66.7% -> 69.5% against the 62% floor.
+
+### Changed
+
+- `--rest` remains inert, now with a comment at the point of the omission. `pkg/ibkr`
+  exposes no option to receive `RestGatewayURL` and `WithGatewayURL` covers both API
+  surfaces, so the real fix is an SDK option or removing the flag - not a second dead
+  assignment in the CLI. Wiring it would have made the code look finished while the
+  behaviour stayed wrong.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-29-cli-subcommand-coverage/`](./docs/runs/2026-09-29-cli-subcommand-coverage/).
+
 ## [1.1.24] - 2026-09-27
 
 The circuit breaker's error budget could be spent once and never recovered, which
