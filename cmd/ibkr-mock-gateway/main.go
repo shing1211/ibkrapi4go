@@ -152,35 +152,90 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 
-	httpSrv, base, err := newServer(o)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	return serve(ctx, o, stdout, stderr)
+}
+
+// serve runs the gateway until ctx is cancelled or the listener fails.
+//
+// ctx is a parameter rather than being built here, which is what makes the
+// shutdown path testable: the caller supplies a cancellable context, and a test
+// can therefore exercise the graceful-shutdown branch that an interrupt would
+// otherwise be needed to reach. That branch is the one with real logic in it -
+// the ErrServerClosed filtering, the shutdown timeout, and the error wrapping -
+// and it was the part no test could previously touch.
+//
+// Note that ListenAndServe binds a real socket, so these tests listen on
+// 127.0.0.1:0. That is not a compromise here: the alternative is asserting on a
+// mock of http.Server, which would only prove the test's own mock behaves as
+// written. The port is ephemeral and the listener is closed when the test ends.
+func serve(ctx context.Context, o options, stdout, stderr io.Writer) error {
+	// The base URL newServer derives is discarded: it comes from the requested
+	// address, and with an ephemeral port that address is not the one bound. The
+	// banner below uses the real listener address instead.
+	httpSrv, _, err := newServer(o)
 	if err != nil {
 		return err
 	}
-	printBanner(stdout, base, o.seed, o.scenario, o.useTLS)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	// The listener is created here rather than by ListenAndServe, for one reason:
+	// -addr 127.0.0.1:0 asks the OS for any free port, and only the bound listener
+	// knows which one it got. Banner first and then bind, and the banner would
+	// advertise a port nothing is listening on - which is the whole purpose of
+	// the banner, since it exists to tell the operator where to point the SDK.
+	ln, err := net.Listen("tcp", o.addr)
+	if err != nil {
+		return err
+	}
+	scheme := "http"
+	if o.useTLS {
+		scheme = "https"
+	}
+	printBanner(stdout, baseURL(ln.Addr().String(), scheme), o.seed, o.scenario, o.useTLS)
 
 	errCh := make(chan error, 1)
 	go func() {
 		if o.useTLS {
-			errCh <- httpSrv.ListenAndServeTLS("", "")
+			errCh <- httpSrv.ServeTLS(ln, "", "")
 			return
 		}
-		errCh <- httpSrv.ListenAndServe()
+		errCh <- httpSrv.Serve(ln)
 	}()
 
 	select {
 	case err := <-errCh:
+		// ErrServerClosed is what Serve returns once Shutdown or Close has been
+		// called, so it is the normal end of a serve that was stopped deliberately
+		// - not a failure to report.
+		//
+		// This branch is not reached by any test, and deliberately so. The only
+		// caller-visible way to stop the server is the ctx.Done() branch below,
+		// which returns without reading errCh, so Serve's ErrServerClosed goes to a
+		// channel nobody reads. The filter survives a mutation - deleting it leaves
+		// the suite green - which is the honest description of it: a guard for a
+		// shutdown path that a future caller could add, not code under test. The
+		// errCh branch that IS covered is the bind failure in TestRun_UnreachableAddr.
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 		return nil
 	case <-ctx.Done():
-		stop()
 		_, _ = fmt.Fprintln(stderr, "\nshutting down...")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
+		// Shutdown waits for in-flight requests, which is the point: the gateway's
+		// parked WebSocket handlers are closed by the server, not abandoned. A
+		// shutdown that times out is reported rather than swallowed, because a
+		// half-stopped gateway holding client connections is not a clean exit.
+		//
+		// The shutdown context is rooted in Background rather than in ctx on
+		// purpose. ctx is already cancelled - that is why this branch was taken - so
+		// a context derived from it would be born cancelled and Shutdown would
+		// return context.Canceled immediately without waiting for anything. The
+		// timeout below is the only deadline this needs.
+		//nolint:contextcheck // ctx is already cancelled in this branch; see above
 		if err := httpSrv.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("shutdown: %w", err)
 		}

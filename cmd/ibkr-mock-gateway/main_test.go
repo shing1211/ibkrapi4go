@@ -5,6 +5,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -552,6 +553,162 @@ func TestRun_UnreachableAddr(t *testing.T) {
 	if errors.Is(err, http.ErrServerClosed) {
 		t.Errorf("run = %v; want the bind error, not ErrServerClosed", err)
 	}
+}
+
+// TestServe_GracefulShutdown covers the branch that carries the most logic and
+// was previously unreachable: the context is cancelled, and serve must shut the
+// server down, report it, and return nil rather than surfacing the
+// http.ErrServerClosed that Shutdown provokes internally.
+func TestServe_GracefulShutdown(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	var stdout, stderr strings.Builder
+
+	done := make(chan error, 1)
+	go func() {
+		done <- serve(ctx, options{addr: "127.0.0.1:0", scenario: "none", seed: 1}, &stdout, &stderr)
+	}()
+
+	// Wait for the banner, which is the only signal that the listener is up. A
+	// fixed sleep would race: cancelling before ListenAndServe binds would take
+	// the ctx.Done path with nothing to shut down and prove nothing.
+	waitFor(t, &stdout, "listening on")
+
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("serve = %v; want nil after a graceful shutdown", err)
+		}
+	case <-time.After(30 * time.Second):
+		t.Fatal("serve did not return after the context was cancelled")
+	}
+
+	if !strings.Contains(stderr.String(), "shutting down") {
+		t.Errorf("stderr = %q; want the shutdown notice", stderr.String())
+	}
+	// The banner must be on stdout, not stderr: it is the command's output, and
+	// the operator reads it while stderr carries diagnostics.
+	if !strings.Contains(stdout.String(), "export IBKR_GATEWAY_URL=") {
+		t.Errorf("stdout = %q; want the SDK connection hint", stdout.String())
+	}
+}
+
+// TestServe_ServesWhileRunning is the other half of the shutdown test. Cancelling
+// and getting nil back would be equally true of a server that never served a
+// single request, so this asserts the listener actually answers between start and
+// shutdown.
+func TestServe_ServesWhileRunning(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var stdout, stderr strings.Builder
+
+	done := make(chan error, 1)
+	go func() {
+		done <- serve(ctx, options{addr: "127.0.0.1:0", scenario: "none", seed: 1}, &stdout, &stderr)
+	}()
+	defer func() {
+		cancel()
+		<-done
+	}()
+
+	banner := waitFor(t, &stdout, "listening on")
+	base := bannerAddress(t, banner)
+
+	resp, err := http.Get(base + "/v1/api/iserver/auth/status")
+	if err != nil {
+		t.Fatalf("GET while serving = %v; want nil", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode >= 500 {
+		t.Errorf("GET while serving = %d; want a non-5xx answer", resp.StatusCode)
+	}
+}
+
+// TestServe_TLS covers the TLS branch of the serve loop, not just the server
+// construction. ListenAndServeTLS is a different call from ListenAndServe and
+// fails differently - a certificate that builds but is rejected at handshake time
+// would leave the plain-HTTP tests green.
+func TestServe_TLS(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	var stdout, stderr strings.Builder
+
+	done := make(chan error, 1)
+	go func() {
+		done <- serve(ctx, options{addr: "127.0.0.1:0", scenario: "none", seed: 1, useTLS: true}, &stdout, &stderr)
+	}()
+	defer func() {
+		cancel()
+		<-done
+	}()
+
+	banner := waitFor(t, &stdout, "listening on")
+	host := bannerHost(t, banner)
+
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}, //nolint:gosec // self-signed loopback cert, as the banner documents
+	}}
+	resp, err := client.Get("https://" + host + "/v1/api/iserver/auth/status")
+	if err != nil {
+		t.Fatalf("TLS GET while serving = %v; want nil", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.TLS == nil {
+		t.Error("response did not negotiate TLS")
+	}
+}
+
+// TestServe_BadScenario covers the error path through serve rather than run, so
+// it is reached without a signal handler in the way.
+func TestServe_BadScenario(t *testing.T) {
+	var stdout, stderr strings.Builder
+	err := serve(context.Background(), options{addr: "127.0.0.1:0", scenario: "nope"}, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("serve with a bogus scenario = nil; want an error")
+	}
+	// A rejected scenario must not print a banner: it would tell the operator to
+	// point the SDK at a server that was never built.
+	if strings.Contains(stdout.String(), "listening on") {
+		t.Errorf("stdout = %q; want no banner for a rejected scenario", stdout.String())
+	}
+}
+
+// waitFor polls a writer until it contains want, or fails the test. Polling beats
+// a fixed sleep because the serve loop binds its socket asynchronously and the
+// delay is unbounded on a loaded CI runner.
+func waitFor(t *testing.T, w *strings.Builder, want string) string {
+	t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		if got := w.String(); strings.Contains(got, want) {
+			return got
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %q; got %q", want, w.String())
+	return ""
+}
+
+// bannerAddress extracts the base URL the banner tells the operator to use. The
+// port is ephemeral, so it can only come from the banner the program printed.
+func bannerAddress(t *testing.T, banner string) string {
+	t.Helper()
+	for _, line := range strings.Split(banner, "\n") {
+		if strings.HasPrefix(line, "ibkr-mock-gateway listening on ") {
+			rest := strings.TrimPrefix(line, "ibkr-mock-gateway listening on ")
+			fields := strings.Fields(rest)
+			if len(fields) == 0 {
+				t.Fatal("banner line carries no address")
+			}
+			return fields[0]
+		}
+	}
+	t.Fatalf("banner has no listening line:\n%s", banner)
+	return ""
+}
+
+func bannerHost(t *testing.T, banner string) string {
+	t.Helper()
+	return strings.TrimPrefix(bannerAddress(t, banner), "https://")
 }
 
 func TestRun_BadFlag(t *testing.T) {
