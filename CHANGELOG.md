@@ -5,6 +5,70 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.24] - 2026-09-27
+
+The circuit breaker's error budget could be spent once and never recovered, which
+silently reduced the configured failure threshold to 1.
+
+### Fixed
+
+- **An exhausted error budget stayed exhausted for the life of the client.**
+  `errorBudget.window` was appended to on every failure and never cleared. The success
+  path in `Record` reset `consecutive`, `openUntil` and `probing` - and not the budget -
+  so once `len(window) >= budget` was true it stayed true. The window only shrank past
+  `size`, so at the recommended `size=100, budget=3` the budget stayed spent until
+  roughly 97 further outcomes.
+
+  The observable effect: after the budget tripped once, the configured consecutive
+  threshold stopped meaning anything, and a single further failure re-opened the
+  circuit. Measured directly, with `threshold=10, budget=3, size=100`:
+
+  | Step | Window | State |
+  |------|--------|-------|
+  | 3 failures | 3 | open (budget exhausted) |
+  | cooldown elapses, probe succeeds | 3 | closed |
+  | **1 more failure** | 4 | **open** |
+
+  This only affects callers who opted in with `WithCircuitBreakerBudget`. Without it
+  the budget stays nil and `record` is a no-op, so the default path is untouched.
+
+- **The window is now a rolling window over the last `size` outcomes**, as
+  `WithCircuitBreakerBudget` already documented, rather than an append-only pile of
+  failures. `window` is `[]bool` and `record` counts failures within it, so a success
+  pushes an old failure out and the budget recovers. The public contract text did not
+  change - the implementation now matches it.
+
+  A failure is recorded even when the consecutive threshold already tripped; skipping
+  it made the window understate how many failures had actually happened.
+
+- **The dead `now` parameter is gone.** `evict(now)` never read it, which is the direct
+  reason the type comment could say "sliding" while nothing ever slid. A test named
+  `TestErrorBudget_EvictsOldEntries` asserted the opposite of its name, and the previous
+  run's `next-phase.md` had already flagged that mismatch as the likely reason the
+  time-window question was answered wrongly twice. It is now
+  `TestErrorBudget_WindowIsBoundedAndKeepsTheNewest` and asserts what it says.
+
+  Entries are still **not** aged out by time. "5 failures in 60s" remains inexpressible;
+  a caller approximates it with a `size` chosen to cover the period of interest, which
+  depends on request rate. That is a new public option, not a bug fix, and is left for
+  a separate decision.
+
+### Changed
+
+- `WithCircuitBreakerBudget`'s doc comment now states that the window counts outcomes
+  and that `size<=0` disables the budget, which it always did.
+
+  This is a behaviour change for opt-in callers, released as a patch because the
+  documented contract is unchanged, no signature moved, and no new option was added. A
+  loose `size`/`budget` ratio still keeps the budget satisfied for many outcomes and so
+  legitimately re-opens the circuit often - that is the configured behaviour, and the
+  regression tests say so rather than leaving it to be rediscovered.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-error-budget-recovery/`](./docs/runs/2026-09-27-error-budget-recovery/).
+
 ## [1.1.23] - 2026-09-27
 
 A package under `internal/` can be unreachable for the life of the module and no

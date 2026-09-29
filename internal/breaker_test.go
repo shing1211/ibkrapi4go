@@ -157,13 +157,42 @@ func TestBreaker_SetErrorBudget_NilReceiver(t *testing.T) {
 	b.SetErrorBudget(5, 10) // should not panic
 }
 
-func TestErrorBudget_EvictsOldEntries(t *testing.T) {
-	eb := newErrorBudget(2, 5)
-	now := time.Now()
-	eb.record(now.Add(-10 * time.Second))
-	eb.record(now.Add(-9 * time.Second))
-	eb.record(now) // third entry; evict should not remove since size=5
-	if len(eb.window) != 3 {
-		t.Fatalf("window len = %d; want 3", len(eb.window))
+// TestErrorBudget_WindowIsBoundedAndKeepsTheNewest pins the rolling window: the
+// budget looks at the last `size` outcomes and drops the oldest beyond that.
+//
+// This replaced TestErrorBudget_EvictsOldEntries, whose name claimed the opposite
+// of what its body asserted - it checked that entries were *not* removed. That
+// mismatch is the likely reason the "sliding window" wording in the type comment was
+// taken literally for so long, when the implementation has never aged anything out
+// by time.
+func TestErrorBudget_WindowIsBoundedAndKeepsTheNewest(t *testing.T) {
+	eb := newErrorBudget(4, 5)
+
+	// Five outcomes fit in a window of five; a sixth evicts the oldest.
+	for i := 0; i < 5; i++ {
+		eb.record(false)
+	}
+	if len(eb.window) != 5 {
+		t.Fatalf("window len after 5 outcomes = %d; want 5", len(eb.window))
+	}
+
+	// Two failures, then six successes: the failures must be pushed out, so the
+	// budget is usable again. Before the window recorded successes this was the
+	// defect - the failures stayed forever and every later failure re-tripped.
+	eb2 := newErrorBudget(2, 3)
+	eb2.record(true)
+	eb2.record(true)
+	if !eb2.record(true) {
+		t.Fatal("budget of 2 was not exhausted by 2 failures in a window of 3")
+	}
+	eb2.record(false)
+	eb2.record(false)
+	eb2.record(false) // the first two failures are now out of the window
+	if len(eb2.window) != 3 {
+		t.Fatalf("window len = %d; want 3", len(eb2.window))
+	}
+	if tripped := eb2.record(true); tripped {
+		t.Error("budget tripped after 3 successes evicted the earlier failures; " +
+			"the window should have recovered")
 	}
 }

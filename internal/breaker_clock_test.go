@@ -95,13 +95,19 @@ func TestBreaker_FailedProbeReopensTheCircuit(t *testing.T) {
 // TestBreaker_SetErrorBudgetTripsTheBreaker wires the budget in and pins that it
 // can open the circuit on its own, below the consecutive threshold.
 func TestBreaker_SetErrorBudgetTripsTheBreaker(t *testing.T) {
-	// Consecutive threshold is high, so only the budget can trip it. Successes
-	// between failures reset the consecutive counter, leaving the budget as the
-	// only thing accumulating.
+	// Consecutive threshold is high, so only the budget can trip it: the successes
+	// between the failures reset the consecutive counter, so the budget is the only
+	// signal that can accumulate.
+	//
+	// The window is sized so that all three failures are still inside it once the
+	// two successes have been recorded. With the tighter size=3 this test used to
+	// declare, the last three outcomes are [success, failure, failure] - two
+	// failures - and the budget correctly no longer trips, because the failures
+	// have aged out. That is the recovery behaviour, not a regression in it.
 	clk := &testClock{now: time.Date(2026, 9, 27, 12, 0, 0, 0, time.UTC)}
 	b := NewBreaker(100, time.Minute)
 	clk.install(b)
-	b.SetErrorBudget(3, 3)
+	b.SetErrorBudget(3, 5)
 
 	for i := 1; i <= 2; i++ {
 		b.Record(errors.New("boom"), 500)
@@ -114,6 +120,64 @@ func TestBreaker_SetErrorBudgetTripsTheBreaker(t *testing.T) {
 	b.Record(errors.New("boom"), 500)
 	if err := b.Allow(); !errors.Is(err, ErrCircuitOpen) {
 		t.Errorf("Allow = %v; want ErrCircuitOpen once the budget of 3 is exhausted", err)
+	}
+}
+
+// TestBreaker_ErrorBudgetRecoversAfterSuccess is the regression test for the
+// defect found by the 2026-09-27 spike.
+//
+// errorBudget.window was appended to on every failure and never cleared: the
+// success path in Record reset consecutive, openUntil and probing but not the
+// budget. So once len(window) >= budget the condition stayed true for the life of
+// the client, and every subsequent single failure re-opened the circuit - the
+// configured consecutive threshold of 10 silently reduced to 1. The circuit does
+// close on a successful probe, so the failure looked intermittent and had no
+// visible cause.
+//
+// The window is a rolling one over the last `size` outcomes, so a success pushes
+// old failures out of it and the budget becomes usable again.
+//
+// size == budget is used deliberately, because that is the tightest case: one
+// success evicts exactly one failure, so a single successful probe must clear the
+// budget. A looser ratio recovers too, but more slowly - with budget=3 and size=5
+// the budget is still satisfied after a probe and one further failure (4 failures
+// in 4 outcomes), and with budget=3 and size=100 it stays satisfied for roughly 97
+// further outcomes. A breaker configured that way legitimately keeps re-opening, so
+// that is not this defect returning.
+func TestBreaker_ErrorBudgetRecoversAfterSuccess(t *testing.T) {
+	const cooldown = 30 * time.Second
+	clk := &testClock{now: time.Date(2026, 9, 27, 12, 0, 0, 0, time.UTC)}
+	b := NewBreaker(10, cooldown) // consecutive threshold 10: only the budget can trip
+	clk.install(b)
+	b.SetErrorBudget(3, 3) // 3 failures among the last 3 outcomes
+
+	// Exhaust the budget with three failures.
+	for i := 0; i < 3; i++ {
+		b.Record(errors.New("boom"), 500)
+	}
+	if err := b.Allow(); !errors.Is(err, ErrCircuitOpen) {
+		t.Fatalf("Allow after exhausting a budget of 3 = %v; want ErrCircuitOpen", err)
+	}
+
+	// The cooldown elapses, a probe is allowed and succeeds, so the circuit closes
+	// and the window is [failure, failure, success]: the budget is clear again.
+	clk.advance(cooldown)
+	if err := b.Allow(); err != nil {
+		t.Fatalf("half-open probe refused: %v", err)
+	}
+	b.Record(nil, 200)
+	if err := b.Allow(); err != nil {
+		t.Fatalf("Allow after a successful probe = %v; want nil", err)
+	}
+
+	// One further failure must not re-open the circuit. Before the fix this is
+	// where it failed: the window still held 3 failures and nothing had evicted
+	// them, so the budget tripped again immediately.
+	b.Record(errors.New("boom"), 500)
+	err := b.Allow()
+	if errors.Is(err, ErrCircuitOpen) {
+		t.Errorf("Allow after recovery and one failure = %v; want nil - the budget "+
+			"did not recover, so the consecutive threshold of 10 is effectively 1", err)
 	}
 }
 

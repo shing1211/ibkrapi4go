@@ -285,8 +285,9 @@ func WithCircuitBreaker(threshold int, cooldown time.Duration) Option {
 // WithCircuitBreakerBudget installs a sliding-window error budget on the
 // circuit breaker. When budget failures occur within the last size outcomes
 // the breaker opens, even if the consecutive-failure threshold has not been
-// reached. Requires WithCircuitBreaker to be set first. budget<=0 disables
-// the budget. size should be >= budget.
+// reached. The window counts outcomes, so successes push older failures out of
+// it and the budget recovers. Requires WithCircuitBreaker to be set first.
+// budget<=0 or size<=0 disables the budget. size should be >= budget.
 func WithCircuitBreakerBudget(budget, size int) Option {
 	return func(c *config) error {
 		if c.breaker == nil {
