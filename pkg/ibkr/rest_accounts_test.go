@@ -277,7 +277,11 @@ func TestRESTAccounts_SubmitDocument(t *testing.T) {
 		case "/gw/api/v1/accounts/documents":
 			accountPath = r.URL.Path
 			gotContentType = r.Header.Get("Content-Type")
-			r.ParseMultipartForm(32 << 20)
+			r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
+			if err := r.ParseMultipartForm(32 << 20); err != nil { //nolint:gosec // test handler bounds the body with MaxBytesReader
+				http.Error(w, "invalid multipart body", http.StatusBadRequest)
+				return
+			}
 			gotAccountID = r.FormValue("accountId")
 			if files := r.MultipartForm.File["file"]; len(files) == 1 {
 				fh := files[0]

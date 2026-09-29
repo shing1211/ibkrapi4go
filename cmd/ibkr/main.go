@@ -194,10 +194,8 @@ func mustAccount(flagValue string) (ibkr.AccountID, error) {
 }
 
 // ctx returns a context with a reasonable timeout for CLI operations.
-func ctx() context.Context {
-	c, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	_ = cancel // timeout handles cleanup
-	return c
+func ctx() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 15*time.Second)
 }
 
 func printUsage(w io.Writer) {

@@ -22,9 +22,11 @@ jobs:
       - name: Run spec version check
         id: check
         run: |
+          set +e
           output=$(python3 scripts/check_spec_version.py 2>&1)
+          exit_code=$?
+          set -e
           echo "$output"
-          exit_code=${?}
           echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
           if echo "$output" | grep -q "Live version:"; then
             live_version=$(echo "$output" | grep "Live version:" | awk '{print $NF}')
@@ -38,26 +40,29 @@ jobs:
       - name: Create GitHub issue on drift
         if: steps.check.outputs.exit_code == '1'
         run: |
+          cat > "$RUNNER_TEMP/spec-drift.md" <<'EOF'
+          ## Spec Drift Detected
+
+          The live IBKR OpenAPI spec has advanced beyond the pinned version.
+
+          - **Pinned version:** ${{ steps.check.outputs.pinned_version }}
+          - **Live version:** ${{ steps.check.outputs.live_version }}
+          - **Detected by:** spec-drift workflow
+
+          Action required:
+          1. Fetch the new spec: \`make codegen\`
+          2. Review the diff for breaking changes or new operations
+          3. Update \`scripts/patch_spec.py\` if needed
+          4. Regenerate: \`make codegen\`
+          5. Verify: \`make codegen-verify && make check\`
+          6. Commit and tag a new release
+
+          ---
+          _This issue was automatically created by the spec-drift workflow._
+          EOF
           gh issue create \
             --title "[spec-drift] Upstream IBKR spec advanced to ${{ steps.check.outputs.live_version }}" \
-            --body "## Spec Drift Detected
-
-The live IBKR OpenAPI spec has advanced beyond the pinned version.
-
-- **Pinned version:** ${{ steps.check.outputs.pinned_version }}
-- **Live version:** ${{ steps.check.outputs.live_version }}
-- **Detected by:** spec-drift workflow
-
-Action required:
-1. Fetch the new spec: \`make codegen\`
-2. Review the diff for breaking changes or new operations
-3. Update \`scripts/patch_spec.py\` if needed
-4. Regenerate: \`make codegen\`
-5. Verify: \`make codegen-verify && make check\`
-6. Commit and tag a new release
-
----
-_This issue was automatically created by the spec-drift workflow._" \
+            --body-file "$RUNNER_TEMP/spec-drift.md" \
             --label "spec-drift" \
             --label "upstream-change"
         env:

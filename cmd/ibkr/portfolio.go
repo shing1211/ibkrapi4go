@@ -68,13 +68,15 @@ func runPortfolioSummary(e *env, args []string) error {
 		return err
 	}
 	defer func() { _ = cli.Close() }()
+	cliCtx, cancel := ctx()
+	defer cancel()
 
-	if err := cli.Session().Initialize(ctx()); err != nil {
+	if err := cli.Session().Initialize(cliCtx); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
-	summary, err := cli.Portfolio().Summary(ctx(), acct)
+	summary, err := cli.Portfolio().Summary(cliCtx, acct)
 	if err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: portfolio summary: %v\n", err)
 		return err
@@ -111,13 +113,15 @@ func runPortfolioLedger(e *env, args []string) error {
 		return err
 	}
 	defer func() { _ = cli.Close() }()
+	cliCtx, cancel := ctx()
+	defer cancel()
 
-	if err := cli.Session().Initialize(ctx()); err != nil {
+	if err := cli.Session().Initialize(cliCtx); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
-	ledger, err := cli.Portfolio().Ledger(ctx(), acct)
+	ledger, err := cli.Portfolio().Ledger(cliCtx, acct)
 	if err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: portfolio ledger: %v\n", err)
 		return err
@@ -143,13 +147,15 @@ func runPortfolioAllocation(e *env, args []string) error {
 		return err
 	}
 	defer func() { _ = cli.Close() }()
+	cliCtx, cancel := ctx()
+	defer cancel()
 
-	if err := cli.Session().Initialize(ctx()); err != nil {
+	if err := cli.Session().Initialize(cliCtx); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
-	alloc, err := cli.Portfolio().Allocation(ctx(), acct)
+	alloc, err := cli.Portfolio().Allocation(cliCtx, acct)
 	if err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: portfolio allocation: %v\n", err)
 		return err

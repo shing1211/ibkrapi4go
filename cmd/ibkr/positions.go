@@ -34,13 +34,15 @@ func runPositions(e *env, args []string) error {
 		return err
 	}
 	defer func() { _ = cli.Close() }()
+	cliCtx, cancel := ctx()
+	defer cancel()
 
-	if err := cli.Session().Initialize(ctx()); err != nil {
+	if err := cli.Session().Initialize(cliCtx); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
-	positions, err := cli.Portfolio().Positions(ctx(), acct)
+	positions, err := cli.Portfolio().Positions(cliCtx, acct)
 	if err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: list positions: %v\n", err)
 		return err

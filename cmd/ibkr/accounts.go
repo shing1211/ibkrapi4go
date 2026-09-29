@@ -21,13 +21,15 @@ func runAccounts(e *env, args []string) error {
 		return err
 	}
 	defer func() { _ = cli.Close() }()
+	cliCtx, cancel := ctx()
+	defer cancel()
 
-	if err := cli.Session().Initialize(ctx()); err != nil {
+	if err := cli.Session().Initialize(cliCtx); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
-	accounts, err := cli.Account().List(ctx())
+	accounts, err := cli.Account().List(cliCtx)
 	if err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: list accounts: %v\n", err)
 		return err

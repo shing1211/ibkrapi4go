@@ -47,13 +47,15 @@ func runOrdersList(e *env, args []string) error {
 		return err
 	}
 	defer func() { _ = cli.Close() }()
+	cliCtx, cancel := ctx()
+	defer cancel()
 
-	if err := cli.Session().Initialize(ctx()); err != nil {
+	if err := cli.Session().Initialize(cliCtx); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
-	orders, err := cli.Trade().OpenOrders(ctx())
+	orders, err := cli.Trade().OpenOrders(cliCtx)
 	if err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: list orders: %v\n", err)
 		return err
@@ -173,8 +175,10 @@ Flags:
 		return err
 	}
 	defer func() { _ = cli.Close() }()
+	cliCtx, cancel := ctx()
+	defer cancel()
 
-	if err := cli.Session().Initialize(ctx()); err != nil {
+	if err := cli.Session().Initialize(cliCtx); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
@@ -197,7 +201,7 @@ Flags:
 		req.TimeInForce = ibkr.TimeInForceDay
 	}
 
-	result, err := cli.Trade().Submit(ctx(), acct, req)
+	result, err := cli.Trade().Submit(cliCtx, acct, req)
 	if err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: submit order: %v\n", err)
 		return err
@@ -244,13 +248,15 @@ func runOrdersCancel(e *env, args []string) error {
 		return err
 	}
 	defer func() { _ = cli.Close() }()
+	cliCtx, cancel := ctx()
+	defer cancel()
 
-	if err := cli.Session().Initialize(ctx()); err != nil {
+	if err := cli.Session().Initialize(cliCtx); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
-	if err := cli.Trade().Cancel(ctx(), acct, orderID); err != nil {
+	if err := cli.Trade().Cancel(cliCtx, acct, orderID); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: cancel order: %v\n", err)
 		return err
 	}

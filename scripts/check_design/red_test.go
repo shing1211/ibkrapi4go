@@ -121,7 +121,7 @@ func copyPath(src, dst string) error {
 		if err := os.MkdirAll(filepath.Dir(dst), 0o750); err != nil {
 			return err
 		}
-		return os.WriteFile(dst, b, 0o600)
+		return os.WriteFile(dst, b, 0o600) //nolint:gosec // repo-local scratch path, not user input
 	}
 	entries, err := os.ReadDir(src)
 	if err != nil {
@@ -155,7 +155,7 @@ func mutate(t *testing.T, rel, old, repl string) {
 		t.Fatalf("read %s: %v", p, err)
 	}
 	t.Cleanup(func() {
-		if err := os.WriteFile(p, orig, 0o600); err != nil {
+		if err := os.WriteFile(p, orig, 0o600); err != nil { //nolint:gosec // repo-local scratch path, not user input
 			t.Fatalf("restore %s: %v", p, err)
 		}
 	})
@@ -171,7 +171,7 @@ func mutate(t *testing.T, rel, old, repl string) {
 	if n := strings.Count(s, old); n != 1 {
 		t.Fatalf("anchor %q occurs %d times in %s, want exactly 1", old, n, rel)
 	}
-	if err := os.WriteFile(p, []byte(strings.Replace(s, old, repl, 1)), 0o600); err != nil {
+	if err := os.WriteFile(p, []byte(strings.Replace(s, old, repl, 1)), 0o600); err != nil { //nolint:gosec // repo-local scratch path, not user input
 		t.Fatalf("write %s: %v", p, err)
 	}
 }

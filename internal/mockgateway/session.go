@@ -80,7 +80,7 @@ func (s *Server) serveSession(w http.ResponseWriter, req *Request, op string) {
 	switch op {
 	case OpInitializeSession:
 		token := s.sessions.authenticate()
-		http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true})
+		http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode}) //nolint:gosec // mock gateway intentionally serves plain HTTP locally
 		writeJSON(w, http.StatusOK, `{"authenticated":true,"established":true}`)
 	case OpGetBrokerageStatus:
 		if s.authRequired && !s.sessions.isAuthenticated(req) {

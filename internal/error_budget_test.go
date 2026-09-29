@@ -9,8 +9,6 @@ import "testing"
 // breaker tests. It needs no clock: record takes the outcome, not a timestamp, so
 // the window is a pure count over the last N outcomes.
 
-var budgetEpoch = 0 // retained only so the file's history is easy to follow
-
 // TestErrorBudget_TripsOnFailuresWithinTheWindow pins the trip condition: budget
 // failures among the last size outcomes.
 func TestErrorBudget_TripsOnFailuresWithinTheWindow(t *testing.T) {

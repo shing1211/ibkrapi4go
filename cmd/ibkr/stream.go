@@ -72,13 +72,15 @@ Flags:
 		return err
 	}
 	defer func() { _ = cli.Close() }()
+	cliCtx, cancel := ctx()
+	defer cancel()
 
-	if err := cli.Session().Initialize(ctx()); err != nil {
+	if err := cli.Session().Initialize(cliCtx); err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: session initialize: %v\n", err)
 		return err
 	}
 
-	snapshots, err := cli.MarketData().Snapshot(ctx(), []ibkr.ConID{ibkr.ConID(conid)}, fields)
+	snapshots, err := cli.MarketData().Snapshot(cliCtx, []ibkr.ConID{ibkr.ConID(conid)}, fields)
 	if err != nil {
 		_, _ = fmt.Fprintf(e.stderr, "error: market data snapshot: %v\n", err)
 		return err

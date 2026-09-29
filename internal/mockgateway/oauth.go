@@ -100,7 +100,7 @@ func (s *Server) serveToken(w http.ResponseWriter, req *Request) {
 	}
 
 	access, refresh, expiresIn := s.oauth.issue()
-	body, err := json.Marshal(struct {
+	body, err := json.Marshal(struct { //nolint:gosec // synthetic mock token, never a real credential
 		AccessToken  string `json:"access_token"`
 		TokenType    string `json:"token_type"`
 		ExpiresIn    int64  `json:"expires_in"`
