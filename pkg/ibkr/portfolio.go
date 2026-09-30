@@ -59,23 +59,23 @@ type Position struct {
 // LedgerCurrency is the ledger balance for one currency.
 type LedgerCurrency struct {
 	// AccountCode is the account id the ledger belongs to.
-	AccountCode string
+	AccountCode           string `json:"acctcode"`
 	// Currency is the balance currency.
-	Currency string
+	Currency string `json:"currency"`
 	// CashBalance is the cash balance.
-	CashBalance string
+	CashBalance string `json:"cashbalance"`
 	// SettledCash is the settled cash balance.
-	SettledCash string
+	SettledCash string `json:"settledcash"`
 	// NetLiquidationValue is the net liquidation value.
-	NetLiquidationValue string
+	NetLiquidationValue string `json:"netliquidationvalue"`
 	// StockMarketValue is the stock market value.
-	StockMarketValue string
+	StockMarketValue string `json:"stockmarketvalue"`
 	// StockOptionMarketValue is the stock-option market value.
-	StockOptionMarketValue string
+	StockOptionMarketValue string `json:"stockoptionmarketvalue"`
 	// UnrealizedPnL is the unrealized P&L.
-	UnrealizedPnL string
+	UnrealizedPnL string `json:"unrealizedpnl"`
 	// RealizedPnL is the realized P&L.
-	RealizedPnL string
+	RealizedPnL string `json:"realizedpnl"`
 }
 
 // SummaryValue is one key of a portfolio summary.
