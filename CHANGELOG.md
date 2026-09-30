@@ -5,6 +5,83 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.30] - 2026-09-30
+
+Adds the five forecast operations and fixes a documentation gate that had stopped
+checking most of what it claimed to. No dependency change and no change to any
+existing exported signature.
+
+### Added
+
+- **`ForecastManager` has methods.** It was exported, wired into `Client.Forecast()`
+  and `transport_pool.go`, and documented as having five operations in `MIGRATION.md`,
+  `ROADMAP.md` and the design docs — with none of them existing. `Client.Forecast()`
+  handed callers a struct they could not call. The five are `ForecastCategories`,
+  `ForecastContract`, `ForecastMarkets`, `ForecastRules` and `ForecastSchedule`.
+
+  The `Get` prefix is dropped from the public method and kept in the `op` string,
+  which is the existing convention rather than an inconsistency: `AlertManager.AllAlerts`
+  runs under `Alert.GetAllAlerts`. The `op` string is what metrics and the error
+  taxonomy key on, so renaming it would churn both. Signatures take plain arguments
+  rather than the generated `*GetForecast*Params`, matching `Snapshot` and `Position`.
+
+  `ForecastCategories` returns `json.RawMessage` where the other four return typed
+  models, and the reason is worth stating because it looks like an exception. The
+  category tree is an object keyed by category id, and the generated response type
+  flattens that map into a single struct with `name`, `parent_id` and `markets`
+  fields — a model built from it would describe a payload IBKR does not send.
+  `ScannerParameters` is passthrough for the same reason.
+
+  Numeric fields are `json.Number`, not `int64` and not `float64`, and are read
+  through the lenient `rawToString` helper so a field arriving as a number or as a
+  string both land correctly (ADR 0008). The mock gateway already routed all five
+  opIds and served fixtures, so no mock change was needed — the 193/193 route claim
+  was true and only the SDK side was missing.
+
+### Fixed
+
+- **`make design-check` verified 5 manager method counts out of 15, and three of
+  those five passed by coincidence.** The doc table grouped managers into shared cells
+  — `` | `AlertManager`, `ForecastManager`, `ScannerManager` | … | 7, 5, and 2 ops
+  respectively | `` — while the verifier matches one manager name against one `N ops`
+  cell. It could not read a grouped row, returned 0, and the caller skipped on 0. Nine
+  managers went unverified, and the one parseable check counted backtick-quoted method
+  names in the doc against the methods a hand-maintained file map named. Those two
+  omissions cancelled: `AccountManager.SubscribeAccount` lives in `ws.go`, which the
+  map omitted, and the doc did not list it either, so the row compared 3 == 3 while
+  the code had 4.
+
+  Every manager in `pkg/ibkr` is now checked, the per-manager file list is gone, and a
+  missing doc row fails the build instead of being skipped. Five numbers were wrong
+  (`AccountManager` 3→4, `PortfolioManager` 15→16, `AllocationManager` 8→9,
+  `ModelManager` 11→18, and `ForecastManager` 5→0 at the time) and `SessionManager`,
+  which had no row at all, was added. Mutation-verified against six previously-blind
+  paths, including a new manager type added with no doc row.
+
+- **The CI `lint & security` job was red on `main`.** Six `nolintlint` findings, each an
+  unused `//nolint:gosec` directive. `gosec` is enabled and only G104 and G101 are
+  excluded, so one directive guarded an excluded rule and the other five guarded
+  file-permission rules that do not fire because the code already complies — G306 asks
+  for `0600` or less and all three sites pass `0o600`. All six suppressed nothing.
+  Confirmed by mutation: loosening a `0o600` to `0o644` is now caught as G306 at the
+  exact line whose directive was removed. Both CI lint passes are green.
+
+### Changed
+
+- **`parseGlobalFlags`'s index was documented two ways and both were wrong about the
+  same number.** `TestParseGlobalFlags_StopsAtFirstNonFlag` called the value "the index
+  of `orders`" when `orders` is at index 1 and the value is 2. The behaviour was right;
+  the comment was not, and it is corrected. The function doc no longer apologises for
+  returning an index no caller reads, and instead states why stopping at the first
+  non-flag is load-bearing: a flag written after the command belongs to that command,
+  and an earlier version that parsed from `argv[0]` honoured no global flag at all.
+
+- **`docs/runs/2026-09-29-session-pacing-gate/next-phase.md` rewritten against current
+  reality.** Six carried items are now closed with the commit that closed each, and the
+  "needs a decision" section is empty: the coverage floor was answerable from
+  measurement and the lint job from the config, and neither was a judgement call once
+  looked at properly. What remains needs a live IBKR account.
+
 ## [1.1.29] - 2026-09-30
 
 Dead-code and inert-surface removal. No public Go API change, no generated-code
@@ -2183,7 +2260,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.29...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.30...HEAD
+[1.1.30]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.29...v1.1.30
 [1.1.29]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.28...v1.1.29
 [1.1.28]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.27...v1.1.28
 [1.1.13]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.12...v1.1.13

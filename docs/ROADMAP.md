@@ -253,7 +253,19 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.29`**.
+**`v1.1.30`**.
+
+The `v1.1.30` release gives `ForecastManager` the five methods it has been documented
+as having since v1.0.0. The type was exported, wired into `Client.Forecast()`, and
+listed in `MIGRATION.md` and `ROADMAP.md` as five operations, none of which existed —
+`Client.Forecast()` returned a struct with no methods on it. It also repairs a
+documentation gate that had quietly stopped checking most of what it claimed:
+`check_design` compared 5 manager method counts out of 15, and three of those five
+passed only because two independent omissions cancelled — an undocumented method and
+a file missing from a hand-maintained map. All 15 are verified now, a missing doc row
+fails the build, and the CI lint job, red on `main` for six unused `//nolint:gosec`
+directives, is green. `pkg/ibkr` coverage reaches 62.0%, the first time that package
+has cleared the floor CI measures it against.
 
 The `v1.1.29` patch removes two things that were shipped but could not work. The
 `--rest` global flag and its `rest` config key carried a REST gateway URL that
