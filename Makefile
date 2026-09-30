@@ -11,7 +11,7 @@ OAPI_CODEGEN_VERSION ?= v2.8.0
 
 .PHONY: help tools fmt vet test test-race test-integration coverage check \
         codegen codegen-verify docs-spec docs-check design-check \
-        license license-check mock-gateway fuzz clean
+        managers-table license license-check mock-gateway fuzz clean
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -53,6 +53,9 @@ internal-refs-check: ## Fail if a package under internal/ is imported by nothing
 
 design-check: ## Fail if a design doc disagrees with the code it describes
 	go run ./scripts/check_design
+
+managers-table: ## Regenerate the generated manager table in docs/design/03-managers.md
+	go run ./scripts/check_design -fix
 
 codegen: ## Regenerate client/ from the OpenAPI spec
 	./scripts/codegen.sh

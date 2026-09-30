@@ -5,6 +5,8 @@ client and returns stable public types.
 
 ## Managers (CPAPI)
 
+<!-- generated: managers-table -->
+
 | Manager | Scope | Methods (implemented) |
 |---------|-------|-----------------------|
 | `AccountManager` | accounts & summaries | 4 ops |
@@ -23,13 +25,28 @@ client and returns stable public types.
 | `TradingAccountManager` | trading-account ops | 9 ops |
 | `WatchlistManager` | watchlists | 4 ops |
 
+<!-- /generated: managers-table -->
+
 One manager per row, and one count per row, on purpose. An earlier revision of this
 table grouped managers into shared cells — `` | `AlertManager`, `ForecastManager`,
 `ScannerManager` | … | 7, 5, and 2 ops respectively | `` — which reads better and
 cannot be checked. The verifier matches a single manager name against a single `N
 ops` cell, so every grouped row silently went unverified, and the drift it was
-supposed to catch went unnoticed for nine runs. The counts below are enforced by
-`make design-check`; a mismatch fails the build.
+supposed to catch went unnoticed for nine runs.
+
+**The table between the markers is generated.** Run `make managers-table` after
+adding, removing or renaming a manager method, and commit the result; `make
+design-check` fails on a stale table, and a hand-edited count fails even when it
+happens to satisfy the per-manager check. The method column is a fact about the code
+and is rendered from the AST. The scope column is prose, so it lives in
+`managerScopes` in `scripts/check_design/main.go` — add a manager's scope there, not
+in the table. Everything outside the markers is hand-written and is not touched.
+
+The generator and the verifier share one walk over `pkg/ibkr` rather than being two
+implementations, because a second one could count differently and then regenerate a
+table the verifier rejects. It is the same shape as `gofmt`: `-fix` writes, the
+default compares. `-fix` is not wired into `make check`, since a gate that edits its
+own subject is not a gate.
 
 > **Method counts are verified against source by `make design-check`, not by hand.**
 > The authoritative per-method list is the

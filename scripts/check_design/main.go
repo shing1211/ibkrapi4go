@@ -21,10 +21,13 @@
 //     confirmation, single-attempt mutation path and error mapping in
 //     docs/design/09-orders-and-confirmation.md match the code
 //
-// Usage: go run ./scripts/check_design
+// Usage: go run ./scripts/check_design [-fix]
+//
+//	-fix  rewrite the generated manager table in docs/design/03-managers.md
 package main
 
 import (
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -133,8 +136,24 @@ func collectDocErrors(repoRoot, doc string, checks []docCheck) error {
 	return nil
 }
 
+// -fix rewrites the generated manager table in docs/design/03-managers.md from
+// the source and exits without running the checks, in the shape gofmt uses: -w
+// writes, the default compares. It is deliberately not wired into `make check`,
+// because a gate that edits its own subject is not a gate.
 func main() {
 	repoRoot, _ := os.Getwd()
+	fix := flag.Bool("fix", false, "rewrite the generated manager table in docs/design/03-managers.md")
+	flag.Parse()
+
+	if *fix {
+		if err := fixManagerTable(repoRoot); err != nil {
+			fmt.Fprintf(os.Stderr, "design doc fix failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("regenerated docs/design/03-managers.md manager table")
+		return
+	}
+
 	verified, err := run(repoRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "design doc check failed: %v\n", err)
@@ -412,6 +431,154 @@ func checkTransportChain(repoRoot string) error {
 	return nil
 }
 
+// managerScopes is the Scope column of the 03-managers.md table, and the reason
+// that table is generated rather than hand-written.
+//
+// The Method column is a fact about the code, so it can be rendered from the AST.
+// The Scope column is prose and cannot be derived, so it lives here and is emitted
+// alongside the count. That is the honest division: the checker owns the whole
+// table, the prose around it stays hand-written, and a manager added to pkg/ibkr
+// without a scope here is an error rather than a row with a blank cell.
+var managerScopes = map[string]string{
+	"AccountManager":        "accounts & summaries",
+	"AlertManager":          "alerts",
+	"AllocationManager":     "FA allocation",
+	"FYIManager":            "FYIs / notifications",
+	"ForecastManager":       "event contracts",
+	"MarketDataManager":     "quotes, history & streaming",
+	"ModelManager":          "model portfolios",
+	"OAuthManager":          "OAuth1",
+	"PerformanceManager":    "PortfolioAnalyst",
+	"PortfolioManager":      "positions & ledger",
+	"ScannerManager":        "market scanner",
+	"SessionManager":        "session lifecycle & health",
+	"TradeManager":          "orders & contracts",
+	"TradingAccountManager": "trading-account ops",
+	"WatchlistManager":      "watchlists",
+}
+
+// The generated region of 03-managers.md. Everything between these markers is
+// rewritten by -fix and compared byte for byte otherwise, so a hand-edited count
+// fails even when it happens to satisfy the per-manager check below.
+const (
+	managersTableStart = "<!-- generated: managers-table -->"
+	managersTableEnd   = "<!-- /generated: managers-table -->"
+)
+
+// renderManagerTable produces the whole generated region, markers included, from
+// the same managerMethodCounts walk that verifies it.
+//
+// It shares that walk with the check deliberately. A second implementation - a
+// Python script parsing Go, say - could count differently from the verifier, and
+// then "regenerate" a table the verifier rejects. One walk, two modes, the shape
+// gofmt uses: -fix writes, the default compares.
+func renderManagerTable(repoRoot string) (string, error) {
+	counts, err := managerMethodCounts(repoRoot)
+	if err != nil {
+		return "", err
+	}
+	names := make([]string, 0, len(counts))
+	for name := range counts {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	var missing []string
+	var b strings.Builder
+	b.WriteString(managersTableStart + "\n\n")
+	b.WriteString("| Manager | Scope | Methods (implemented) |\n")
+	b.WriteString("|---------|-------|-----------------------|\n")
+	for _, name := range names {
+		scope, ok := managerScopes[name]
+		if !ok {
+			missing = append(missing, name)
+			continue
+		}
+		fmt.Fprintf(&b, "| `%s` | %s | %d ops |\n", name, scope, counts[name])
+	}
+	if len(missing) > 0 {
+		return "", fmt.Errorf(
+			"no scope in managerScopes for %s; add one so the generated table can describe it",
+			strings.Join(missing, ", "))
+	}
+	// A scope with no matching type is the same drift in the other direction: the
+	// table would silently lose a row.
+	var stale []string
+	for name := range managerScopes {
+		if _, ok := counts[name]; !ok {
+			stale = append(stale, name)
+		}
+	}
+	if len(stale) > 0 {
+		sort.Strings(stale)
+		return "", fmt.Errorf(
+			"managerScopes names %s, which pkg/ibkr does not declare; remove the stale entries",
+			strings.Join(stale, ", "))
+	}
+	b.WriteString("\n" + managersTableEnd + "\n")
+	return b.String(), nil
+}
+
+// checkManagerTableRegion compares the committed generated region against what
+// renderManagerTable produces, and reports both sides on a mismatch.
+func checkManagerTableRegion(repoRoot string) error {
+	docPath := filepath.Join(repoRoot, "docs", "design", "03-managers.md")
+	//nolint:gosec // docPath is repoRoot joined with a constant, and repoRoot is the process working directory, never caller input
+	docSrc, err := os.ReadFile(docPath)
+	if err != nil {
+		return fmt.Errorf("docs/design/03-managers.md: %w", err)
+	}
+	doc := string(docSrc)
+
+	start := strings.Index(doc, managersTableStart)
+	end := strings.Index(doc, managersTableEnd)
+	if start < 0 || end < 0 || end < start {
+		return fmt.Errorf(
+			"docs/design/03-managers.md: the generated table markers are missing or out of order; "+
+				"expected %q before %q", managersTableStart, managersTableEnd)
+	}
+	committed := doc[start:end+len(managersTableEnd)] + "\n"
+
+	want, err := renderManagerTable(repoRoot)
+	if err != nil {
+		return err
+	}
+	if committed == want {
+		return nil
+	}
+	return fmt.Errorf(
+		"docs/design/03-managers.md: the generated manager table is stale; "+
+			"run `go run ./scripts/check_design -fix`\n--- committed ---\n%s\n--- should be ---\n%s",
+		committed, want)
+}
+
+// fixManagerTable rewrites the generated region in place. Called only by -fix.
+func fixManagerTable(repoRoot string) error {
+	docPath := filepath.Join(repoRoot, "docs", "design", "03-managers.md")
+	//nolint:gosec // docPath is repoRoot joined with a constant, and repoRoot is the process working directory, never caller input
+	docSrc, err := os.ReadFile(docPath)
+	if err != nil {
+		return fmt.Errorf("docs/design/03-managers.md: %w", err)
+	}
+	doc := string(docSrc)
+
+	start := strings.Index(doc, managersTableStart)
+	end := strings.Index(doc, managersTableEnd)
+	if start < 0 || end < 0 || end < start {
+		return fmt.Errorf("docs/design/03-managers.md: generated table markers missing or out of order")
+	}
+
+	want, err := renderManagerTable(repoRoot)
+	if err != nil {
+		return err
+	}
+	updated := doc[:start] + strings.TrimSuffix(want, "\n") + doc[end+len(managersTableEnd):]
+	if updated == doc {
+		return nil
+	}
+	return os.WriteFile(docPath, []byte(updated), 0o600)
+}
+
 // checkManagerCounts verifies that the method count listed for each manager in
 // 03-managers.md matches the exported methods actually declared on that type.
 //
@@ -433,7 +600,16 @@ func checkTransportChain(repoRoot string) error {
 // when it could not find a count, which is what let every grouped row -
 // "| `AlertManager`, `ForecastManager`, `ScannerManager` | ... | 7, 5, and 2 ops
 // respectively |" - pass unverified for nine runs while the numbers in it rotted.
+//
+// The per-manager comparison below and checkManagerTableRegion overlap: if the
+// committed table equals the rendered one, every count necessarily matches. The
+// per-manager pass is kept anyway because it names the offending manager and both
+// numbers, where a region diff shows two whole tables and makes the reader find it.
 func checkManagerCounts(repoRoot string) error {
+	if err := checkManagerTableRegion(repoRoot); err != nil {
+		return err
+	}
+
 	docPath := filepath.Join(repoRoot, "docs", "design", "03-managers.md")
 	//nolint:gosec // docPath is repoRoot joined with a constant, and repoRoot is the process working directory, never caller input
 	docSrc, err := os.ReadFile(docPath)
