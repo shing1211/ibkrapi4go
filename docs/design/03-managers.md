@@ -7,17 +7,42 @@ client and returns stable public types.
 
 | Manager | Scope | Methods (implemented) |
 |---------|-------|-----------------------|
-| `AccountManager` | accounts & summaries | `List`, `Summary`, `PnL` |
-| `PortfolioManager` | positions & ledger | `Accounts`, `Subaccounts`, `SubaccountsPager`, `Positions`, `PositionsPaginated`, `Position`, `Ledger`, `Allocation`, `Summary`, `Meta`, `Invalidate`, `AllAccountsForConid`, `ManySubaccounts`, `ComboPositions`, `UncachedPositions` |
-| `TradeManager` | orders & contracts | `Submit`, `Confirm`, `WhatIf`, `Modify`, `Cancel`, `OpenOrders`, `OrderStatus`, `Trades`, `SuppressOrderReplies`, `ResetOrderSuppression`, plus contract search/info ops (`SearchContracts`, `ContractInfo`, `ContractRules`, `Strikes`, `InfoAndRules`, `TradingSchedule`, `CurrencyPairs`, `ExchangeRates`, `BondFilters`, `AlgosByInstrument`, `SecDefInfos`, `ContractSymbolsFromBody`, `ConidsByExchange`, `FutureBySymbol`, `InstrumentDefinition`, `TradingScheduleBySymbol`, `StockBySymbol`) |
-| `MarketDataManager` | quotes, history & streaming | `Snapshot`, `History`, `Unsubscribe`, `UnsubscribeAll`, `Subscribe` |
-| `TradingAccountManager` | trading-account ops | 9 ops (owners, active/dynamic accounts, fund/balance/margin/market summaries) |
-| `AlertManager`, `ForecastManager`, `ScannerManager` | alerts, event contracts, scanner | 7, 5, and 2 ops respectively |
-| `AllocationManager`, `ModelManager` | FA allocation, model portfolios | 8 and 11 ops |
-| `FYIManager`, `OAuthManager`, `WatchlistManager`, `PerformanceManager` | FYIs/notifications, OAuth1, watchlists, PortfolioAnalyst | 12, 3, 4, and 5 ops |
+| `AccountManager` | accounts & summaries | 4 ops |
+| `AlertManager` | alerts | 7 ops |
+| `AllocationManager` | FA allocation | 9 ops |
+| `FYIManager` | FYIs / notifications | 12 ops |
+| `ForecastManager` | event contracts | 0 ops |
+| `MarketDataManager` | quotes, history & streaming | 5 ops |
+| `ModelManager` | model portfolios | 18 ops |
+| `OAuthManager` | OAuth1 | 3 ops |
+| `PerformanceManager` | PortfolioAnalyst | 5 ops |
+| `PortfolioManager` | positions & ledger | 16 ops |
+| `ScannerManager` | market scanner | 2 ops |
+| `SessionManager` | session lifecycle & health | 7 ops |
+| `TradeManager` | orders & contracts | 27 ops |
+| `TradingAccountManager` | trading-account ops | 9 ops |
+| `WatchlistManager` | watchlists | 4 ops |
 
-> **Method counts verified against source as of v1.0.0.** Counts may drift if methods
-> are added. The authoritative list is the [godoc reference](https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr).
+One manager per row, and one count per row, on purpose. An earlier revision of this
+table grouped managers into shared cells — `` | `AlertManager`, `ForecastManager`,
+`ScannerManager` | … | 7, 5, and 2 ops respectively | `` — which reads better and
+cannot be checked. The verifier matches a single manager name against a single `N
+ops` cell, so every grouped row silently went unverified, and the drift it was
+supposed to catch went unnoticed for nine runs. The counts below are enforced by
+`make design-check`; a mismatch fails the build.
+
+> **Method counts are verified against source by `make design-check`, not by hand.**
+> The authoritative per-method list is the
+> [godoc reference](https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr);
+> this table carries counts only, so there is one number per manager to keep honest.
+
+`ForecastManager` is deliberately listed as **0 ops**, not as a typo to be
+corrected. The five forecast operations (`GetForecastCategories`,
+`GetForecastContract`, `GetForecastMarkets`, `GetForecastRules`,
+`GetForecastSchedule`) are generated in `client/` and documented in
+[../MIGRATION.md](../MIGRATION.md), but no wrapper methods exist on the type yet, so
+`Client.Forecast()` returns a struct with no methods on it. The number rises to 5
+when those wrappers land.
 
 The IB REST (`oauth2Bearer`) surface is exposed separately via `Client.REST()`
 (`RESTSurface` and its `REST*` sub-managers); see

@@ -32,6 +32,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -411,8 +412,27 @@ func checkTransportChain(repoRoot string) error {
 	return nil
 }
 
-// checkManagerCounts verifies that method counts listed in 03-managers.md
-// match the actual exported methods on each manager type.
+// checkManagerCounts verifies that the method count listed for each manager in
+// 03-managers.md matches the exported methods actually declared on that type.
+//
+// Three properties this check depends on, each of which was a way for it to pass
+// without comparing anything.
+//
+// The manager set comes from the source, not from a table beside this function, so
+// a manager added to pkg/ibkr cannot go unverified by being forgotten here.
+//
+// The per-manager source-file list is gone. A method declared in ws.go rather than
+// in its manager's home file was previously only counted if the map named that
+// file, and two independent omissions cancelled out: AccountManager's
+// SubscribeAccount lived in ws.go, which the map omitted, and the doc did not list
+// the method either. Undocumented method, uncounted file, row compared equal, both
+// wrong. Counting across the package removes the second omission, and the strict
+// "one row per manager, N ops" format removes the first.
+//
+// A missing doc row is a failure rather than a skip. The old code returned early
+// when it could not find a count, which is what let every grouped row -
+// "| `AlertManager`, `ForecastManager`, `ScannerManager` | ... | 7, 5, and 2 ops
+// respectively |" - pass unverified for nine runs while the numbers in it rotted.
 func checkManagerCounts(repoRoot string) error {
 	docPath := filepath.Join(repoRoot, "docs", "design", "03-managers.md")
 	//nolint:gosec // docPath is repoRoot joined with a constant, and repoRoot is the process working directory, never caller input
@@ -421,127 +441,134 @@ func checkManagerCounts(repoRoot string) error {
 		return fmt.Errorf("docs/design/03-managers.md: %w", err)
 	}
 
-	// For each manager, count actual exported methods in the corresponding Go file.
-	// Map manager names to their source files.
-	managerFiles := map[string][]string{
-		"AccountManager":        {"pkg/ibkr/account.go"},
-		"PortfolioManager":      {"pkg/ibkr/portfolio.go"},
-		"TradeManager":          {"pkg/ibkr/trade.go", "pkg/ibkr/contract.go"},
-		"MarketDataManager":     {"pkg/ibkr/marketdata.go", "pkg/ibkr/ws.go"},
-		"TradingAccountManager": {"pkg/ibkr/trading_accounts.go"},
-		"AlertManager":          {"pkg/ibkr/alerts.go"},
-		"ForecastManager":       {"pkg/ibkr/events.go"},
-		"ScannerManager":        {"pkg/ibkr/scanner.go"},
-		"AllocationManager":     {"pkg/ibkr/allocation.go"},
-		"ModelManager":          {"pkg/ibkr/models.go"},
-		"FYIManager":            {"pkg/ibkr/notifications.go"},
-		"OAuthManager":          {"pkg/ibkr/oauth1.go"},
-		"WatchlistManager":      {"pkg/ibkr/watchlists.go"},
-		"PerformanceManager":    {"pkg/ibkr/performance.go"},
+	actual, err := managerMethodCounts(repoRoot)
+	if err != nil {
+		return err
 	}
 
-	for manager, files := range managerFiles {
-		actualCount := 0
-		for _, file := range files {
-			n, err := countManagerMethods(repoRoot, file, manager)
-			if err != nil {
-				continue // skip if file doesn't exist
-			}
-			actualCount += n
-		}
+	names := make([]string, 0, len(actual))
+	for name := range actual {
+		names = append(names, name)
+	}
+	sort.Strings(names)
 
-		// Extract the documented count for this manager from the doc
-		docCount := extractDocCount(string(docSrc), manager)
-		if docCount == 0 {
-			continue // not documented with a count
+	var failures []string
+	for _, name := range names {
+		docCount, found := extractDocCount(string(docSrc), name)
+		if !found {
+			failures = append(failures, fmt.Sprintf(
+				"docs/design/03-managers.md: %s declares %d exported methods in pkg/ibkr but has no row; "+
+					"add one reading `%d ops`", name, actual[name], actual[name]))
+			continue
 		}
-
-		if actualCount != docCount {
-			return fmt.Errorf("docs/design/03-managers.md: %s has %d methods in code but doc says %d", manager, actualCount, docCount)
+		if docCount != actual[name] {
+			failures = append(failures, fmt.Sprintf(
+				"docs/design/03-managers.md: %s declares %d exported methods in pkg/ibkr but the doc says %d",
+				name, actual[name], docCount))
 		}
 	}
 
+	if len(failures) > 0 {
+		return fmt.Errorf("%d manager method count mismatch(es):\n  %s",
+			len(failures), strings.Join(failures, "\n  "))
+	}
 	return nil
 }
 
-func countManagerMethods(repoRoot, file, managerType string) (int, error) {
-	path := filepath.Join(repoRoot, file)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return 0, nil
-	}
-	//nolint:gosec // file comes from the managerFiles map literal in checkManagerCounts, never from a caller or the environment
-	src, err := os.ReadFile(path)
+// managerMethodCounts returns, for every `*Manager` struct type declared in
+// pkg/ibkr, the number of exported methods declared on it. Both the set of managers
+// and their counts are read from the source, so nothing here needs editing when a
+// manager gains a method or a method moves to a different file in the package.
+//
+// Types are collected separately from their methods, and seeded at zero, because a
+// manager with no methods at all is exactly the case worth reporting - scanning
+// methods alone would omit it, and ForecastManager is presently one of those.
+func managerMethodCounts(repoRoot string) (map[string]int, error) {
+	dir := filepath.Join(repoRoot, "pkg", "ibkr")
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return 0, err
+		return nil, fmt.Errorf("read pkg/ibkr: %w", err)
 	}
 
-	fset := token.NewFileSet()
-	parsed, err := parser.ParseFile(fset, path, src, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	var count int
-	for _, decl := range parsed.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Recv == nil {
+	counts := map[string]int{}
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		recv := fn.Recv.List[0].Type
-		var name string
-		switch t := recv.(type) {
-		case *ast.StarExpr:
-			if ident, ok := t.X.(*ast.Ident); ok {
-				name = ident.Name
-			}
-		case *ast.Ident:
-			name = t.Name
+		path := filepath.Join(dir, name)
+		//nolint:gosec // path comes from a ReadDir entry under a constant dir, never from a caller or the environment
+		src, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", name, err)
 		}
-		if name == managerType && fn.Name.IsExported() {
-			count++
+		fset := token.NewFileSet()
+		parsed, err := parser.ParseFile(fset, path, src, 0)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s: %w", name, err)
+		}
+
+		for _, decl := range parsed.Decls {
+			switch d := decl.(type) {
+			case *ast.GenDecl:
+				for _, spec := range d.Specs {
+					ts, ok := spec.(*ast.TypeSpec)
+					if !ok || !strings.HasSuffix(ts.Name.Name, "Manager") {
+						continue
+					}
+					if _, ok := ts.Type.(*ast.StructType); !ok {
+						continue
+					}
+					// Seed the type so a manager with no methods at all is still
+					// reported. A method-only scan would omit it entirely, and
+					// ForecastManager is presently one of those.
+					if _, seen := counts[ts.Name.Name]; !seen {
+						counts[ts.Name.Name] = 0
+					}
+				}
+			case *ast.FuncDecl:
+				if d.Recv == nil || !d.Name.IsExported() {
+					continue
+				}
+				recv := d.Recv.List[0].Type
+				var recvName string
+				switch t := recv.(type) {
+				case *ast.StarExpr:
+					if ident, ok := t.X.(*ast.Ident); ok {
+						recvName = ident.Name
+					}
+				case *ast.Ident:
+					recvName = t.Name
+				}
+				if !strings.HasSuffix(recvName, "Manager") {
+					continue
+				}
+				counts[recvName]++
+			}
 		}
 	}
-	return count, nil
+	return counts, nil
 }
 
-func extractDocCount(doc string, manager string) int {
-	escaped := strings.ReplaceAll(manager, "*", "\\*")
-	re := regexp.MustCompile(`\|` + escaped + `\|[^|]*\|\s*(\d+)\s*ops\|`)
+// extractDocCount returns the "N ops" count from the 03-managers.md row for one
+// manager, and whether such a row exists at all. The two answers are kept distinct
+// because a manager can legitimately be documented as 0 ops - ForecastManager
+// currently is - and a bare int would report that identically to "not documented",
+// which is precisely the skip this signature exists to delete.
+//
+// The name is matched in a table cell of its own, with the backticks the rest of
+// the docs use written \x60 rather than a literal, since this pattern lives in a Go
+// raw string. Requiring a bare unbackticked name matched no row in the file.
+func extractDocCount(doc, manager string) (int, bool) {
+	escaped := regexp.QuoteMeta(manager)
+	re := regexp.MustCompile(`(?m)^\|\s*\x60?\s*` + escaped + `\s*\x60?\s*\|[^|]*\|\s*(\d+)\s*ops\s*\|`)
 	m := re.FindStringSubmatch(doc)
-	if m != nil {
-		n, _ := strconv.Atoi(m[1])
-		return n
+	if m == nil {
+		return 0, false
 	}
-	// No "N ops" — count backtick-quoted method names in the table row.
-	// The manager is on a row like: | `Name` | scope | `Method1`, `Method2` |
-	// Find the row by looking for the manager name (with optional surrounding space)
-	// then extract the third pipe-delimited field.
-	backtick := "\x60"
-	pat := backtick + `\s*` + escaped + `\s*` + backtick
-	loc := regexp.MustCompile(pat).FindStringIndex(doc)
-	if loc == nil {
-		// Try: backtick + space + name
-		pat2 := backtick + `\s+` + escaped + `\s*` + backtick
-		loc = regexp.MustCompile(pat2).FindStringIndex(doc)
+	n, err := strconv.Atoi(m[1])
+	if err != nil {
+		return 0, false
 	}
-	if loc == nil {
-		return 0
-	}
-	// Find the start of this row: go backward to the last | before loc[0]
-	rowStart := 0
-	for i := loc[0] - 1; i >= 0; i-- {
-		if doc[i] == '|' {
-			rowStart = i
-			break
-		}
-	}
-	// Find the end of the row: the next | after the third field
-	row := doc[rowStart:]
-	fields := strings.Split(row, "|")
-	if len(fields) < 4 {
-		return 0
-	}
-	methodCol := fields[3]
-	count := len(regexp.MustCompile(backtick+"[^"+backtick+"]+"+backtick).FindAllString(methodCol, -1))
-	return count
+	return n, true
 }
