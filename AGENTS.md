@@ -24,8 +24,9 @@ make codegen         # fetch/patch spec, regenerate client/
 make codegen-verify  # fail if generated code differs from committed
 make license         # apply SPDX headers
 make license-check   # verify SPDX headers
-make docs-check      # check markdown links + README translations
-make mock-gateway    # run the standalone mock IBKR gateway
+  make docs-check      # check markdown links + README translations
+  make managers-table  # regenerate the generated manager table in docs/design/03-managers.md
+  make mock-gateway    # run the standalone mock IBKR gateway
 ```
 
 ## Hard rules
@@ -47,7 +48,12 @@ make mock-gateway    # run the standalone mock IBKR gateway
 5. **Do not commit secrets.** Credentials come from the environment; tokens are
    in-memory only.
 6. **One canonical count.** Endpoint/schema numbers come from
-   `docs/SPEC.md`. Do not hand-edit counts elsewhere.
+   `docs/SPEC.md`. Do not hand-edit counts elsewhere. The manager method-count
+   table in `docs/design/03-managers.md` is the one other count in the tree, and
+   it is generated rather than written: after adding, removing or renaming a
+   manager method, run `make managers-table` and commit the result. Editing it by
+   hand fails `make design-check`, by design. A manager's **scope** is prose and
+   lives in `managerScopes` in `scripts/check_design/main.go` — not in the table.
 7. **No dangling doc links.** If you add a reference to a doc, create it.
 8. **No unreferenced packages under `internal/`.** A package there that nothing
    imports is dead code shipped in the module, and `internal/` is not importable

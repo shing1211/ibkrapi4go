@@ -43,11 +43,11 @@ same local `.gitnexus` store.
 
 | Metric | Value |
 |--------|-------|
-| Indexed files | 458 |
-| Indexed symbols | 8,165 |
-| Execution flows | 701 |
-| Functional clusters | 171 |
-| Index commit | `e3a0dd2` (source tree before this document-only update) |
+| Indexed files | 455 |
+| Indexed symbols | 8,307 |
+| Execution flows | 714 |
+| Functional clusters | 174 |
+| Index commit | `b17e802` |
 
 ### Known graph limitations
 
@@ -59,9 +59,9 @@ These bound what the clusters and flows below can claim:
   semantic.
 - **`client/client.gen.go` is not indexed.** It exceeds the 512 KB analyzer cap.
   The generated layer is therefore absent from every cluster and flow below.
-- **Flow discovery is truncated.** The analyzer reports 701 flows while
-  reporting 484 candidate entry points never ranked, 153 deduplicated flows
-  dropped at `maxProcesses`, 1,511 callees skipped at `maxBranching`, and 8
+- **Flow discovery is truncated.** The analyzer reports 714 flows while
+  reporting 488 candidate entry points never ranked, 161 deduplicated flows
+  dropped at `maxProcesses`, 1,508 callees skipped at `maxBranching`, and 8
   walks cut by the per-entry trace budget. An absent flow does not mean the
   code path does not exist.
 - **`heuristicLabel` is not meaningful for this codebase.** The labels collapse
@@ -380,10 +380,18 @@ The repository checks are separate from the runtime path:
 - `scripts/check_links.py` and `scripts/check_i18n.py` validate documentation.
 - `scripts/check_design` verifies that the middleware chain diagram in
   `docs/design/01-transport.md` lists the expected layers in the expected
-  relative order, checks documented manager counts, and diffs the diagram
-  against the middleware that `internal.NewClientTransport` actually assembles.
-  Reordering or adding a middleware in the code without updating the diagram
-  fails the check.
+  relative order, checks the other design documents against the code, and diffs
+  the diagram against the middleware that `internal.NewClientTransport` actually
+  assembles. Reordering or adding a middleware in the code without updating the
+  diagram fails the check. It also *generates* the manager method-count table in
+  `docs/design/03-managers.md`; `make managers-table` rewrites it and the default
+  mode fails on a stale one, so a method added to `pkg/ibkr` cannot leave the
+  documented count wrong.
+- `scripts/check_internal_refs.py` fails when a package under `internal/` is
+  imported by nothing, which is how the orphaned `internal/fake` package was
+  found. Every identifier it declares was exported, so the linter could not see
+  it: the defect is at package granularity, and `unused` reports at symbol
+  granularity.
 - `scripts/bench_compare.go` compares benchmark output with the checked-in
   baseline.
 - `contrib/otel` supplies optional metrics and tracing implementations without
