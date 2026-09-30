@@ -27,25 +27,27 @@ actually need a decision or a credential.
   StopsAtFirstNonFlag` called the value "the index of orders" when `orders` is at
   index 1 and the value is 2. Corrected, and the function doc now says why the
   return exists and why stopping at the first non-flag is load-bearing.
+- **The CI `lint & security` job was red on `main`** → six `nolintlint` findings, all
+  unused `//nolint:gosec` directives, in four files. The question was whether to
+  re-enable the rule the directives guarded or delete them, and that turned out to be
+  answerable from the config rather than a matter of taste: gosec is enabled, and only
+  G104 and G101 are excluded, so the file-permission rules are live. One directive
+  guarded G101, which is excluded globally, and the other five guarded rules that do
+  not fire because the code already complies — `0o600` is what G306 asks for. All six
+  were suppressing nothing and are gone. Confirmed by mutation: loosening a
+  `0o600` to `0o644` is now caught as G306 at the exact line whose directive was
+  removed, so the coverage those directives appeared to provide was never real. Both
+  CI lint passes are green.
+- **Coverage floor policy, deferred across nine runs** → answerable from measurement.
+  CI enforces 62% against the cross-package aggregate, which measures **72.0%**, so the
+  floor is pinned, green, and has ten points of headroom. `pkg/ibkr` on its own was
+  61.8% and is now **62.0%** after the forecast tests, the first time that package has
+  cleared 62%. Closed.
 
 ## Needs a decision
 
-- **The CI `lint & security` job is red on `main`, and has been.** `golangci-lint run`
-  reports six `nolintlint` findings, all unused `//nolint:gosec` directives, in
-  `internal/mockgateway/oauth.go`, `internal/mockgateway/session.go`,
-  `pkg/ibkr/rest_accounts_test.go`, and `scripts/check_design/red_test.go`. The
-  directives guard gosec's file-permission rule, which the current config evidently
-  does not enable. Either re-enable the rule so the directives are needed, or delete
-  six of them. **Not fixed in `7fb2179` on purpose**: deleting a directive that CI's
-  gosec version does need would turn a lint failure into a build failure, and which
-  half is right depends on whether the project wants the rule enforced.
-- **Coverage floor policy, deferred across nine runs.** This one is answerable from
-  measurement rather than opinion. CI enforces 62% against the cross-package
-  aggregate, which measures **72.0%** — so the floor is pinned, green, and has ten
-  points of headroom. `pkg/ibkr` on its own was 61.8% and is now **62.0%** after the
-  forecast tests, the first time that package has cleared 62%. The live question is
-  only whether `pkg/ibkr` deserves its own floor, and whether a threshold with ten
-  points of headroom pins anything.
+_Nothing on this list is a decision any more. The two items that were are closed
+below; the live-account items above are blocked on a credential, not on a judgement._
 
 ## Needs a live account
 

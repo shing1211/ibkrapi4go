@@ -278,7 +278,7 @@ func TestRESTAccounts_SubmitDocument(t *testing.T) {
 			accountPath = r.URL.Path
 			gotContentType = r.Header.Get("Content-Type")
 			r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
-			if err := r.ParseMultipartForm(32 << 20); err != nil { //nolint:gosec // test handler bounds the body with MaxBytesReader
+			if err := r.ParseMultipartForm(32 << 20); err != nil {
 				http.Error(w, "invalid multipart body", http.StatusBadRequest)
 				return
 			}
