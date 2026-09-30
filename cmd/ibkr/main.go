@@ -118,10 +118,23 @@ func newClientFromArgs(args []string) (*ibkr.Client, error) {
 // begin. It takes the arguments as a parameter, like run, so the parsing is
 // reachable from a test without touching os.Args.
 //
+// Stopping at the first non-flag is the load-bearing part, not an incidental
+// bound: a flag written after the command belongs to that command, so
+// `ibkr orders list -gateway X` must not consume `-gateway X` as a global. An
+// earlier version parsed from argv[0], hit the program name in the default branch,
+// and so honoured no global flag at all - see env.newClient.
+//
 // When args contains no non-flag at all, the index is len(args): there is no
 // command, so the position after the last argument is where one would have to be
-// inserted. No production caller reads the index today - newClientFromArgs
-// discards it - so the value is pinned by tests rather than depended upon.
+// inserted.
+//
+// No production caller reads the index: newClientFromArgs discards it, because run
+// hands each command its own argument slice and the command therefore already knows
+// where its arguments start. It is returned, and asserted, so the stop-at-first-
+// non-flag boundary has a number attached to it. An earlier revision of this
+// comment described the index as "one past the first non-flag" while a test comment
+// called the same value "the index of orders", and the two disagreed by one while
+// both tests passed; the behaviour was right and the second comment was not.
 func parseGlobalFlags(args []string) (gateway, account string, insecure bool, cmdIdx int) {
 	for i := 0; i < len(args); i++ {
 		switch argAt(args, i) {

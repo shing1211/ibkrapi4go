@@ -81,7 +81,7 @@ func TestParseGlobalFlags_StopsAtFirstNonFlag(t *testing.T) {
 		t.Errorf("gateway = %q; want empty - the flag after the command belongs to the subcommand", gateway)
 	}
 	if idx != 2 {
-		t.Errorf("cmdIdx = %d; want 2 (the index of \"orders\")", idx)
+		t.Errorf("cmdIdx = %d; want 2, which is one past \"orders\" at index 1", idx)
 	}
 }
 
