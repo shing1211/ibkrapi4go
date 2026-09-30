@@ -11,7 +11,7 @@ client and returns stable public types.
 | `AlertManager` | alerts | 7 ops |
 | `AllocationManager` | FA allocation | 9 ops |
 | `FYIManager` | FYIs / notifications | 12 ops |
-| `ForecastManager` | event contracts | 0 ops |
+| `ForecastManager` | event contracts | 5 ops |
 | `MarketDataManager` | quotes, history & streaming | 5 ops |
 | `ModelManager` | model portfolios | 18 ops |
 | `OAuthManager` | OAuth1 | 3 ops |
@@ -36,13 +36,17 @@ supposed to catch went unnoticed for nine runs. The counts below are enforced by
 > [godoc reference](https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr);
 > this table carries counts only, so there is one number per manager to keep honest.
 
-`ForecastManager` is deliberately listed as **0 ops**, not as a typo to be
-corrected. The five forecast operations (`GetForecastCategories`,
-`GetForecastContract`, `GetForecastMarkets`, `GetForecastRules`,
-`GetForecastSchedule`) are generated in `client/` and documented in
-[../MIGRATION.md](../MIGRATION.md), but no wrapper methods exist on the type yet, so
-`Client.Forecast()` returns a struct with no methods on it. The number rises to 5
-when those wrappers land.
+`ForecastManager` documents five operations: `ForecastCategories`,
+`ForecastContract`, `ForecastMarkets`, `ForecastRules` and `ForecastSchedule`. The
+`Get` prefix the OpenAPI operation ids carry (`getForecastCategories` and so on) is
+dropped from the public method and kept in the `op` string, which is the same split
+every other manager uses — `AlertManager.AllAlerts` runs under `Alert.GetAllAlerts`.
+
+`ForecastCategories` returns `json.RawMessage` where the other four return typed
+models. The category tree is an object keyed by category id, and the generated
+response type flattens that map into a single struct, so a typed model built from it
+would describe a shape IBKR does not send. `ScannerParameters` is passthrough for
+the same reason.
 
 The IB REST (`oauth2Bearer`) surface is exposed separately via `Client.REST()`
 (`RESTSurface` and its `REST*` sub-managers); see
