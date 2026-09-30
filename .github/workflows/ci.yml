@@ -183,8 +183,16 @@ jobs:
         with:
           go-version: '1.26'
 
+      # Pinned, not @latest. golangci-lint ships new gosec rules in patch
+      # releases - v2.14.0 added G117, G120, G124 and G703, which v2.9.0 does
+      # not have - so an unpinned install makes the lint verdict depend on the
+      # day it runs. That is not hypothetical: six //nolint:gosec directives were
+      # deleted as "unused" on the strength of a local 2.9.0 run, and CI then
+      # failed on the rules 2.9.0 cannot see. Bump this deliberately, in a commit
+      # that also reconciles the directives.
+      # oapi-codegen below is pinned for the same reason.
       - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 
       - name: Run golangci-lint
         run: golangci-lint run ./pkg/... ./internal/... ./cmd/... ./scripts/...

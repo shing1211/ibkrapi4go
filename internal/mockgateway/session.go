@@ -83,7 +83,7 @@ func (s *Server) serveSession(w http.ResponseWriter, req *Request, op string) {
 		// No Secure flag: the mock gateway serves plain HTTP on loopback by
 		// design, so a Secure cookie would never be sent back. Nothing here
 		// crosses a network boundary.
-		http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode})
+		http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: token, Path: "/", HttpOnly: true, SameSite: http.SameSiteLaxMode}) //nolint:gosec // G124: the Secure flag is omitted deliberately, as above
 		writeJSON(w, http.StatusOK, `{"authenticated":true,"established":true}`)
 	case OpGetBrokerageStatus:
 		if s.authRequired && !s.sessions.isAuthenticated(req) {

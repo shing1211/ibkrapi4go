@@ -576,6 +576,7 @@ func fixManagerTable(repoRoot string) error {
 	if updated == doc {
 		return nil
 	}
+	//nolint:gosec // G703: docPath is repoRoot joined with a constant, and repoRoot is the process working directory, never caller input
 	return os.WriteFile(docPath, []byte(updated), 0o600)
 }
 
