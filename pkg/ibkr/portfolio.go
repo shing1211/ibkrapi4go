@@ -59,7 +59,7 @@ type Position struct {
 // LedgerCurrency is the ledger balance for one currency.
 type LedgerCurrency struct {
 	// AccountCode is the account id the ledger belongs to.
-	AccountCode           string `json:"acctcode"`
+	AccountCode string `json:"acctcode"`
 	// Currency is the balance currency.
 	Currency string `json:"currency"`
 	// CashBalance is the cash balance.

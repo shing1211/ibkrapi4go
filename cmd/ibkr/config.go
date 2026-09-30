@@ -19,9 +19,8 @@ const defaultGatewayURL = "https://localhost:5000"
 
 // cliConfig holds the persistent CLI configuration.
 type cliConfig struct {
-	GatewayURL     string `json:"gateway_url"`
-	RestGatewayURL string `json:"rest_gateway_url"`
-	AccountID      string `json:"account_id"`
+	GatewayURL string `json:"gateway_url"`
+	AccountID  string `json:"account_id"`
 }
 
 // configPath returns the config file location from IBKR_CONFIG env or default.
@@ -93,7 +92,6 @@ Subcommands:
 
 Keys:
   gateway     Client Portal Gateway URL
-  rest        REST gateway URL
   account     Default account ID
 
 Config file location: ~/.ibkr/config.json (or $IBKR_CONFIG)
@@ -113,7 +111,6 @@ func runConfigShow(e *env) error {
 	w := e.stdout
 	_, _ = fmt.Fprintf(w, "Config file: %s\n\n", configPath())
 	_, _ = fmt.Fprintf(w, "  gateway:     %s\n", cfg.GatewayURL)
-	_, _ = fmt.Fprintf(w, "  rest:        %s\n", cfg.RestGatewayURL)
 	_, _ = fmt.Fprintf(w, "  account:     %s\n", cfg.AccountID)
 	return nil
 }
@@ -134,12 +131,10 @@ func runConfigSet(e *env, args []string) error {
 	switch key {
 	case "gateway":
 		cfg.GatewayURL = value
-	case "rest":
-		cfg.RestGatewayURL = value
 	case "account":
 		cfg.AccountID = value
 	default:
-		return fmt.Errorf("unknown config key %q (valid: gateway, rest, account)", key)
+		return fmt.Errorf("unknown config key %q (valid: gateway, account)", key)
 	}
 
 	if err := saveConfig(cfg); err != nil {

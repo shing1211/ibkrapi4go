@@ -3,36 +3,19 @@
 # SPDX-License-Identifier: Apache-2.0
 """Check that every package under internal/ is actually imported.
 
-``internal/fake`` sat at 0% coverage and unreachable for the whole life of the
-module: seven files of test doubles with no importer anywhere, no test, and no
-external reachability, because ``internal/`` is not importable from outside the
-module either. Nothing reported it. ``unused`` does not, because every identifier
-the package declares is exported and the problem is at package granularity rather
-than symbol granularity.
-
-The reason it was dead is worth recording, because it is the kind of drift this check
-exists to surface. ``internal/fake.Clock`` is documented as implementing
-``internal.Clock``, and it did when ``Clock`` was an interface. ``Clock`` is now a
-struct with unexported function fields and no exported constructor, so
-``Breaker.SetClock`` accepts only a clock that code inside ``internal`` can build -
-and ``fake.Clock`` is a different type that can never be passed to it. The seam moved
-and the fake was never updated.
-
-The rule here is deliberately unconditional: a package under ``internal/`` that
-nothing imports is dead code shipped in the module, and shipping it is a decision
-that belongs in a commit message rather than in an oversight. There are no
-heuristics here, which is the point - a gate with judgement calls in it gets ignored
-the first time it is wrong, and a previous attempt at a similar gate was withdrawn for
-exactly that reason (see docs/runs/2026-09-27-money-gate-retracted).
+The rule is deliberately unconditional: a package under ``internal/`` that nothing
+imports is dead code shipped in the module, and shipping it is a decision that belongs
+in a commit message rather than in an oversight. There are no heuristics here, which
+is the point - a gate with judgement calls in it gets ignored the first time it is
+wrong, and a previous attempt at a similar gate was withdrawn for exactly that reason
+(see docs/runs/2026-09-27-money-gate-retracted).
 
 A package imported only by tests is fine and counts as referenced: a test-only
 importer is a legitimate consumer.
 
-``ALLOWED`` is the escape hatch, and an entry has to say why. ``internal/fake`` is on
-it because removing or rewiring it is a decision about a feature recorded in the
-changelog as intended, not a cleanup this check is entitled to make. If that decision
-goes the other way, the entry goes with it.
-"""
+``ALLOWED`` is the escape hatch, and an entry has to say why. It should be used
+rarely and the reason should be a decision worth recording - not a wish to be
+rid of a cleanup task."""
 
 import os
 import re
@@ -47,14 +30,7 @@ SKIP_DIRS = {".git", "vendor", "testdata", "node_modules"}
 # Unreferenced packages, with the reason each is tolerated. Keep this short: every
 # entry is a package someone has decided to ship without an importer, and the reason
 # is the record of that decision.
-ALLOWED = {
-    "internal/fake": (
-        "orphaned by internal.Clock changing from an interface to a struct with "
-        "unexported fields, so fake.Clock can no longer be passed to SetClock; "
-        "unreachable externally because internal/ is not importable. Removal or "
-        "rewiring is a pending maintainer decision, not a cleanup."
-    ),
-}
+ALLOWED = {}
 
 # An import spec on a single line, as `bare "path"`, `name "path"`, `. "path"` or
 # `_ "path"`.

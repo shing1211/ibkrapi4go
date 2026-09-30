@@ -137,10 +137,10 @@ func TestOrders_ArgsAreNotLeakedBetweenInvocations(t *testing.T) {
 // two forms apart.
 func TestArgParsing_ConsecutiveFlagsBothApply(t *testing.T) {
 	t.Run("global", func(t *testing.T) {
-		gateway, restURL, account, _, cmdIdx := parseGlobalFlags(
-			[]string{"-gateway", "g", "-rest", "r", "positions"})
-		if gateway != "g" || restURL != "r" || account != "" {
-			t.Errorf("got gateway=%q rest=%q account=%q; want g, r, \"\"", gateway, restURL, account)
+		gateway, account, _, cmdIdx := parseGlobalFlags(
+			[]string{"-gateway", "g", "-account", "a", "positions"})
+		if gateway != "g" || account != "a" {
+			t.Errorf("got gateway=%q account=%q; want g, a", gateway, account)
 		}
 		if cmdIdx != 5 {
 			t.Errorf("command index = %d; want 5 (both flags consumed)", cmdIdx)

@@ -12,7 +12,6 @@
 // Global flags:
 //
 //	-gateway    Override the Client Portal Gateway URL
-//	-rest       Override the REST gateway URL
 //	-account    Override the default account ID
 //	-insecure   Skip TLS certificate verification
 package main
@@ -91,7 +90,7 @@ func dispatch(e *env, cmd string) error {
 // a parameter rather than reading os.Args, so a test can build a client with chosen
 // flags.
 func newClientFromArgs(args []string) (*ibkr.Client, error) {
-	gateway, rest, account, insecure, _ := parseGlobalFlags(args)
+	gateway, account, insecure, _ := parseGlobalFlags(args)
 
 	cfg, err := loadConfig()
 	if err != nil {
@@ -102,18 +101,10 @@ func newClientFromArgs(args []string) (*ibkr.Client, error) {
 	if gateway != "" {
 		cfg.GatewayURL = gateway
 	}
-	if rest != "" {
-		cfg.RestGatewayURL = rest
-	}
 	if account != "" {
 		cfg.AccountID = account
 	}
 
-	// rest is deliberately not forwarded. cfg.RestGatewayURL is parsed, stored,
-	// printed by `ibkr config` and settable by `ibkr config set`, but pkg/ibkr
-	// exposes no option to receive it - the only URL option is WithGatewayURL,
-	// which covers both API surfaces. So the flag is accepted and inert, and the
-	// honest fix is either an SDK option or its removal, not a second one here.
 	opts := []ibkr.Option{
 		ibkr.WithGatewayURL(cfg.GatewayURL),
 		ibkr.WithInsecureSkipVerify(insecure),
@@ -131,17 +122,12 @@ func newClientFromArgs(args []string) (*ibkr.Client, error) {
 // command, so the position after the last argument is where one would have to be
 // inserted. No production caller reads the index today - newClientFromArgs
 // discards it - so the value is pinned by tests rather than depended upon.
-func parseGlobalFlags(args []string) (gateway, rest, account string, insecure bool, cmdIdx int) {
+func parseGlobalFlags(args []string) (gateway, account string, insecure bool, cmdIdx int) {
 	for i := 0; i < len(args); i++ {
 		switch argAt(args, i) {
 		case "-gateway", "--gateway":
 			if v, ok := argValue(args, i); ok {
 				gateway = v
-				i++
-			}
-		case "-rest", "--rest":
-			if v, ok := argValue(args, i); ok {
-				rest = v
 				i++
 			}
 		case "-account", "--account":
@@ -152,10 +138,10 @@ func parseGlobalFlags(args []string) (gateway, rest, account string, insecure bo
 		case "-insecure", "--insecure":
 			insecure = true
 		default:
-			return gateway, rest, account, insecure, i + 1
+			return gateway, account, insecure, i + 1
 		}
 	}
-	return gateway, rest, account, insecure, len(args)
+	return gateway, account, insecure, len(args)
 }
 
 // argAt returns args[i], or "" when i is out of range.
@@ -226,7 +212,6 @@ Commands:
 
 Global flags:
   -gateway  URL         Client Portal Gateway URL (default: https://localhost:5000)
-  -rest     URL         REST gateway URL (default: https://api.ibkr.com)
   -account  ID          Default account ID
   -insecure             Skip TLS certificate verification
 
@@ -291,7 +276,6 @@ Subcommands:
 
 Keys:
   gateway     Client Portal Gateway URL
-  rest        REST gateway URL
   account     Default account ID
 
 Config file location: ~/.ibkr/config.json (or $IBKR_CONFIG)

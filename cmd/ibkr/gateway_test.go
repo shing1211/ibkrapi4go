@@ -103,11 +103,8 @@ func TestPortfolio_SummaryLedgerAllocationFromGateway(t *testing.T) {
 	}{
 		// summary prints a header then one line per metric; netliquidation is 1575.00.
 		{"summary", []string{"Portfolio Summary", "U1234567", "1575.00"}},
-		// ledger and allocation are emitted as indented JSON. The ledger keys are
-		// Go field names, not wire names: LedgerCurrency carries no json tags, so
-		// unlike every other JSON-emitting command in the CLI this one is not
-		// lowerCamelCase.
-		{"ledger", []string{"NetLiquidationValue", "1575.00", "USD"}},
+		// ledger and allocation are emitted as indented JSON with wire-format field names.
+		{"ledger", []string{"netliquidationvalue", "1575.00", "USD"}},
 		{"allocation", []string{"STK", "1000.5"}},
 	}
 	for _, tc := range cases {

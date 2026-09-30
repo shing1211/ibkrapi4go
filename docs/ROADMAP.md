@@ -253,7 +253,20 @@ Exit criteria:
 The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v1.1.28`**.
+**`v1.1.29`**.
+
+The `v1.1.29` patch removes two things that were shipped but could not work. The
+`--rest` global flag and its `rest` config key carried a REST gateway URL that
+`pkg/ibkr` had no option to receive, so the value was parsed, stored, printed,
+settable, and then never used by anything that issues a request — an override that
+looked real and was inert. An existing `config.json` keeps working, because
+`loadConfig` ignores unknown fields. And `internal/fake`, seven files at 0% coverage
+with no importer, went with it: it had drifted out of usefulness when `internal.Clock`
+changed from an interface to a struct, and sat on the `check_internal_refs` exemption
+list for five runs. `LedgerCurrency` also gains the explicit `json` tags every other
+struct in `portfolio.go` already had, so `ibkr portfolio ledger` prints the lowercase
+wire field names rather than Go field names. No public Go API, generated-code, or
+dependency change.
 
 The `v1.1.28` patch is test and tooling work — no production code, no generated
 code, no dependency change, and no public API change. It covers the last two

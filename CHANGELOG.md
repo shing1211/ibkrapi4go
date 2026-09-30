@@ -5,6 +5,65 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.29] - 2026-09-30
+
+Dead-code and inert-surface removal. No public Go API change, no generated-code
+change, and no dependency change; the SDK surface is untouched. What changes is one
+CLI flag that never did anything, and a package nothing imported.
+
+### Removed
+
+- **The `--rest` global flag and the `rest` config key.** Both existed to carry a REST
+  gateway URL, and neither could affect a request. `pkg/ibkr` has never exposed an
+  option to receive it — `WithGatewayURL` is the only URL option, and it covers both
+  API surfaces — so `cfg.RestGatewayURL` was parsed, stored, printed by
+  `ibkr config show`, settable by `ibkr config set`, and then never read by anything
+  that issues a request. A flag that is accepted, stored, and discarded is worse than
+  one that does not exist: it looks like a working override.
+
+  The behaviour change is narrow and worth stating plainly. `ibkr -rest X accounts`
+  previously ran and is now `unknown command "-rest"`, because `-rest` is no longer a
+  recognised flag and parsing stops at the first non-flag. A persisted
+  `rest_gateway_url` key in an existing `config.json` is unaffected: `loadConfig`
+  decodes with `json.Unmarshal`, which ignores unknown fields, so the file still loads
+  and the key is dropped on the next write. The flag had no functional effect to lose,
+  which is why this is a patch rather than a minor.
+
+  Reinstating it is deliberately not trivial. The honest fix is an SDK option that
+  actually reaches the REST client, not a second CLI flag that does not.
+
+- **`internal/fake`, seven files, 0% coverage.** The package had no importer anywhere
+  in the module and no external reachability, since `internal/` is not importable from
+  outside it either. `unused` never reported it, because every identifier it declares
+  is exported and the problem is at package granularity rather than symbol
+  granularity — which is the blind spot `make internal-refs-check` now covers. It had
+  been on that check's `ALLOWED` list for five runs, and the reason recorded there is
+  worth keeping: `internal/fake.Clock` is documented as implementing `internal.Clock`
+  and it did when `Clock` was an interface. `Clock` became a struct with unexported
+  fields, so `Breaker.SetClock` can no longer accept it, and the fake was never
+  updated. The seam moved and the fake drifted with nothing to notice. `ALLOWED` is
+  now empty, and the entry only comes back with a decision attached.
+
+### Fixed
+
+- **`LedgerCurrency` now emits wire-format field names.** It was the only JSON struct in
+  `portfolio.go` without explicit `json` tags, so `ibkr portfolio ledger` printed Go
+  field names — `NetLiquidationValue` — where every other JSON-emitting command in the
+  CLI prints the lowercase wire name. The struct tags are the fix; the CLI test that
+  asserted the old output is updated to the wire name.
+
+### Changed
+
+- **`check_internal_refs.py` no longer carries a `CHECK`-shaped exemption list.** The
+  `ALLOWED` dict is empty and its documentation now describes the rule rather than one
+  package's history, which is the shape that let a five-run-old exception read as a
+  standing decision. The rationale for deleting `internal/fake` moved into this
+  changelog, where it is a dated record instead of a live exception.
+- **`scripts/check_design/wide_red_test.go` drops its `internal/fake` fixture.** The
+  case existed to prove the design checker does not flag an `internal/` package for not
+  importing generated code. The property is still worth testing, but not by
+  resurrecting a deleted package to test it.
+
 ## [1.1.28] - 2026-09-30
 
 Test and tooling work. No production code, no generated code, no dependency change, and
@@ -2124,7 +2183,8 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.28...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.29...HEAD
+[1.1.29]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.28...v1.1.29
 [1.1.28]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.27...v1.1.28
 [1.1.13]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.12...v1.1.13
 [1.1.12]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.11...v1.1.12

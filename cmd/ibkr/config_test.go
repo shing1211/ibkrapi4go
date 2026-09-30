@@ -50,9 +50,8 @@ func TestSaveConfig_RoundTrip(t *testing.T) {
 	t.Setenv("IBKR_CONFIG", path)
 
 	want := cliConfig{
-		GatewayURL:     "https://gateway.example:5000",
-		RestGatewayURL: "https://rest.example:5000",
-		AccountID:      "U1234567",
+		GatewayURL: "https://gateway.example:5000",
+		AccountID:  "U1234567",
 	}
 	if err := saveConfig(want); err != nil {
 		t.Fatalf("saveConfig = %v; want nil", err)
@@ -178,9 +177,8 @@ func TestRunConfigShow(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	t.Setenv("IBKR_CONFIG", path)
 	if err := saveConfig(cliConfig{
-		GatewayURL:     "https://gateway.example:5000",
-		RestGatewayURL: "https://rest.example:5000",
-		AccountID:      "U1234567",
+		GatewayURL: "https://gateway.example:5000",
+		AccountID:  "U1234567",
 	}); err != nil {
 		t.Fatalf("saveConfig = %v; want nil", err)
 	}
@@ -190,7 +188,7 @@ func TestRunConfigShow(t *testing.T) {
 		t.Fatalf("runConfigShow = %v; want nil", err)
 	}
 	got := out.String()
-	for _, want := range []string{path, "https://gateway.example:5000", "https://rest.example:5000", "U1234567"} {
+	for _, want := range []string{path, "https://gateway.example:5000", "U1234567"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("config show output is missing %q\n---\n%s", want, got)
 		}
@@ -208,7 +206,6 @@ func TestRunConfigSet_RoundTrip(t *testing.T) {
 		check func(cliConfig) bool
 	}{
 		{"gateway", "https://new-gateway:1", func(c cliConfig) bool { return c.GatewayURL == "https://new-gateway:1" }},
-		{"rest", "https://new-rest:2", func(c cliConfig) bool { return c.RestGatewayURL == "https://new-rest:2" }},
 		{"account", "UNEW", func(c cliConfig) bool { return c.AccountID == "UNEW" }},
 	}
 	for _, tc := range cases {
@@ -269,7 +266,7 @@ func TestRunConfigSet_UnknownKey(t *testing.T) {
 		t.Fatal("runConfigSet with an unknown key = nil; want an error")
 	}
 	// The message has to name the valid keys, or the user cannot recover.
-	for _, want := range []string{"gateway", "rest", "account"} {
+	for _, want := range []string{"gateway", "account"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error = %q; want it to list the valid key %q", err, want)
 		}
@@ -309,7 +306,7 @@ func TestRunConfig_Dispatch(t *testing.T) {
 			t.Fatalf("runConfig --help = %v; want nil", err)
 		}
 		help := errOut.String()
-		for _, want := range []string{"show", "set", "gateway", "rest", "account", "IBKR_CONFIG"} {
+		for _, want := range []string{"show", "set", "gateway", "account", "IBKR_CONFIG"} {
 			if !strings.Contains(help, want) {
 				t.Errorf("help text is missing %q\n---\n%s", want, help)
 			}

@@ -840,12 +840,7 @@ func wideGreenCases() []greenCase {
 			name:  "surface/close-keeps-its-error-result",
 			edits: []edit{replace(wsPub, "func (s *Subscription) Close() error {", "func (s *Subscription) Close() error {\n\t// still returns an error; the diagram elides the result")},
 		},
-		{
-			// A package under internal/ that does not touch the generated code is
-			// not a boundary violation, and must not be reported as one.
-			name:  "boundary/an-internal-package-need-not-import",
-			edits: []edit{replace("internal/fake/fake.go", "package fake", "package fake\n\n// this package deliberately does not import the generated code")},
-		},
+
 		{
 			// The buffer default is a claim about the number, not about the field it
 			// lives in; a comment can be reworded freely.

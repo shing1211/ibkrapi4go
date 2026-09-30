@@ -13,7 +13,6 @@ func TestParseGlobalFlags(t *testing.T) {
 		name     string
 		args     []string
 		gateway  string
-		rest     string
 		account  string
 		insecure bool
 		cmdIdx   int
@@ -25,14 +24,13 @@ func TestParseGlobalFlags(t *testing.T) {
 		},
 		{
 			name:     "all flags before the command",
-			args:     []string{"-gateway", "https://g:1", "-rest", "https://r:2", "-account", "U1", "-insecure", "positions"},
+			args:     []string{"-gateway", "https://g:1", "-account", "U1", "-insecure", "positions"},
 			gateway:  "https://g:1",
-			rest:     "https://r:2",
 			account:  "U1",
 			insecure: true,
 			// cmdIdx is one past the command, i.e. where that command's own
-			// arguments begin: "positions" is args[7], so its args start at 8.
-			cmdIdx: 8,
+			// arguments begin: "positions" is args[5], so its args start at 6.
+			cmdIdx: 6,
 		},
 		{
 			name:    "long flag spellings",
@@ -56,13 +54,10 @@ func TestParseGlobalFlags(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gotGateway, gotRest, gotAccount, gotInsecure, gotIdx :=
+			gotGateway, gotAccount, gotInsecure, gotIdx :=
 				parseGlobalFlags(tc.args)
 			if gotGateway != tc.gateway {
 				t.Errorf("gateway = %q; want %q", gotGateway, tc.gateway)
-			}
-			if gotRest != tc.rest {
-				t.Errorf("rest = %q; want %q", gotRest, tc.rest)
 			}
 			if gotAccount != tc.account {
 				t.Errorf("account = %q; want %q", gotAccount, tc.account)
@@ -81,7 +76,7 @@ func TestParseGlobalFlags(t *testing.T) {
 // the first non-flag argument, so a flag placed after the command belongs to
 // that command and is not consumed as a global one.
 func TestParseGlobalFlags_StopsAtFirstNonFlag(t *testing.T) {
-	gateway, _, _, _, idx := parseGlobalFlags([]string{"-insecure", "orders", "-gateway", "https://ignored"})
+	gateway, _, _, idx := parseGlobalFlags([]string{"-insecure", "orders", "-gateway", "https://ignored"})
 	if gateway != "" {
 		t.Errorf("gateway = %q; want empty - the flag after the command belongs to the subcommand", gateway)
 	}
@@ -98,7 +93,7 @@ func TestParseGlobalFlags_StopsAtFirstNonFlag(t *testing.T) {
 // uses nil args and so only covers the zero case.
 func TestParseGlobalFlags_NoCommandReturnsLen(t *testing.T) {
 	args := []string{"-insecure", "-gateway", "https://g:1"}
-	_, _, _, _, idx := parseGlobalFlags(args)
+	_, _, _, idx := parseGlobalFlags(args)
 	if idx != len(args) {
 		t.Errorf("cmdIdx = %d; want %d (len(args))", idx, len(args))
 	}
@@ -107,7 +102,7 @@ func TestParseGlobalFlags_NoCommandReturnsLen(t *testing.T) {
 // TestParseGlobalFlags_RepeatedFlag pins that the last occurrence wins, so a
 // change to that behaviour is deliberate.
 func TestParseGlobalFlags_RepeatedFlag(t *testing.T) {
-	gateway, _, _, _, _ := parseGlobalFlags(
+	gateway, _, _, _ := parseGlobalFlags(
 		[]string{"-gateway", "https://first", "-gateway", "https://second", "accounts"})
 	if want := "https://second"; gateway != want {
 		t.Errorf("gateway = %q; want %q (last occurrence wins)", gateway, want)
