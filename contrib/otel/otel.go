@@ -137,7 +137,7 @@ func (t *OTelTracing) OnRequestStart(ctx context.Context, info ibkr.RequestInfo)
 	if t.tracer == nil {
 		return ctx
 	}
-	ctx, _ = t.tracer.Start(ctx, info.Method+" "+info.Path,
+	ctx, span := t.tracer.Start(ctx, info.Method+" "+info.Path,
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
 			attribute.String("http.method", info.Method),
@@ -145,6 +145,9 @@ func (t *OTelTracing) OnRequestStart(ctx context.Context, info ibkr.RequestInfo)
 			attribute.String("request.id", info.RequestID),
 		),
 	)
+	if span.IsRecording() {
+		span.SetAttributes(attribute.String("otel.trace_id", span.SpanContext().TraceID().String()))
+	}
 	return ctx
 }
 
