@@ -50,6 +50,7 @@ type config struct {
 	gatewayURL         string
 	httpClient         *http.Client
 	requestTimeout     time.Duration
+	endpointTimeout    time.Duration
 	tickleInterval     time.Duration
 	userAgent          string
 	logger             *slog.Logger
@@ -58,6 +59,8 @@ type config struct {
 	rateLimit          float64
 	rateBurst          int
 	globalRateLimit    float64
+	authRateLimit      float64
+	authRateBurst      int
 	retry              internal.RetryPolicy
 	telemetry          internal.Telemetry
 	metrics            internal.Metrics
@@ -65,12 +68,17 @@ type config struct {
 	restGatewayURL     string
 	oauth2             internal.OAuthConfig
 	tokenSource        *internal.TokenSource
+	userMiddleware     []internal.Middleware
+	maxResponseBytes   int64
 }
 
 // Rate-limit defaults (see docs/RATE-LIMITING.md).
 const (
 	DefaultPerEndpointRPS = 10
 	DefaultGlobalRPS      = 50
+	// DefaultAuthRateLimit paces auth/session endpoints. It is a client-side
+	// precaution, not a measured gateway property - see ADR 0018.
+	DefaultAuthRateLimit = 1
 )
 
 // Option customizes a Client during construction. Options are applied in order;
@@ -163,6 +171,45 @@ func WithRateLimit(rps float64, burst int) Option {
 	}
 }
 
+// WithAuthRateLimit sets the request rate and burst for auth and session
+// endpoints (`/iserver/auth/*`, `/tickle`, `/sso/validate`). rps<=0 disables auth
+// pacing; burst<=0 defaults to 1.
+//
+// The default is unchanged at 1 req/s with burst 1, so a caller who does nothing
+// gets today's behaviour. This exists for short-lived processes: a client that
+// initialises a session and exits spends about a second waiting for a token before
+// its auth status poll, and against a local gateway that poll succeeds first try,
+// so the wait buys no information. A long-running client should leave it alone.
+//
+// It is a precaution, not a measured gateway property, and ADR 0018 records that as
+// the open question. `/v1/api/logout` is not paced here: a best-effort teardown
+// should not block process exit.
+//
+// Note that the limiter is only built when per-endpoint or global limiting is
+// enabled, so WithRateLimit(0) together with WithGlobalRateLimit(0) removes auth
+// pacing as well. This option can relax that pacing; it cannot add it to a client
+// that has turned the limiter off entirely.
+func WithAuthRateLimit(rps float64, burst int) Option {
+	return func(c *config) error {
+		if rps < 0 {
+			return &ConfigError{Field: "AuthRateLimit", Message: "must not be negative"}
+		}
+		c.authRateLimit = rps
+		c.authRateBurst = burst
+		return nil
+	}
+}
+
+// WithMaxResponseBytes caps the size of any single HTTP response body.
+// Responses exceeding the cap return an error instead of consuming unbounded
+// memory. A value <= 0 disables the limit (default).
+func WithMaxResponseBytes(n int64) Option {
+	return func(c *config) error {
+		c.maxResponseBytes = n
+		return nil
+	}
+}
+
 // RetryPolicy controls automatic retries for safe (idempotent) requests. Order
 // and other unsafe mutations are never retried (ADR 0009).
 type RetryPolicy = internal.RetryPolicy
@@ -179,6 +226,18 @@ type RequestInfo = internal.RequestInfo
 
 // ResponseInfo describes a request outcome for telemetry.
 type ResponseInfo = internal.ResponseInfo
+
+// SpanContext carries trace context across the API boundary.
+type SpanContext = internal.SpanContext
+
+// WSConnInfo describes a WebSocket connection event.
+type WSConnInfo = internal.WSConnInfo
+
+// WSSubInfo describes a subscription change.
+type WSSubInfo = internal.WSSubInfo
+
+// OrderEventInfo describes an order lifecycle event.
+type OrderEventInfo = internal.OrderEventInfo
 
 // WithTelemetry installs telemetry hooks invoked around each HTTP request.
 func WithTelemetry(t Telemetry) Option {
@@ -257,6 +316,22 @@ func WithCircuitBreaker(threshold int, cooldown time.Duration) Option {
 	}
 }
 
+// WithCircuitBreakerBudget installs a sliding-window error budget on the
+// circuit breaker. When budget failures occur within the last size outcomes
+// the breaker opens, even if the consecutive-failure threshold has not been
+// reached. The window counts outcomes, so successes push older failures out of
+// it and the budget recovers. Requires WithCircuitBreaker to be set first.
+// budget<=0 or size<=0 disables the budget. size should be >= budget.
+func WithCircuitBreakerBudget(budget, size int) Option {
+	return func(c *config) error {
+		if c.breaker == nil {
+			return &ConfigError{Field: "CircuitBreakerBudget", Message: "requires WithCircuitBreaker"}
+		}
+		c.breaker.SetErrorBudget(budget, size)
+		return nil
+	}
+}
+
 // WithRetryPolicy overrides the retry policy. Set MaxAttempts to 1 to disable
 // retries.
 func WithRetryPolicy(p RetryPolicy) Option {
@@ -295,7 +370,8 @@ type Client struct {
 	session    *internal.Session
 	generated  *client.ClientWithResponses
 
-	closed atomic.Bool
+	closed  atomic.Bool
+	release func() // pool-managed cleanup callback; nil for standalone clients
 
 	wsMu sync.Mutex
 	ws   *internal.WSConn
@@ -324,7 +400,7 @@ type Client struct {
 // variables and then compiled-in defaults. It performs no I/O and does not
 // authenticate; call Session().Initialize to start the session.
 func NewClient(opts ...Option) (*Client, error) {
-	cfg := config{rateLimit: -1, globalRateLimit: -1}
+	cfg := config{rateLimit: -1, globalRateLimit: -1, authRateLimit: -1, authRateBurst: -1}
 	for _, o := range opts {
 		if err := o(&cfg); err != nil {
 			return nil, err
@@ -349,6 +425,12 @@ func NewClient(opts ...Option) (*Client, error) {
 	}
 	if cfg.globalRateLimit < 0 {
 		cfg.globalRateLimit = DefaultGlobalRPS
+	}
+	if cfg.authRateLimit < 0 {
+		cfg.authRateLimit = DefaultAuthRateLimit
+	}
+	if cfg.authRateBurst < 0 {
+		cfg.authRateBurst = 1
 	}
 	if cfg.retry.MaxAttempts == 0 {
 		cfg.retry = internal.DefaultRetryPolicy()
@@ -377,12 +459,18 @@ func NewClient(opts ...Option) (*Client, error) {
 	var limiter *internal.Limiter
 	if cfg.rateLimit > 0 || cfg.globalRateLimit > 0 {
 		limiter = internal.NewLimiter(cfg.rateLimit, cfg.rateBurst, cfg.globalRateLimit)
+		limiter.SetAuthRateLimit(cfg.authRateLimit, cfg.authRateBurst)
 		limiter.Logger = cfg.logger
 		limiter.SetMetrics(cfg.metrics)
 	}
 	if cfg.breaker != nil {
 		cfg.breaker.Logger = cfg.logger
 		cfg.breaker.SetMetrics(cfg.metrics)
+	}
+
+	transportTimeout := cfg.requestTimeout
+	if cfg.endpointTimeout > 0 {
+		transportTimeout = cfg.endpointTimeout
 	}
 
 	var session *internal.Session
@@ -396,13 +484,15 @@ func NewClient(opts ...Option) (*Client, error) {
 			}
 			return session.Token()
 		},
-		Logger:    cfg.logger,
-		Telemetry: cfg.telemetry,
-		Metrics:   cfg.metrics,
-		Breaker:   cfg.breaker,
-		Retry:     cfg.retry,
-		Limiter:   limiter,
-		Timeout:   cfg.requestTimeout,
+		Logger:           cfg.logger,
+		Telemetry:        cfg.telemetry,
+		Metrics:          cfg.metrics,
+		Breaker:          cfg.breaker,
+		Retry:            cfg.retry,
+		Limiter:          limiter,
+		Timeout:          transportTimeout,
+		MaxResponseBytes: cfg.maxResponseBytes,
+		UserMiddleware:   cfg.userMiddleware,
 	})
 	httpClient := &http.Client{Transport: transport, Jar: jar}
 
@@ -431,7 +521,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	c.sessionManager = &SessionManager{client: c}
 	c.accountManager = &AccountManager{client: c}
 	c.portfolioManager = &PortfolioManager{client: c}
-	c.tradeManager = &TradeManager{client: c}
+	c.tradeManager = &TradeManager{client: c, coidRegistry: newCOIDRegistry()}
 	c.marketDataManager = &MarketDataManager{client: c}
 	c.tradingAccountManager = &TradingAccountManager{client: c}
 	c.alertManager = &AlertManager{client: c}
@@ -512,6 +602,10 @@ func (c *Client) Close() error {
 	if ws != nil {
 		_ = ws.Close()
 	}
+	if c.release != nil {
+		c.release()
+		return nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), closeLogoutTimeout)
 	defer cancel()
 	return c.session.Close(ctx)
@@ -529,6 +623,9 @@ func (c *Client) checkOpen() error {
 // disabled.
 func (c *Client) metricsSink() internal.Metrics { return c.cfg.metrics }
 
+// telemetrySink returns the configured telemetry sink, or nil when disabled.
+func (c *Client) telemetrySink() internal.Telemetry { return c.cfg.telemetry }
+
 // errorFrom maps a non-2xx response to *Error, tagging it with op.
 func (c *Client) errorFrom(resp *http.Response, op string) *Error {
 	e := internal.ResponseError(resp)
@@ -539,8 +636,24 @@ func (c *Client) errorFrom(resp *http.Response, op string) *Error {
 	return e
 }
 
-// wrapOp wraps a transport-level error as *Error so callers can use errors.As.
+// wrapOp attaches op to err so callers can use errors.As. A plain error is
+// wrapped in a fresh *Error; an *Error is adopted as-is apart from a missing
+// Op, so Code, HTTPStatus, and RequestID stay readable on the value the caller
+// receives. Adopting rather than re-wrapping is what makes the documented
+// errors.As(err, &e); e.HTTPStatus idiom (docs/ERRORS.md) work for the >= 400
+// guards, which build a typed *Error and hand it straight here.
+//
+// The type assertion is deliberately not errors.As: wrapOp adopts the value it
+// is given, not the first *Error buried somewhere in its chain, so a wrapped
+// context prefix is never silently dropped. Callers must not pass an *Error
+// they retain a reference to, since Op is filled in place.
 func wrapOp(op string, err error) *Error {
+	if e, ok := err.(*Error); ok {
+		if e.Op == "" {
+			e.Op = op
+		}
+		return e
+	}
 	return &Error{Op: op, Message: err.Error(), Err: err}
 }
 
@@ -555,7 +668,14 @@ func baseTransport(cfg config) (http.RoundTripper, http.CookieJar) {
 		}
 		jar = cfg.httpClient.Jar
 	} else if cfg.insecureSkipVerify {
-		base = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}} //nolint:gosec // opt-in, localhost only
+		base = &http.Transport{ //nolint:gosec // opt-in, localhost only
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+			MaxIdleConns:        100,
+			MaxIdleConnsPerHost: 10,
+			IdleConnTimeout:     90 * time.Second,
+			ForceAttemptHTTP2:   true,
+			TLSHandshakeTimeout: 10 * time.Second,
+		}
 	}
 	if jar == nil {
 		if j, err := cookiejar.New(nil); err == nil {

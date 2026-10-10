@@ -3,17 +3,17 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
-  <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
-  <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
+  <img src="https://img.shields.io/badge/Endpoints-193-orange?style=flat-square" alt="Endpoints">
+  <img src="https://img.shields.io/badge/Schemas-451-blue?style=flat-square" alt="Schemas">
+  <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
 
-> **⚠️ No oficial y pre-alfa.** ibkrapi4go es un SDK de Go de la comunidad para la
-> Interactive Brokers Web API. **No está afiliado a Interactive Brokers.** Las 185
-> operaciones de la API están implementadas (115 CPAPI + 70 IB REST).
+> **⚠️ No oficial.** ibkrapi4go es un SDK de Go de la comunidad para la
+> Interactive Brokers Web API. **No está afiliado a Interactive Brokers.** Las 193
+> operaciones de la API están implementadas (123 CPAPI + 70 IB REST).
 > Consulta [DISCLAIMER.md](./DISCLAIMER.md) y [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 > **Nativo de Go · Con tipos seguros · Basado en OpenAPI.** Un cliente Go idiomático
@@ -23,7 +23,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > Este documento es una traducción comunitaria del [README](./README.md) en inglés.
-> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: b7f2b81
+> **La versión en inglés es la autoritativa.** Sincronizado / Last synced: v1.1.30
 
 ## Tabla de contenidos
 
@@ -48,31 +48,31 @@
 | Planificación y documentación | ✅ Completo |
 | Validación de generación de código OpenAPI | ✅ Verificado ([docs/CODEGEN.md](./docs/CODEGEN.md)) |
 | Código generado en `client/` | ✅ Incluido en el repositorio (generado) |
-| API pública `pkg/ibkr` | ✅ Implementada (185/185 operaciones) |
+| API pública `pkg/ibkr` | ✅ Implementada (193/193 operaciones) |
 | Implementación `internal/` | ✅ Implementada |
 | Pruebas / ejemplos | ✅ Implementados |
-| Mock gateway (185/185 operaciones) | ✅ Implementado ([docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)) |
+| Mock gateway (193/193 operaciones) | ✅ Implementado ([docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)) |
 | Benchmarks + fuzz tests | ✅ Implementados ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | Métricas + logging | ✅ Implementadas ([docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)) |
 | CI quality gates (cobertura, pre-commit) | ✅ Implementados |
 | Sitio web de documentación + Discussions | ✅ Implementado ([docs/ROADMAP.md](./docs/ROADMAP.md)) |
-| Lanzamiento | ✅ v0.2.0 (GitHub + Gitee) |
+| Lanzamiento | ✅ v1.1.30 (GitHub + Gitee) |
 
 Este repositorio contiene el **cliente OpenAPI generado**, documentación y
-herramientas de generación de código. Las 185 operaciones de la API están
+herramientas de generación de código. Las 193 operaciones de la API están
 implementadas. Consulta [docs/ROADMAP.md](./docs/ROADMAP.md) para el plan
 de construcción.
 
 ## Las dos API
 
-La especificación OpenAPI de IBKR (v2.39.0) describe en realidad **dos superficies de
+La especificación OpenAPI de IBKR (v2.40.0) describe en realidad **dos superficies de
 API con dos esquemas de autenticación distintos**. No son intercambiables:
 
 | Superficie | Ruta base | Operaciones | Autenticación |
 |------------|-----------|------------:|---------------|
-| Client Portal API (CPAPI) | `/v1/api/*` | 115 | `ssoBearer` |
+| Client Portal API (CPAPI) $1123 | `ssoBearer` |
 | IB REST API | `/gw/api/v1/*`, `/gw/api/v2/*`, `/oauth2/*` | 70 | `oauth2Bearer` |
-| **Total** | | **185** | |
+| **Total** | | **193** | |
 
 La v1 se limitaba inicialmente a CPAPI (`ssoBearer`); la superficie
 `oauth2Bearer` se publicó en las fases 5-6. Consulta
@@ -154,6 +154,40 @@ ibkrapi4go/
 └── specs/           # Especificación OpenAPI en caché (gitignore)
 ```
 
+## Cómo encaja todo
+
+```text
+NewClient(options...)
+   │
+   ▼
+SessionManager.Initialize(ctx)   → tickle goroutine starts
+   │
+   ▼
+Manager calls (Account, Portfolio, Trade, MarketData)
+   │
+   ▼
+Client.Close()                   → tickle stops, logout, ws closed
+```
+
+Toda petición pasa por una cadena de transporte antes de llegar a la pasarela:
+
+```text
+Request
+  → request ID + User-Agent
+  → auth header injection (bearer)
+  → logging + telemetry hooks
+  → circuit breaker (optional)
+  → retry (safe methods only; honors Retry-After)
+  → per-endpoint rate limiter
+  → global rate limiter
+  → per-request timeout (when the caller sets none)
+  → HTTP call
+  → error parsing (IBKR envelope → *ibkr.Error)
+Response
+```
+
+Consulta [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) para el detalle de capas.
+
 ## Documentación del repositorio
 
 | Documento | Contenido |
@@ -162,6 +196,8 @@ ibkrapi4go/
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Capas, composición, middleware |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | Plan por fases con criterios de salida |
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | Pasarela simulada del repositorio (pruebas, ejemplos, binario independiente) |
+| [docs/GATEWAY-SETUP.md](./docs/GATEWAY-SETUP.md) | Ejecutar y autenticar la Client Portal Gateway |
+| [docs/PERMISSIONS.md](./docs/PERMISSIONS.md) | Permisos de trading, derechos de datos de mercado, datos retrasados |
 | [docs/AUTH.md](./docs/AUTH.md) | Los dos modelos de autenticación |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | Obtención, parcheo, generación y verificación |
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | Métricas, benchmarks, fuzz tests, logging |

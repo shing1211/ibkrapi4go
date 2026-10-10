@@ -109,7 +109,7 @@ func DefaultFixtures() *Fixtures {
 	f.Set(OpGetUncachedPositions, Fixture{
 		Body: `[{"acctId":"U1234567","conid":265598,"contractDesc":"AAPL","assetClass":"STK","currency":"USD","position":"10.5","avgCost":"145.25","mktPrice":"150.00","mktValue":"1575.00","unrealizedPnl":"49.875"}]`,
 	})
-	f.Set(OpInvalidatePositionCache, Fixture{Body: `{"status":"success"}`})
+	f.Set(OpInvalidatePositionCache, Fixture{Body: `{"message":"Positions cache invalidated"}`})
 	f.Set(OpGetPaginatedPositions, Fixture{Dynamic: paginatedPositions})
 	f.Set(OpGetPositionByConid, Fixture{
 		Body: `[{"acctId":"U1234567","conid":265598,"contractDesc":"AAPL","assetClass":"STK","currency":"USD","position":"10.5","avgCost":"145.25","mktPrice":"150.00","mktValue":"1575.00","unrealizedPnl":"49.875"}]`,
@@ -134,7 +134,9 @@ func DefaultFixtures() *Fixtures {
 	f.Set(OpGetMdHistory, Fixture{
 		Body: `{"symbol":"AAPL","data":[{"t":1564652478,"o":"150.1","h":"151.2","l":"149.9","c":"150.9","v":"1000"}]}`,
 	})
-	f.Set(OpCloseMdStream, Fixture{Body: `{"status":"success"}`})
+	// The generated 200 type for closeMdStream declares success only; it has no
+	// message field, so an ack naming one would not decode.
+	f.Set(OpCloseMdStream, Fixture{Body: `{"success":true}`})
 	f.Set(OpCloseAllMdStreams, Fixture{Body: `{}`})
 
 	// --- orders ---
@@ -144,7 +146,10 @@ func DefaultFixtures() *Fixtures {
 		Body: `{"amount":{"initial":"1000.50","maintenance":"800.25"}}`,
 	})
 	f.Set(OpModifyOpenOrder, Fixture{Body: `[{"order_id":"999","order_status":"PreSubmitted"}]`})
-	f.Set(OpCancelOpenOrder, Fixture{Body: `{"order_id":"999","msg":"Request was submitted"}`})
+	// cancelOpenOrder's oneOf member client.OrderCancelSuccess declares
+	// order_id as int64, unlike the sibling submit/modify bodies where
+	// client.OrderSubmitSuccess declares it as string.
+	f.Set(OpCancelOpenOrder, Fixture{Body: `{"order_id":999,"msg":"Request was submitted"}`})
 	f.Set(OpGetOpenOrders, Fixture{
 		Body: `{"orders":[{"orderId":"999","account":"U1234567","conid":265598,"ticker":"AAPL","orderType":"LMT","side":"BUY","status":"PreSubmitted","timeInForce":"DAY","totalSize":"10","filledQuantity":"0","remainingQuantity":"10","price":"150.00","avgPrice":"0"}]}`,
 	})

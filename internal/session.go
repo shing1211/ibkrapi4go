@@ -17,9 +17,13 @@ import (
 	"time"
 )
 
+// SessionState is the lifecycle state of a gateway session.
 type SessionState int
 
+// Session lifecycle states, in the order a healthy session passes through
+// them. A session that never authenticates stops at StateInitializing.
 const (
+	// StateDisconnected is the initial state: no session has been started.
 	StateDisconnected SessionState = iota
 	StateInitializing
 	StateAuthenticated
@@ -44,6 +48,8 @@ func (s SessionState) String() string {
 	}
 }
 
+// BrokerageStatus reports which trading permissions a session holds. The
+// gateway returns it from the auth/status call after authentication.
 type BrokerageStatus struct {
 	Authenticated bool
 	Established   bool
@@ -109,10 +115,25 @@ func (h *httpAPI) logout(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = h.client.Do(req)
-	return err
+	resp, err := h.client.Do(req)
+	if err != nil {
+		return err
+	}
+	// The logout payload is irrelevant, but net/http only returns a connection to
+	// the keep-alive pool once the body has been read to EOF *and* closed, so a
+	// bare Close here would drop the connection instead of reusing it. This defer
+	// is registered after cancel() above, so it runs first (LIFO) and the request
+	// context is still live while the body is drained.
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
+	return nil
 }
 
+// Session is an authenticated Client Portal Gateway session. It owns the
+// session cookie, the CSRF token, and the tickle loop that keeps the session
+// alive. Use NewSession to create one.
 type Session struct {
 	api             api
 	token           string
@@ -124,17 +145,25 @@ type Session struct {
 	tickleStop      atomic.Bool
 	tickleStopCh    chan struct{}
 	tickleDoneCh    chan struct{}
+	ctx             context.Context
+	cancel          context.CancelFunc
 	logger          *slog.Logger
+	clock           *Clock
 }
 
+// SessionConfig configures a Session. GatewayURL and AccountID are required;
+// the remaining fields are optional.
 type SessionConfig struct {
 	HTTPClient     *http.Client
 	ServerURL      string
 	TickleInterval time.Duration
 	RequestTimeout time.Duration
 	Logger         *slog.Logger
+	Clock          *Clock
 }
 
+// NewSession creates an unauthenticated Session. Call Initialize to
+// authenticate it; the session is not usable until that returns.
 func NewSession(cfg SessionConfig) *Session {
 	if cfg.TickleInterval == 0 {
 		cfg.TickleInterval = 60 * time.Second
@@ -148,23 +177,35 @@ func NewSession(cfg SessionConfig) *Session {
 	if cfg.Logger == nil {
 		cfg.Logger = NopLogger()
 	}
+	if cfg.Clock == nil {
+		cfg.Clock = &Clock{}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Session{
 		api:            newHTTPAPI(cfg.HTTPClient, cfg.ServerURL),
 		tickleInterval: cfg.TickleInterval,
 		requestTimeout: cfg.RequestTimeout,
 		logger:         cfg.Logger,
 		state:          int32(StateDisconnected),
+		ctx:            ctx,
+		cancel:         cancel,
+		clock:          cfg.Clock,
 	}
 }
 
+// State reports the session's current lifecycle state.
 func (s *Session) State() SessionState {
 	return SessionState(atomic.LoadInt32(&s.state))
 }
 
 func (s *Session) setState(state SessionState) {
+	// #nosec G115 -- SessionState is a five-value iota enum (0-4) stored in an
+	// int32 field, so the conversion cannot overflow.
 	atomic.StoreInt32(&s.state, int32(state))
 }
 
+// Token returns the current session token and whether one is present. It
+// rotates on every tickle, so callers should not cache the value.
 func (s *Session) Token() (token string, ok bool) {
 	if SessionState(atomic.LoadInt32(&s.state)) != StateAuthenticated {
 		return "", false
@@ -177,10 +218,24 @@ func (s *Session) Token() (token string, ok bool) {
 	return s.token, true
 }
 
+// HTTPClient returns an http.Client bound to this session, carrying the
+// session cookie and CSRF token on every request.
 func (s *Session) HTTPClient() *http.Client {
 	return s.api.(*httpAPI).client
 }
 
+// SetHTTPClient replaces the session's internal HTTP client. This is used by
+// TransportPool to inject a shared client after the session is created (breaking
+// the circular dependency between session and transport).
+func (s *Session) SetHTTPClient(c *http.Client) {
+	h, ok := s.api.(*httpAPI)
+	if ok {
+		h.client = c
+	}
+}
+
+// Initialize authenticates the session and starts its tickle loop. It is not
+// safe to call concurrently, and calling it twice returns an error.
 func (s *Session) Initialize(ctx context.Context) error {
 	current := SessionState(atomic.LoadInt32(&s.state))
 	if current == StateAuthenticated {
@@ -212,30 +267,37 @@ func (s *Session) Initialize(ctx context.Context) error {
 	{
 		pollCtx, cancel := context.WithTimeout(ctx, s.requestTimeout)
 		defer cancel()
-		time.Sleep(1 * time.Second)
-		ticker := time.NewTicker(1 * time.Second)
+		clock := s.clock
+		if clock == nil {
+			clock = &Clock{}
+		}
+		ticker := clock.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 		for {
+			// Poll first, wait second. The loop used to sleep a full second
+			// before its first auth_status call, so every Initialize paid a fixed
+			// one-second penalty before it could discover a session that was
+			// already established. Checking immediately converges at the same
+			// rate - a session that is not up yet simply falls through to the
+			// wait below - and takes the second off the happy path.
+			bs, err := s.fetchAuthStatus(pollCtx)
+			if err != nil {
+				s.logger.Warn("ibkr.session auth_status error", "err", err)
+			} else if bs.Established && bs.Authenticated {
+				s.setState(StateAuthenticated)
+				s.logger.Info("ibkr.session authenticated", "connected", bs.Connected)
+				s.startTickle()
+				return nil
+			} else if bs.Fail != "" {
+				s.setState(StateDisconnected)
+				return fmt.Errorf("ibkr: session init: server rejected: %s", bs.Fail)
+			}
+
 			select {
 			case <-pollCtx.Done():
 				s.setState(StateDisconnected)
 				return fmt.Errorf("ibkr: session init: timeout waiting for established: %w", pollCtx.Err())
 			case <-ticker.C:
-				bs, err := s.fetchAuthStatus(pollCtx)
-				if err != nil {
-					s.logger.Warn("ibkr.session auth_status error", "err", err)
-					continue
-				}
-				if bs.Established && bs.Authenticated {
-					s.setState(StateAuthenticated)
-					s.logger.Info("ibkr.session authenticated", "connected", bs.Connected)
-					s.startTickle()
-					return nil
-				}
-				if bs.Fail != "" {
-					s.setState(StateDisconnected)
-					return fmt.Errorf("ibkr: session init: server rejected: %s", bs.Fail)
-				}
 			}
 		}
 	}
@@ -291,14 +353,29 @@ func (s *Session) startTickle() {
 	s.mu.Unlock()
 
 	go func() {
-		defer close(doneCh)
-		ticker := time.NewTicker(interval)
+		defer func() {
+			if r := recover(); r != nil {
+				s.logger.Error("ibkr.session tickle goroutine panicked", "panic", r)
+			}
+			close(doneCh)
+		}()
+		clock := s.clock
+		if clock == nil {
+			clock = &Clock{}
+		}
+		ticker := clock.NewTicker(interval)
 		defer ticker.Stop()
+		var ctxDone <-chan struct{}
+		if s.ctx != nil {
+			ctxDone = s.ctx.Done()
+		}
 		for {
 			select {
 			case <-ticker.C:
 				s.tickleRound()
 			case <-stopCh:
+				return
+			case <-ctxDone:
 				return
 			}
 		}
@@ -309,7 +386,11 @@ func (s *Session) tickleRound() {
 	if s.tickleStop.Load() {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), s.requestTimeout)
+	parentCtx := context.Background()
+	if s.ctx != nil {
+		parentCtx = s.ctx
+	}
+	ctx, cancel := context.WithTimeout(parentCtx, s.requestTimeout)
 	defer cancel()
 
 	resp, err := s.api.tickle(ctx)
@@ -379,15 +460,23 @@ func (s *Session) stopTickle() {
 	}
 }
 
+// Close stops the tickle loop and invalidates the session server-side. It is
+// idempotent.
 func (s *Session) Close(ctx context.Context) error {
 	current := SessionState(atomic.LoadInt32(&s.state))
 	if current == StateClosed || current == StateDisconnected {
 		s.setState(StateClosed)
+		if s.cancel != nil {
+			s.cancel()
+		}
 		return nil
 	}
 	s.setState(StateClosed)
 
 	s.stopTickle()
+	if s.cancel != nil {
+		s.cancel()
+	}
 
 	s.logger.Info("ibkr.session closing")
 	_ = s.api.logout(ctx)

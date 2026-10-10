@@ -5,16 +5,65 @@ client and returns stable public types.
 
 ## Managers (CPAPI)
 
+<!-- generated: managers-table -->
+
 | Manager | Scope | Methods (implemented) |
 |---------|-------|-----------------------|
-| `AccountManager` | accounts & summaries | `List`, `Summary`, `PnL` |
-| `PortfolioManager` | positions & ledger | `Accounts`, `Subaccounts`, `Positions`, `PositionsPaginated`, `Position`, `Ledger`, `Allocation`, `Summary`, `Meta`, `Invalidate`, `GetAllAccountsForConid`, `GetManySubaccounts`, `GetComboPositions`, `GetUncachedPositions` |
-| `TradeManager` | orders & contracts | `Submit`, `Confirm`, `WhatIf`, `Modify`, `Cancel`, `OpenOrders`, `OrderStatus`, `Trades`, `SearchContracts`, `ContractInfo`, `ContractRules`, `Strikes`, plus extended contract ops (`GetInfoAndRules`, `GetTradingSchedule`, `GetCurrencyPairs`, `GetExchangeRates`, `GetBondFilters`, `GetAlgosByInstrument`, `GetStockBySymbol`, ...) |
-| `MarketDataManager` | quotes, history & streaming | `Snapshot`, `History`, `Unsubscribe`, `UnsubscribeAll`, `Subscribe` |
-| `TradingAccountManager` | trading-account ops | 9 ops (owners, active/dynamic accounts, fund/balance/margin/market summaries) |
-| `AlertManager`, `ForecastManager`, `ScannerManager` | alerts, event contracts, scanner | 6, 5, and 2 ops respectively |
-| `AllocationManager`, `ModelManager` | FA allocation, model portfolios | 8 and 10 ops |
-| `FYIManager`, `OAuthManager`, `WatchlistManager`, `PerformanceManager` | FYIs/notifications, OAuth1, watchlists, PortfolioAnalyst | 11, 3, 4, and 4 ops |
+| `AccountManager` | accounts & summaries | 4 ops |
+| `AlertManager` | alerts | 7 ops |
+| `AllocationManager` | FA allocation | 9 ops |
+| `FYIManager` | FYIs / notifications | 12 ops |
+| `ForecastManager` | event contracts | 5 ops |
+| `MarketDataManager` | quotes, history & streaming | 5 ops |
+| `ModelManager` | model portfolios | 18 ops |
+| `OAuthManager` | OAuth1 | 3 ops |
+| `PerformanceManager` | PortfolioAnalyst | 5 ops |
+| `PortfolioManager` | positions & ledger | 16 ops |
+| `ScannerManager` | market scanner | 2 ops |
+| `SessionManager` | session lifecycle & health | 7 ops |
+| `TradeManager` | orders & contracts | 27 ops |
+| `TradingAccountManager` | trading-account ops | 9 ops |
+| `WatchlistManager` | watchlists | 4 ops |
+
+<!-- /generated: managers-table -->
+
+One manager per row, and one count per row, on purpose. An earlier revision of this
+table grouped managers into shared cells — `` | `AlertManager`, `ForecastManager`,
+`ScannerManager` | … | 7, 5, and 2 ops respectively | `` — which reads better and
+cannot be checked. The verifier matches a single manager name against a single `N
+ops` cell, so every grouped row silently went unverified, and the drift it was
+supposed to catch went unnoticed for nine runs.
+
+**The table between the markers is generated.** Run `make managers-table` after
+adding, removing or renaming a manager method, and commit the result; `make
+design-check` fails on a stale table, and a hand-edited count fails even when it
+happens to satisfy the per-manager check. The method column is a fact about the code
+and is rendered from the AST. The scope column is prose, so it lives in
+`managerScopes` in `scripts/check_design/main.go` — add a manager's scope there, not
+in the table. Everything outside the markers is hand-written and is not touched.
+
+The generator and the verifier share one walk over `pkg/ibkr` rather than being two
+implementations, because a second one could count differently and then regenerate a
+table the verifier rejects. It is the same shape as `gofmt`: `-fix` writes, the
+default compares. `-fix` is not wired into `make check`, since a gate that edits its
+own subject is not a gate.
+
+> **Method counts are verified against source by `make design-check`, not by hand.**
+> The authoritative per-method list is the
+> [godoc reference](https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr);
+> this table carries counts only, so there is one number per manager to keep honest.
+
+`ForecastManager` documents five operations: `ForecastCategories`,
+`ForecastContract`, `ForecastMarkets`, `ForecastRules` and `ForecastSchedule`. The
+`Get` prefix the OpenAPI operation ids carry (`getForecastCategories` and so on) is
+dropped from the public method and kept in the `op` string, which is the same split
+every other manager uses — `AlertManager.AllAlerts` runs under `Alert.GetAllAlerts`.
+
+`ForecastCategories` returns `json.RawMessage` where the other four return typed
+models. The category tree is an object keyed by category id, and the generated
+response type flattens that map into a single struct, so a typed model built from it
+would describe a shape IBKR does not send. `ScannerParameters` is passthrough for
+the same reason.
 
 The IB REST (`oauth2Bearer`) surface is exposed separately via `Client.REST()`
 (`RESTSurface` and its `REST*` sub-managers); see

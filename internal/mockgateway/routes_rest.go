@@ -265,13 +265,13 @@ func registerRESTFixtures(f *Fixtures) {
 	f.Set(OpListFormsRequiredForms, Fixture{Body: `{"forms":["Form 1"],"hasError":false}`})
 	f.Set(OpListParticipatingBanks, Fixture{Body: `{"banks":[{"id":"bank-1","name":"Example Bank"}]}`})
 	f.Set(OpListRequests, Fixture{Body: `{"limit":50,"offset":0,"requestDetails":[{"accountID":"U1234567","dateSubmitted":"2026-01-02","requestId":5001,"requestType":"ACCOUNT_UPDATE","status":"COMPLETED"}],"total":1}`})
-	f.Set(OpGetRequestsStatus, Fixture{Body: `{"requestId":5001,"status":"COMPLETED","executedAt":"2026-01-02T15:04:05Z"}`})
+	f.Set(OpGetRequestsStatus, Fixture{Body: `{"requestId":5001,"status":"COMPLETED","dateSubmitted":"2026-01-02T20:30:00-05:00"}`})
 	f.Set(OpUpdateRequestsStatus, Fixture{Body: `{"requestId":"5001","status":"COMPLETED"}`})
 	f.Set(OpGetValidationsUsernames, Fixture{Body: `{"available":true}`})
 
 	// --- authorization ---
 	f.Set(OpCreateSsoBrowserSessions, Fixture{Body: `{"active":true,"url":"https://example.test/sso/browser"}`})
-	f.Set(OpCreateSsoSessions, Fixture{Body: `{"accessToken":"sso-access-token","active":true,"tokenType":"Bearer"}`})
+	f.Set(OpCreateSsoSessions, Fixture{Body: `{"access_token":"sso-access-token","active":true,"token_type":"Bearer"}`})
 	f.Set(OpGenerateToken, Fixture{Body: `{"access_token":"mock-access","token_type":"Bearer","expires_in":3600,"refresh_token":"mock-refresh"}`})
 
 	// --- pre-trade compliance restrictions ---

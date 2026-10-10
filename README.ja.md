@@ -3,17 +3,17 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat-square&logo=go" alt="Go">
   <img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.39-brightgreen?style=flat-square" alt="IBKR API Version">
-  <img src="https://img.shields.io/badge/Endpoints-185-orange?style=flat-square" alt="Endpoints">
-  <img src="https://img.shields.io/badge/Schemas-443-blue?style=flat-square" alt="Schemas">
-  <img src="https://img.shields.io/badge/Status-alpha-blue?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/IBKR%20Web%20API-v2.40-brightgreen?style=flat-square" alt="IBKR API Version">
+  <img src="https://img.shields.io/badge/Endpoints-193-orange?style=flat-square" alt="Endpoints">
+  <img src="https://img.shields.io/badge/Schemas-451-blue?style=flat-square" alt="Schemas">
+  <img src="https://img.shields.io/badge/Status-stable-brightgreen?style=flat-square" alt="Status">
   <a href="https://codecov.io/gh/shing1211/ibkrapi4go"><img src="https://codecov.io/gh/shing1211/ibkrapi4go/branch/main/graph/badge.svg" alt="Coverage"></a>
   <a href="https://shing1211.github.io/ibkrapi4go/"><img src="https://img.shields.io/badge/Docs-GitHub%20Pages-97CAFF?style=flat-square&logo=github" alt="Docs"></a>
 </p>
 
-> **⚠️ 非公式 & プレアルファ版。** ibkrapi4go は Interactive Brokers Web API 向けの
+> **⚠️ 非公式。** ibkrapi4go は Interactive Brokers Web API 向けの
 > コミュニティ製 Go SDK です。**Interactive Brokers とは一切関係ありません。**
-> すべての 185 の API オペレーションが実装済みです（115 CPAPI + 70 IB REST）。
+> すべての 193 の API オペレーションが実装済みです（123 CPAPI + 70 IB REST）。
 > [DISCLAIMER.md](./DISCLAIMER.md) と [docs/ROADMAP.md](./docs/ROADMAP.md) をご覧ください。
 
 > **Go ネイティブ · 型安全 · OpenAPI 駆動。** Interactive Brokers Web API 向けの
@@ -23,7 +23,7 @@
 [English](./README.md) · [简体中文](./README.zh-Hans.md) · [繁體中文](./README.zh-Hant.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md)
 
 > 本書は英語版 [README](./README.md) のコミュニティ翻訳です。**英語版が正式です。**
-> 同期 / Last synced: b7f2b81
+> 同期 / Last synced: v1.1.30
 
 ## 目次
 
@@ -48,30 +48,30 @@
 | 計画とドキュメント | ✅ 完了 |
 | OpenAPI コード生成の検証 | ✅ 検証済み（[docs/CODEGEN.md](./docs/CODEGEN.md)） |
 | `client/` 生成コード | ✅ コミット済み（生成） |
-| `pkg/ibkr` 公開 API | ✅ 実装済み（185/185 オペレーション） |
+| `pkg/ibkr` 公開 API | ✅ 実装済み（193/193 オペレーション） |
 | `internal/` 実装 | ✅ 実装済み |
 | テスト / サンプル | ✅ 実装済み |
-| モックゲートウェイ（185/185 オペレーション） | ✅ 実装済み（[docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)） |
+| モックゲートウェイ（193/193 オペレーション） | ✅ 実装済み（[docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md)） |
 | ベンチマーク + ファズテスト | ✅ 実装済み（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | メトリクス + ロギング | ✅ 実装済み（[docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md)） |
 | CI 品質ゲート（カバレッジ、プレコミット） | ✅ 実装済み |
 | ドキュメントサイト + Discussions | ✅ 実装済み（[docs/ROADMAP.md](./docs/ROADMAP.md)） |
-| リリース | ✅ v0.2.0（GitHub + Gitee） |
+| リリース | ✅ v1.1.30（GitHub + Gitee） |
 
 現在のリポジトリには**生成済みの OpenAPI クライアント**、ドキュメント、
-コード生成ツールが含まれます。すべての 185 の API オペレーションが実装済みです。
+コード生成ツールが含まれます。すべての 193 の API オペレーションが実装済みです。
 計画は [docs/ROADMAP.md](./docs/ROADMAP.md) を参照してください。
 
 ## 2 つの API
 
-IBKR OpenAPI 仕様（v2.39.0）は、実際には**異なる認証方式を持つ 2 つの API
+IBKR OpenAPI 仕様（v2.40.0）は、実際には**異なる認証方式を持つ 2 つの API
 サーフェス**を記述しています。両者は互換ではありません。
 
 | サーフェス | ベースパス | オペレーション数 | 認証 |
 |------------|-----------|----------------:|------|
-| Client Portal API (CPAPI) | `/v1/api/*` | 115 | `ssoBearer` |
+| Client Portal API (CPAPI) $1123 | `ssoBearer` |
 | IB REST API | `/gw/api/v1/*`、`/gw/api/v2/*`、`/oauth2/*` | 70 | `oauth2Bearer` |
-| **合計** | | **185** | |
+| **合計** | | **193** | |
 
 SDK は当初 CPAPI（`ssoBearer`）のみを対象としていました。`oauth2Bearer`
 サーフェスはフェーズ 5-6 で実装されました。[ADR 0001](./docs/adr/0001-two-api-surfaces.md)
@@ -152,6 +152,40 @@ ibkrapi4go/
 └── specs/           # キャッシュされた OpenAPI 仕様（gitignore 済み）
 ```
 
+## 全体の流れ
+
+```text
+NewClient(options...)
+   │
+   ▼
+SessionManager.Initialize(ctx)   → tickle goroutine starts
+   │
+   ▼
+Manager calls (Account, Portfolio, Trade, MarketData)
+   │
+   ▼
+Client.Close()                   → tickle stops, logout, ws closed
+```
+
+すべてのリクエストはゲートウェイに到達する前にトランスポートチェーンを通ります：
+
+```text
+Request
+  → request ID + User-Agent
+  → auth header injection (bearer)
+  → logging + telemetry hooks
+  → circuit breaker (optional)
+  → retry (safe methods only; honors Retry-After)
+  → per-endpoint rate limiter
+  → global rate limiter
+  → per-request timeout (when the caller sets none)
+  → HTTP call
+  → error parsing (IBKR envelope → *ibkr.Error)
+Response
+```
+
+詳細なレイヤリングは [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) を参照。
+
 ## リポジトリのドキュメント
 
 | ドキュメント | 内容 |
@@ -160,6 +194,8 @@ ibkrapi4go/
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | レイヤリング、構成、ミドルウェア |
 | [docs/ROADMAP.md](./docs/ROADMAP.md) | 終了条件付きの段階的計画 |
 | [docs/MOCK-GATEWAY.md](./docs/MOCK-GATEWAY.md) | リポジトリ内モックゲートウェイ（テスト、サンプル、単体バイナリ） |
+| [docs/GATEWAY-SETUP.md](./docs/GATEWAY-SETUP.md) | Client Portal Gateway の実行と認証 |
+| [docs/PERMISSIONS.md](./docs/PERMISSIONS.md) | 取引権限、マーケットデータ権利、遅延データ |
 | [docs/AUTH.md](./docs/AUTH.md) | 2 つの認証モデル |
 | [docs/CODEGEN.md](./docs/CODEGEN.md) | 仕様の取得、パッチ、生成、検証 |
 | [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | メトリクス、ベンチマーク、ファズテスト、ロギング |

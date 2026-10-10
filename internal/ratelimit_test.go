@@ -122,6 +122,39 @@ func TestLimiter_PerEndpointIsolation(t *testing.T) {
 	}
 }
 
+// TestLimiter_LogoutIsNotAuthPaced pins that the best-effort teardown call does not
+// sit in the auth bucket.
+//
+// /v1/api/logout used to match isAuthPath, so with a 1 rps burst-1 auth bucket a
+// logout issued right after a session init waited ~997ms for a token. Every
+// CLI invocation pays that twice - once before auth/status, once at exit - and the
+// exit wait is the sharper problem, because Session.Close documents its logout as
+// best-effort and then blocks process exit on it.
+//
+// The auth bucket exists to pace credential-touching endpoints. Logout touches no
+// credential, its result is discarded, and a 429 there costs nothing, so it belongs
+// in the ordinary per-endpoint bucket where WithRateLimit governs it.
+func TestLimiter_LogoutIsNotAuthPaced(t *testing.T) {
+	l := NewLimiter(1000, 100, 0)
+	ctx := context.Background()
+
+	// Consume the auth token exactly as a session init does.
+	if err := l.Wait(ctx, "POST", "/v1/api/iserver/auth/ssodh/init"); err != nil {
+		t.Fatalf("auth warmup: %v", err)
+	}
+
+	start := time.Now()
+	if err := l.Wait(ctx, "POST", "/v1/api/logout"); err != nil {
+		t.Fatalf("logout: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed >= 500*time.Millisecond {
+		t.Errorf("logout waited %v; want no auth-bucket wait, since it is best-effort", elapsed)
+	}
+}
+
+// TestLimiter_AuthPathsAreSlow still pins the pacing itself, and the two tests above
+// are deliberately paired: one removes a path from the auth bucket, the other guards
+// the paths that remain in it. TestLimiter_AuthPathsAreSlow is unchanged.
 func TestLimiter_AuthPathsAreSlow(t *testing.T) {
 	l := NewLimiter(1000, 100, 0)
 	ctx := context.Background()

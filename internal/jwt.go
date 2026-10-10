@@ -26,6 +26,9 @@ type jwtClaims struct {
 	ClientID string `json:"client_id"`
 }
 
+// JWTConfig holds the inputs needed to build a private_key_jwt client
+// assertion. PrivateKey is the parsed RSA key; Expiry is the assertion's
+// validity window and defaults to five minutes when zero.
 type JWTConfig struct {
 	ClientID   string
 	TokenURL   string
@@ -54,6 +57,8 @@ func signJWT(claims jwtClaims, key *rsa.PrivateKey) (string, error) {
 	return hB64 + "." + pB64 + "." + sB64, nil
 }
 
+// ParsePrivateKeyFromPEM decodes a PEM-encoded RSA private key, accepting
+// both PKCS#1 and PKCS#8 encodings.
 func ParsePrivateKeyFromPEM(pemData []byte) (*rsa.PrivateKey, error) {
 	block, _ := pem.Decode(pemData)
 	if block == nil {
@@ -102,6 +107,8 @@ func parseRSAPrivateKey(der []byte) (*rsa.PrivateKey, error) {
 	return parsePKCS1Key(der)
 }
 
+// ParseRSAPublicKeyFromPEM decodes a PEM-encoded RSA public key, accepting
+// both PKCS#1 and PKCS#8 encodings.
 func ParseRSAPublicKeyFromPEM(pemData []byte) (*rsa.PublicKey, error) {
 	block, _ := pem.Decode(pemData)
 	if block == nil {
@@ -118,6 +125,8 @@ func ParseRSAPublicKeyFromPEM(pemData []byte) (*rsa.PublicKey, error) {
 	return pubKey, nil
 }
 
+// BuildJWTAssertion produces the signed RS256 client assertion sent to the
+// token endpoint for the private_key_jwt authentication method.
 func BuildJWTAssertion(cfg JWTConfig) (string, error) {
 	now := time.Now()
 	expiry := now.Add(cfg.Expiry)

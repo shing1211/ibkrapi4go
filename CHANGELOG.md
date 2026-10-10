@@ -5,7 +5,1962 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.30] - 2026-09-30
+
+Adds the five forecast operations and fixes a documentation gate that had stopped
+checking most of what it claimed to. No dependency change and no change to any
+existing exported signature.
+
+### Added
+
+- **`ForecastManager` has methods.** It was exported, wired into `Client.Forecast()`
+  and `transport_pool.go`, and documented as having five operations in `MIGRATION.md`,
+  `ROADMAP.md` and the design docs — with none of them existing. `Client.Forecast()`
+  handed callers a struct they could not call. The five are `ForecastCategories`,
+  `ForecastContract`, `ForecastMarkets`, `ForecastRules` and `ForecastSchedule`.
+
+  The `Get` prefix is dropped from the public method and kept in the `op` string,
+  which is the existing convention rather than an inconsistency: `AlertManager.AllAlerts`
+  runs under `Alert.GetAllAlerts`. The `op` string is what metrics and the error
+  taxonomy key on, so renaming it would churn both. Signatures take plain arguments
+  rather than the generated `*GetForecast*Params`, matching `Snapshot` and `Position`.
+
+  `ForecastCategories` returns `json.RawMessage` where the other four return typed
+  models, and the reason is worth stating because it looks like an exception. The
+  category tree is an object keyed by category id, and the generated response type
+  flattens that map into a single struct with `name`, `parent_id` and `markets`
+  fields — a model built from it would describe a payload IBKR does not send.
+  `ScannerParameters` is passthrough for the same reason.
+
+  Numeric fields are `json.Number`, not `int64` and not `float64`, and are read
+  through the lenient `rawToString` helper so a field arriving as a number or as a
+  string both land correctly (ADR 0008). The mock gateway already routed all five
+  opIds and served fixtures, so no mock change was needed — the 193/193 route claim
+  was true and only the SDK side was missing.
+
+### Fixed
+
+- **`make design-check` verified 5 manager method counts out of 15, and three of
+  those five passed by coincidence.** The doc table grouped managers into shared cells
+  — `` | `AlertManager`, `ForecastManager`, `ScannerManager` | … | 7, 5, and 2 ops
+  respectively | `` — while the verifier matches one manager name against one `N ops`
+  cell. It could not read a grouped row, returned 0, and the caller skipped on 0. Nine
+  managers went unverified, and the one parseable check counted backtick-quoted method
+  names in the doc against the methods a hand-maintained file map named. Those two
+  omissions cancelled: `AccountManager.SubscribeAccount` lives in `ws.go`, which the
+  map omitted, and the doc did not list it either, so the row compared 3 == 3 while
+  the code had 4.
+
+  Every manager in `pkg/ibkr` is now checked, the per-manager file list is gone, and a
+  missing doc row fails the build instead of being skipped. Five numbers were wrong
+  (`AccountManager` 3→4, `PortfolioManager` 15→16, `AllocationManager` 8→9,
+  `ModelManager` 11→18, and `ForecastManager` 5→0 at the time) and `SessionManager`,
+  which had no row at all, was added. Mutation-verified against six previously-blind
+  paths, including a new manager type added with no doc row.
+
+- **The CI `lint & security` job was red on `main`.** Six `nolintlint` findings, each an
+  unused `//nolint:gosec` directive. `gosec` is enabled and only G104 and G101 are
+  excluded, so one directive guarded an excluded rule and the other five guarded
+  file-permission rules that do not fire because the code already complies — G306 asks
+  for `0600` or less and all three sites pass `0o600`. All six suppressed nothing.
+  Confirmed by mutation: loosening a `0o600` to `0o644` is now caught as G306 at the
+  exact line whose directive was removed. Both CI lint passes are green.
+
+### Changed
+
+- **`parseGlobalFlags`'s index was documented two ways and both were wrong about the
+  same number.** `TestParseGlobalFlags_StopsAtFirstNonFlag` called the value "the index
+  of `orders`" when `orders` is at index 1 and the value is 2. The behaviour was right;
+  the comment was not, and it is corrected. The function doc no longer apologises for
+  returning an index no caller reads, and instead states why stopping at the first
+  non-flag is load-bearing: a flag written after the command belongs to that command,
+  and an earlier version that parsed from `argv[0]` honoured no global flag at all.
+
+- **`docs/runs/2026-09-29-session-pacing-gate/next-phase.md` rewritten against current
+  reality.** Six carried items are now closed with the commit that closed each, and the
+  "needs a decision" section is empty: the coverage floor was answerable from
+  measurement and the lint job from the config, and neither was a judgement call once
+  looked at properly. What remains needs a live IBKR account.
+
+## [1.1.29] - 2026-09-30
+
+Dead-code and inert-surface removal. No public Go API change, no generated-code
+change, and no dependency change; the SDK surface is untouched. What changes is one
+CLI flag that never did anything, and a package nothing imported.
+
+### Removed
+
+- **The `--rest` global flag and the `rest` config key.** Both existed to carry a REST
+  gateway URL, and neither could affect a request. `pkg/ibkr` has never exposed an
+  option to receive it — `WithGatewayURL` is the only URL option, and it covers both
+  API surfaces — so `cfg.RestGatewayURL` was parsed, stored, printed by
+  `ibkr config show`, settable by `ibkr config set`, and then never read by anything
+  that issues a request. A flag that is accepted, stored, and discarded is worse than
+  one that does not exist: it looks like a working override.
+
+  The behaviour change is narrow and worth stating plainly. `ibkr -rest X accounts`
+  previously ran and is now `unknown command "-rest"`, because `-rest` is no longer a
+  recognised flag and parsing stops at the first non-flag. A persisted
+  `rest_gateway_url` key in an existing `config.json` is unaffected: `loadConfig`
+  decodes with `json.Unmarshal`, which ignores unknown fields, so the file still loads
+  and the key is dropped on the next write. The flag had no functional effect to lose,
+  which is why this is a patch rather than a minor.
+
+  Reinstating it is deliberately not trivial. The honest fix is an SDK option that
+  actually reaches the REST client, not a second CLI flag that does not.
+
+- **`internal/fake`, seven files, 0% coverage.** The package had no importer anywhere
+  in the module and no external reachability, since `internal/` is not importable from
+  outside it either. `unused` never reported it, because every identifier it declares
+  is exported and the problem is at package granularity rather than symbol
+  granularity — which is the blind spot `make internal-refs-check` now covers. It had
+  been on that check's `ALLOWED` list for five runs, and the reason recorded there is
+  worth keeping: `internal/fake.Clock` is documented as implementing `internal.Clock`
+  and it did when `Clock` was an interface. `Clock` became a struct with unexported
+  fields, so `Breaker.SetClock` can no longer accept it, and the fake was never
+  updated. The seam moved and the fake drifted with nothing to notice. `ALLOWED` is
+  now empty, and the entry only comes back with a decision attached.
+
+### Fixed
+
+- **`LedgerCurrency` now emits wire-format field names.** It was the only JSON struct in
+  `portfolio.go` without explicit `json` tags, so `ibkr portfolio ledger` printed Go
+  field names — `NetLiquidationValue` — where every other JSON-emitting command in the
+  CLI prints the lowercase wire name. The struct tags are the fix; the CLI test that
+  asserted the old output is updated to the wire name.
+
+### Changed
+
+- **`check_internal_refs.py` no longer carries a `CHECK`-shaped exemption list.** The
+  `ALLOWED` dict is empty and its documentation now describes the rule rather than one
+  package's history, which is the shape that let a five-run-old exception read as a
+  standing decision. The rationale for deleting `internal/fake` moved into this
+  changelog, where it is a dated record instead of a live exception.
+- **`scripts/check_design/wide_red_test.go` drops its `internal/fake` fixture.** The
+  case existed to prove the design checker does not flag an `internal/` package for not
+  importing generated code. The property is still worth testing, but not by
+  resurrecting a deleted package to test it.
+
+## [1.1.28] - 2026-09-30
+
+Test and tooling work. No production code, no generated code, no dependency change, and
+no public API change — every change is to test files, CI configuration, or documentation.
+
+### Fixed
+
+- **`ibkr config set` no longer writes past the command's output stream.** Its confirmation
+  used `fmt.Printf`, which writes to the process stdout, bypassing the `env` seam every other
+  message in the CLI goes through. The message was therefore uncapturable by a test and
+  invisible to anything consuming the command's output. This is the same defect that was
+  fixed for the `orders cancel` message in an earlier release.
+
+- **The mock gateway's startup banner now reports the port it actually bound.** With
+  `-addr 127.0.0.1:0`, the OS assigns any free port and only the bound listener knows which.
+  The banner was derived from the *requested* address, so it printed a URL with port `0` —
+  a port nothing was listening on. The banner exists for exactly one reason, which is
+  telling the operator where to point the SDK. Binding is now an explicit `net.Listen` and
+  the banner is derived from `ln.Addr()`.
+
+### Added
+
+- **Tests for `cmd/ibkr-mock-gateway`, previously at 0.0% coverage.** Now 90.4%.
+  Coverage alone is not the claim; the reachable surface is. The server construction is
+  split out of `run` so the flag wiring is testable without a listening socket, and the
+  serve loop takes its `context.Context` as a parameter so the graceful-shutdown branch —
+  the one carrying the `ErrServerClosed` filter, the shutdown timeout and the error
+  wrapping — can be reached without sending the test process `SIGINT`. The self-signed
+  certificate is asserted to complete a real TLS handshake and to carry a SAN covering
+  loopback, and `statusRecorder` is asserted to forward `Hijack` and `Flush`, since a
+  wrapper that did not would break every WebSocket upgrade in a way no status-code
+  assertion can see.
+
+- **Tests for the `config` subcommand, previously at 0%.** It is the only command that
+  writes to the user's own filesystem, so every test points `IBKR_CONFIG` at `t.TempDir()`;
+  the seam already existed in `configPath` and nothing used it. The file mode is asserted to
+  be `0600` on POSIX, and a rejected key or a missing value is asserted to leave no file
+  behind.
+
+- **Tests for `ibkrPrintln`'s nil guard and `truncate`'s boundary.** `truncate` is now
+  pinned to never return more than the requested width, which is the invariant the
+  fixed-width positions table depends on.
+
+### Changed
+
+- **`check_i18n.py` now checks release versions (rule 7).** Five translated READMEs claimed
+  release `v1.1.7` for twenty releases while every one of their `Last synced:` banners said
+  `v1.1.27`, and the gate was green throughout: the existing rule compared badge *URLs*, and
+  the badge URLs carry no version, so the prose status table was never compared at all. The
+  new rule requires the status table and the banner to agree within a file and every
+  translation to name the same version as the English README. The five translations and
+  `docs/ROADMAP.md` are corrected to `v1.1.28`.
+
+- **`docs/ARCHITECTURE.md` regenerated from the current code graph** — 458 files, 8,165
+  symbols, 701 execution flows and 171 clusters, replacing a snapshot that was 43 commits
+  stale and whose cluster table no longer matched the tree.
+
+### Added (CI and tooling)
+
+- **OpenSpec project workflows** under `.opencode/`, `.claude/`, `.agents/`, `.cursor/`
+  and `openspec/`, for spec-driven change management.
+
+- **The `lint & security` job is green.** It was failing on every push with findings in
+  library code, and `.golangci.yml` was failing `config verify`, which silently discarded its
+  linter settings. Both are fixed: the config validates, the CLI timeout contexts return
+  their `CancelFunc`, and the remaining findings are gone.
+
+- **The `spec-drift` workflow runs again.** Its heredoc made the YAML unparseable, so
+  GitHub created a synthetic zero-second failed run on every push and no job ever executed.
+  A manual dispatch now completes green in 12s.
+
+- **`ci.yml` no longer interpolates the pull-request title directly into a shell script**,
+  which actionlint correctly flags as a script-injection vector; the value is now passed
+  through `env:`.
+
+### Notes
+
+- `main()` in `cmd/ibkr-mock-gateway` remains uncovered. It is three lines that hand
+  `os.Args` to `run` and exit non-zero, and is reachable only via a subprocess.
+- The `ErrServerClosed` filter in the serve loop is recorded in the code as untested, which
+  it is: deleting it leaves the suite green, because the context-cancelled branch returns
+  without reading the error channel. It is a guard for a shutdown path a future caller could
+  add, and the comment says so rather than letting a coverage number imply otherwise.
+- One defect in this release's own test code was caught only by CI's `-race` job: the serve
+  tests polled a `strings.Builder` that another goroutine was writing to. `CGO_ENABLED` is 0
+  on the development host, so the race detector could not run locally. It is recorded here
+  because "the tests passed locally" was true and the tests were still wrong.
+
+## [1.1.27] - 2026-09-29
+
+The 2.0s-per-invocation defect fixed in 1.1.26 passed every gate in this repository for
+two releases. This adds the signal that catches it, and no production change.
+
+### Added
+
+- **A session-pacing regression test.** A client that initialises a session and closes it
+  makes four requests, and the test asserts on the rate limiter's own
+  `ibkr.ratelimit.waits` counter. Exactly one wait is expected with the default auth
+  pacing - the deliberate one - and none when the caller raises the auth rate.
+
+  Both cases also assert the four requests, so neither can pass by doing nothing. A
+  zero-wait assertion over an empty run is trivially true.
+
+  This is mutation-verified: reintroducing `/v1/api/logout` into the auth path set
+  reports `rate-limit waits = 2; want 1` and fails. Notably the *opted-out* case does
+  **not** catch that regression - a burst of 10 absorbs both auth calls - so the
+  default case is the one that does, and the two are ordered so it runs first.
+
+- **No wall-clock assertion, deliberately.** A latency test that fails on a loaded CI
+  runner gets muted rather than fixed, and this repository has retracted `check_money.py`
+  twice for that reason. A counter is exact and free.
+
+- **No new CI step.** The test lives in the normal `go test ./...` sweep. A gate that
+  exists in only one CI job is a gate someone eventually drops.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-29-session-pacing-gate/`](./docs/runs/2026-09-29-session-pacing-gate/).
+
+## [1.1.26] - 2026-09-29
+
+Every CLI invocation cost ~2.0s, and half of that was a best-effort call blocking
+process exit.
+
+### Fixed
+
+- **A best-effort logout no longer blocks process exit for a second.** `Session.Close`
+  documents its logout as best-effort and discards the result, then waited for a
+  rate-limit token before issuing a call whose answer is thrown away. `/v1/api/logout`
+  is no longer treated as an auth endpoint, so it uses the ordinary per-endpoint bucket
+  where `WithRateLimit` governs it. It touches no credential and a 429 on it costs
+  nothing. Measured: `Close` 998ms -> 1ms, for every user of the SDK and with no opt-in.
+
+- **Auth rate limiting is now configurable, via `WithAuthRateLimit(rps, burst)`.** The
+  1 req/s burst-1 auth bucket was hardcoded, and `RATE-LIMITING.md` listed it as
+  `fixed`. The default is **unchanged**, so nothing moves for a caller who does nothing.
+
+  It exists for short-lived processes. Against a gateway that answers instantly, the
+  wait before the auth status poll buys no information - the poll succeeds first try -
+  so a client that initialises a session and exits pays ~1s for a precaution that bought
+  nothing. Measured for an initialize-then-close cycle: **2.002s -> 0.004s**.
+
+  A long-running client should leave the default alone; it is not making auth calls back
+  to back. The limiter is only built when per-endpoint or global limiting is enabled, so
+  `WithRateLimit(0)` together with `WithGlobalRateLimit(0)` removes auth pacing as well -
+  this option can relax pacing, not add it.
+
+  `TestLimiter_AuthPathsAreSlow` is unchanged and still passes, which is the check that
+  the default really did not move. It is now paired with
+  `TestLimiter_LogoutIsNotAuthPaced`, so the paths that stay in the bucket and the path
+  that left it are each pinned.
+
+### Added
+
+- **[ADR 0018](docs/adr/0018-auth-rate-limit.md): the auth limit is a client-side
+  precaution, and its premise is unverified.** `RATE-LIMITING.md` asserts that "IBKR
+  enforces request pacing" without a source. The spec is silent, the mock gateway
+  imposes no limit, and no ADR stated it. The ADR is Accepted with the question open:
+  if auth endpoints turn out not to be specially limited, the correct change is to drop
+  the bucket rather than raise its rate.
+
+  The default was deliberately **not** raised. Doing so trades a 2s CLI for 429s against
+  a real gateway on no evidence either way.
+
+### Changed
+
+- `RATE-LIMITING.md` listed `/logout` among the auth paths, which contradicted the code
+  after the fix above. The table, algorithm list and testing list are updated, and a
+  "Short-lived processes" section records the measured cost and the opt-out.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-29-auth-rate-limit/`](./docs/runs/2026-09-29-auth-rate-limit/).
+
+## [1.1.25] - 2026-09-29
+
+Not one global flag had ever been read. The CLI could only be pointed at a different
+gateway by editing its config file.
+
+### Fixed
+
+- **`--gateway`, `--rest`, `--insecure` and global `--account` were all inert.**
+  `parseGlobalFlags` was only ever called as `parseGlobalFlags(e.args)`, and its `default`
+  branch returns on the first argument that is not a global flag - which is `e.args[0]`,
+  the program name. The loop returned at `i=0` and read nothing.
+
+  | Invocation | Behaviour before |
+  |------------|-------------------|
+  | `ibkr --gateway URL accounts` | `unknown command "--gateway"` |
+  | `ibkr accounts --gateway URL` | runs, connects to `https://localhost:5000` |
+  | `ibkr accounts` | same |
+
+  So a CLI whose whole purpose is talking to a gateway could only be redirected by editing
+  `~/.ibkr/config.json`. The parser's own tests pass because they call it with argv *minus*
+  the program name, so the shape that ships was never the shape under test.
+
+  The client factory now takes the subcommand's own arguments - the ones the documented
+  `ibkr <command> [subcommand] [flags]` puts the global flags in - so subcommand depth
+  stops mattering and the flag path is finally covered.
+
+- **`ibkr orders submit` and `ibkr orders cancel` ignored `-account`.** Both called
+  `mustAccount("")` and never parsed the flag, unlike every other command. So
+  `ibkr orders submit --account U999 ...` was accepted, printed no complaint, and placed
+  the order against whatever `account_id` the config held - or failed with
+  `account ID required` when the config had none.
+
+- **`ibkr portfolio` panicked with no arguments.** `runPortfolio` did `args[1:]` inside its
+  `len(args) == 0` branch, a `slice bounds out of range [1:0]`. `runOrders` has the
+  identical shape and handles it correctly.
+
+- **`ibkr orders cancel` wrote its confirmation to the process stdout.** `fmt.Printf` where
+  every other message in the CLI goes through the injected `e.stdout`. The message was
+  uncapturable and invisible to anything consuming the command's output, and it was the
+  only output path that ignored the `env` contract.
+
+### Added
+
+- **`cmd/ibkr` subcommand coverage: 33.0% -> 76.1%.** All 9 client-construction call sites
+  in `accounts.go`, `orders.go`, `portfolio.go`, `positions.go` and `stream.go` were
+  unexecuted, because `subcommands_test.go` deliberately stopped short of needing a
+  gateway and no test ever replaced the `newClient` seam. They now run against
+  `internal/mockgateway` via `httptest`, on the happy path and on the error paths -
+  unreachable gateway, 401 not swallowed, and an unusable account id rejected before any
+  request.
+
+  The seam itself was not the work and never needed to be: it has existed since 1.1.14.
+  Total coverage 66.7% -> 69.5% against the 62% floor.
+
+### Changed
+
+- `--rest` remains inert, now with a comment at the point of the omission. `pkg/ibkr`
+  exposes no option to receive `RestGatewayURL` and `WithGatewayURL` covers both API
+  surfaces, so the real fix is an SDK option or removing the flag - not a second dead
+  assignment in the CLI. Wiring it would have made the code look finished while the
+  behaviour stayed wrong.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-29-cli-subcommand-coverage/`](./docs/runs/2026-09-29-cli-subcommand-coverage/).
+
+## [1.1.24] - 2026-09-27
+
+The circuit breaker's error budget could be spent once and never recovered, which
+silently reduced the configured failure threshold to 1.
+
+### Fixed
+
+- **An exhausted error budget stayed exhausted for the life of the client.**
+  `errorBudget.window` was appended to on every failure and never cleared. The success
+  path in `Record` reset `consecutive`, `openUntil` and `probing` - and not the budget -
+  so once `len(window) >= budget` was true it stayed true. The window only shrank past
+  `size`, so at the recommended `size=100, budget=3` the budget stayed spent until
+  roughly 97 further outcomes.
+
+  The observable effect: after the budget tripped once, the configured consecutive
+  threshold stopped meaning anything, and a single further failure re-opened the
+  circuit. Measured directly, with `threshold=10, budget=3, size=100`:
+
+  | Step | Window | State |
+  |------|--------|-------|
+  | 3 failures | 3 | open (budget exhausted) |
+  | cooldown elapses, probe succeeds | 3 | closed |
+  | **1 more failure** | 4 | **open** |
+
+  This only affects callers who opted in with `WithCircuitBreakerBudget`. Without it
+  the budget stays nil and `record` is a no-op, so the default path is untouched.
+
+- **The window is now a rolling window over the last `size` outcomes**, as
+  `WithCircuitBreakerBudget` already documented, rather than an append-only pile of
+  failures. `window` is `[]bool` and `record` counts failures within it, so a success
+  pushes an old failure out and the budget recovers. The public contract text did not
+  change - the implementation now matches it.
+
+  A failure is recorded even when the consecutive threshold already tripped; skipping
+  it made the window understate how many failures had actually happened.
+
+- **The dead `now` parameter is gone.** `evict(now)` never read it, which is the direct
+  reason the type comment could say "sliding" while nothing ever slid. A test named
+  `TestErrorBudget_EvictsOldEntries` asserted the opposite of its name, and the previous
+  run's `next-phase.md` had already flagged that mismatch as the likely reason the
+  time-window question was answered wrongly twice. It is now
+  `TestErrorBudget_WindowIsBoundedAndKeepsTheNewest` and asserts what it says.
+
+  Entries are still **not** aged out by time. "5 failures in 60s" remains inexpressible;
+  a caller approximates it with a `size` chosen to cover the period of interest, which
+  depends on request rate. That is a new public option, not a bug fix, and is left for
+  a separate decision.
+
+### Changed
+
+- `WithCircuitBreakerBudget`'s doc comment now states that the window counts outcomes
+  and that `size<=0` disables the budget, which it always did.
+
+  This is a behaviour change for opt-in callers, released as a patch because the
+  documented contract is unchanged, no signature moved, and no new option was added. A
+  loose `size`/`budget` ratio still keeps the budget satisfied for many outcomes and so
+  legitimately re-opens the circuit often - that is the configured behaviour, and the
+  regression tests say so rather than leaving it to be rediscovered.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-error-budget-recovery/`](./docs/runs/2026-09-27-error-budget-recovery/).
+
+## [1.1.23] - 2026-09-27
+
+A package under `internal/` can be unreachable for the life of the module and no
+linter will say so. That is now a build failure.
+
+### Added
+
+- **`internal-refs-check`: every package under `internal/` must be imported.** A
+  package there that nothing imports is dead code shipped in the module, and
+  `internal/` is not importable from outside it, so no user can reach it. `unused`
+  does not report it, because every identifier such a package declares is exported and
+  the problem is at package granularity rather than symbol granularity.
+
+  The rule is deliberately unconditional - every package appears in at least one
+  import, with no thresholds and no judgement about intent. That is what separates it
+  from the precision gate proposed and withdrawn in 1.1.19, whose two formulations
+  produced 27 false positives and then 16 false negatives: a gate with judgement
+  calls in it gets ignored the first time it is wrong. Package paths are read from
+  `go.mod` so comparison is exact, since a prefix match would treat `internal/a` and
+  `internal/a/deeper` as the same package and pass a package nobody imports. A
+  test-only importer counts, because that is a legitimate consumer.
+
+  `internal/fake` is on the `ALLOWED` list with its reason recorded, so the exception
+  is printed on every run rather than being an oversight. If the decision to delete or
+  rewire it goes the other way, the entry goes with it.
+
+  Wired into `make check`, a CI step beside the money-types check, and AGENTS.md rule
+  8 - including why `unused` cannot catch it, which is the part a future reader would
+  otherwise have to rediscover.
+
+### Fixed
+
+- **The checker missed real imports, twice, and only running it against a real file
+  showed that.** A single multiline regex found `"testing"` in a grouped import block
+  and missed the module's own import on the next line, because the blank line between
+  the stdlib and third-party groups defeated `^` under `re.M` with a greedy `\s*` - the
+  shape a gofmt'd file has. The obvious repair, an optional alias group, is also
+  wrong: it matches the path's own leading word characters, cannot satisfy its
+  trailing `\s+`, and then fails expecting a quote where a letter is. The working form
+  needs two alternatives and per-line matching.
+
+  A synthetic test string without a blank line, or with a short path, passes both
+  broken versions. The gate is now verified against the real tree with a synthetic
+  package: unreferenced fails and names it, referenced by a test passes, removal
+  restores green.
+
+  A third reported failure was the probe's fault rather than the checker's - the probe
+  had written an import line with no closing quote, which is not an import. The probe
+  now asserts its own input is well formed.
+
+### Added (run artifacts)
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-internal-refs-gate/`](./docs/runs/2026-09-27-internal-refs-gate/).
+
+## [1.1.22] - 2026-09-27
+
+A package in the module has been unreachable and untested since the day it was
+written, and the reason is a design change nobody propagated.
+
+### Fixed
+
+- **`internal/fake` was orphaned by a change to the seam it was written for.** It is
+  a set of test doubles - a controllable clock, a rate limiter, a session machine, a
+  token provider, a transport and a WebSocket - and nothing in the module imports it,
+  no test uses it, and `internal/` means nothing outside the module can either.
+
+  The reason is not neglect. `internal.Clock` is a struct with unexported function
+  fields and no exported constructor, so `Breaker.SetClock` accepts only a clock that
+  code **inside** `internal` can build. `internal/fake.Clock` is a different type
+  whose doc comment says it "implements internal.Clock" - but `internal.Clock` is a
+  struct, not an interface, so there is nothing to implement and nothing that can be
+  passed to it. The seam moved from an interface to a struct and the fake was never
+  updated.
+
+  Nothing detects this: `unused` does not report it, because every identifier the
+  package declares is exported and the problem is at package granularity.
+
+- **The breaker tests waited on wall-clock time when a clock seam existed to prevent
+  it.** `Breaker.SetClock` has been unused; the tests slept 60ms against a 40ms
+  cooldown, which is slower and racy under load. The new tests drive an in-package
+  clock and sleep not at all, pinning the full closed → open → half-open → closed
+  cycle including both sides of the cooldown boundary, that a failed probe restarts
+  the cooldown, and that the error budget can trip the circuit below the consecutive
+  threshold.
+
+- **The error budget's documented behaviour does not match its implementation.**
+  `errorBudget` is described as a sliding window and `evict` as removing "entries
+  that have slid out of the window", but `evict` is passed `now` and never reads it:
+  it bounds the slice by count only. The budget is a count of recent failures with no
+  time component.
+
+  That matters operationally - "5 failures in 60s" currently means "5 failures out of
+  the last N", however far apart they were - so the present behaviour is now pinned
+  by `TestErrorBudget_CountsFailuresNotElapsedTime` and the discrepancy is recorded.
+  Changing it alters when a trading client trips its circuit breaker, which needs an
+  ADR rather than a patch.
+
+  The existing `TestErrorBudget_EvictsOldEntries` is named for the opposite of what it
+  asserts - its body checks that entries are **not** evicted - which is the likely
+  source of that misreading.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-breaker-clock/`](./docs/runs/2026-09-27-breaker-clock/).
+
+## [1.1.21] - 2026-09-27
+
+The stream hub fans every tick out to every client. Three of its behaviours were
+untested, and the fourth turned out not to be testable in a way worth shipping.
+
+### Fixed
+
+- **The stream hub's fan-out had no test.** `Broadcast` sends to every registered
+  connection and returns how many it wrote to. The count alone proves nothing -
+  returning the connection count without sending anything satisfied it - so each
+  client now has to actually read the frame. A mutation that skipped one connection
+  reports `Broadcast() = 1; want 2`, and one that counts without writing leaves
+  clients with no frame.
+
+- **`sendFrame`'s silent skip was undocumented and untested.** On an already-closed
+  connection it returns nil rather than an error, so the connection is skipped
+  without complaint. That is what makes `Broadcast`'s return value an **attempt
+  count, not a delivery count**, which is easy to read the other way.
+
+- **`closeAll`'s effect on the hub was misunderstood, and the test caught it.** It
+  marks connections closed and calls `CloseNow`, and the first draft asserted it
+  does not deregister them. It does - `CloseNow` unblocks the connection handler,
+  whose defer is what removes them. The test now pins the observable drain: the hub
+  reaches zero subscribers, and a subsequent `Broadcast` returns 0. A mutation that
+  never closes the socket leaves all three registered and is caught.
+
+`internal/mockgateway` coverage 86.6% -> 87.5%; overall 66.3% -> 66.5%. Four
+mutations, all caught on the assertion.
+
+### Not tested, and recorded as such
+
+- **The hub lock discipline is a review rule, not a test.** `Broadcast` and
+  `closeAll` snapshot the connection set under the mutex and act outside it, because
+  holding it across a socket write would let one unresponsive client stall every
+  other one. Three attempts to test it were made and abandoned: probing with a
+  synthetic connection panics the in-flight broadcast on a nil socket; probing with
+  `Subscribers()` needs a genuinely blocked write, and the write fails in tens of
+  milliseconds rather than running to the 5s timeout, so any timing budget either
+  always passes or is too tight to survive a loaded machine; and shrinking the client
+  receive buffer is unavailable because `coder/websocket`'s `NetConn` wrapper does
+  not expose `SetReadBuffer`, so the test skipped rather than failed.
+
+  The first two of those passed with the lock deliberately held, so the requirement
+  and the three dead ends are now documented on `Broadcast` and `closeAll`
+  themselves, labelled as weaker than a test.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-stream-hub/`](./docs/runs/2026-09-27-stream-hub/).
+
+## [1.1.20] - 2026-09-27
+
+Closes the last of the `json.Number` class: every such field that reaches a caller
+as a string now has a test that would notice if it stopped preserving digits.
+
+### Fixed
+
+- **Historical bar prices had no precision test.** `MarketData().History` decodes
+  open, high, low, close and volume as `json.Number` in a single anonymous struct
+  and stringifies each one. A `float32` regression would round all five silently.
+  Volume is included because it travels the identical path, even though it is a
+  count rather than a price.
+
+- **Option strike prices had no precision test, and a slice is a different decode
+  target from a scalar.** `Trade().Strikes` decodes `Call []json.Number` and
+  `Put []json.Number`. An element that regressed would leave the surrounding
+  structure intact, so the assertions check the values *and* the length - a slice
+  that silently lost an element would otherwise satisfy a value-only check.
+
+- **The contract multiplier had no precision test.** A scale factor rather than a
+  price, so a rounding error would misstate the *size* of a contract rather than its
+  cost - a quieter failure than a wrong price, and worth pinning for that reason.
+
+All three are mutation-verified on the assertion: under a `float32` decode they
+report `16777218` for `16777217.89`, `67108864` for `67108865.13`, and `12345.679`
+for `12345.6789`. The new file reuses the `float32Loses` guard from the money
+tests, so a value that a `float32` renders unchanged is rejected at authoring time
+rather than accepted as a test that proves nothing.
+
+No `json.Number` field reaching a caller as a string is now left without a
+`float32`-changing assertion.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-number-precision/`](./docs/runs/2026-09-27-number-precision/).
+
+## [1.1.19] - 2026-09-27
+
+A recommended quality gate was tested against the real code and withdrawn rather
+than shipped. The gap it was meant to prevent is closed by hand instead.
+
+### Fixed
+
+- **The remaining 7 of 28 monetary `json.Number` fields had no test proving they
+  keep their digits.** `balance`, `excessLiquidity`, `initialMargin`, `regTLoan`,
+  `regTMargin` and `securitiesGVP` on the account summary, and
+  `stockOptionMarketValue` on the ledger. Each is now asserted with a value a
+  `float32` would destroy, and each is mutation-verified: under a `float32` decode
+  they report `16777218`, `12345679` and `33554432` where the gateway sent
+  `16777217.89`, `12345678.91` and `33554432.55`.
+
+  `money_precision_test.go` is now exhaustive over the monetary `json.Number` fields
+  of the account summary, positions and ledger, and says so in a comment, so a field
+  added later without a lossy-value assertion is visibly out of place.
+
+### Withdrawn
+
+- **The proposed `check_money.py` precision gate is not shipped.** Two formulations
+  were prototyped against the real code. Scanning literals for money comparisons
+  flags 27 findings that are almost all false positives - `sum.TotalCashValue !=
+  "100.25"` is a string comparison on a `string`-typed field, where a `float32`
+  regression is a compile error rather than a silent round - while missing the one
+  real case, which sits on a fixture line rather than a comparison. Keying off the
+  `json.Number` type instead produces the correct invariant and 16 false negatives,
+  because table-driven assertions keep their literal in a `const` declared elsewhere.
+
+  A lint with 27 false positives teaches a team to ignore it; one with false
+  negatives teaches a team to trust it. Both are worse than the recurrence they
+  would prevent, and the second failure is invisible. `check_money.py` is unchanged.
+  A sound version would have to resolve the *type* of the field under assertion,
+  which means following the `toPublic` mappings - a small analysis rather than a
+  lint, and worth writing only if the recurrence rate justifies it.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-money-gate-retracted/`](./docs/runs/2026-09-27-money-gate-retracted/).
+
+## [1.1.18] - 2026-09-27
+
+The account summary, positions and ledger decode their money fields as `json.Number`
+precisely so decimal digits survive - and no test used a value that would notice if
+they stopped.
+
+### Fixed
+
+- **39 `json.Number` money fields had no test proving they keep their digits.**
+  `accountSummaryRaw` declares 15 monetary fields as `json.Number`, with the comment
+  "decodes monetary fields as json.Number to preserve decimal precision", and
+  `portfolio.go` declares 17 more. `toPublic` then calls `.String()` on each, so a
+  caller receives the gateway's exact digits - or, under a `float32` regression, a
+  rounded string.
+
+  Every existing assertion on those fields uses a value `float32` renders unchanged,
+  so those tests pass whether the field is a float or a `json.Number`. This is the
+  same blind spot that hid real money bugs in 1.1.9 (the tax-voucher response) and
+  1.1.13 (the banking request): an assertion that cannot detect rounding while
+  looking like a precision test.
+
+  `money_precision_test.go` now covers all three responses with values above 2^24,
+  where a 24-bit mantissa rounds to a whole unit - the account summary including
+  both nested `cashBalances` values, six position fields, and the currency-keyed
+  ledger. Five mutations, each emulating a `float32` decode in the production
+  conversion, are caught on the assertion: `12345678.91` arrives as `12345679`,
+  `16777217.89` as `16777218`, `33554432.55` as `33554432`, `67108865.13` as
+  `67108864`.
+
+- **A precision test should check detectability, not representability.** A value can
+  be lossy in binary and still render back as its own literal under Go's
+  shortest-round-trip formatting - `0.007` is one, and no string comparison could
+  ever notice it had been through a `float32`. The new tests reject any value that
+  survives the `float32` round trip unchanged, so they cannot silently stop proving
+  anything.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-money-precision/`](./docs/runs/2026-09-27-money-precision/).
+
+## [1.1.17] - 2026-09-27
+
+The fault injection the SDK's retry tests depend on was almost entirely untested,
+and a defect in it fails quietly rather than loudly.
+
+### Fixed
+
+- **The mock gateway's fault injection had no tests.** `pkg/ibkr`'s retry,
+  error-classification and order-reply tests all inject faults through
+  `Scenario.SetPolicy` and `applyScenario`. Before this release `SetPolicy` had
+  three uncovered statements, `applyScenario` had eleven, and `scenario.go` as a
+  whole was at 30.2%.
+
+  If that path had stopped injecting, the client would have received a clean
+  fixture where it expected a 500, and a retry test would have passed for the wrong
+  reason with nothing reporting a broken mock.
+
+  `scenario_test.go` now pins the resolution order - policy, then per-op, then
+  global, then nothing - and that a policy declining *defers* rather than
+  suppressing. All four injection modes are asserted end to end, because a unit
+  test of the resolver alone would not prove anything reaches the client: an
+  injected status replaces the fixture and `Clear` restores it, a status-only fault
+  still returns parseable JSON, latency is measured rather than trusted with a
+  per-fault delay winning over the global one, a dropped connection is observed
+  through a real TCP connection, and a timeout must honour the client's context.
+
+- **The request recorder was untested, and every "what was sent" assertion depends
+  on it.** `Recorder.clone` exists so a recorded snapshot is not mutated once
+  routing enriches the live request. A shallow copy would mean every such assertion
+  in the suite was asserting against a structure that changes under it. Each field
+  is now checked independently, so a partial regression is distinguishable, along
+  with the nil guards, the slice copy, reset, concurrent access, and the
+  documented contract that a snapshot carries no route parameters.
+
+- **The stream frame and field parsers are now covered** across both wire shapes
+  the mock accepts - the JSON control frame and the legacy `smd+`/`umd+` text
+  protocol - including the negative cases. An unknown method must be ignored, since
+  treating one as a subscribe would push frames at a client that never asked for
+  them.
+
+`scenario.go` reaches 100% and `recorder.go` 96.9%; the package goes 75.5% to
+**86.6%**, and overall coverage 65.4% to 66.3%. Fifteen mutations are caught,
+covering fault precedence, every injection mode, each recorder aliasing field, and
+each parser branch.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-fault-injection/`](./docs/runs/2026-09-27-fault-injection/).
+
+## [1.1.16] - 2026-09-27
+
+The mock gateway's coverage was high on the code that maps paths and near-zero on
+the code that decides who gets in. And the coverage number itself was not counting
+that package.
+
+### Fixed
+
+- **The mock gateway's auth gatekeepers were almost untested.** `session.go` was at
+  4.3% and `oauth.go` at 1.1%, while the route tables sat at 100%. If either store
+  had been more permissive than the real gateway, `pkg/ibkr` tests would have passed
+  against requests the gateway would reject, with nothing here saying so.
+
+  `session_test.go` covers the session store and the gate, including
+  `isSessionOp` - an allowlist in which every entry is an *unauthenticated*
+  endpoint, so the exact set is pinned and a representative set of protected
+  operations is asserted to stay protected. It also pins the rule that a correct
+  token is still refused until a session is established, and that a logout revokes
+  access rather than merely returning 200.
+
+  `oauth_test.go` covers all three grant flows, JWT assertion shape checking, token
+  issue/validate/expiry including eviction, bearer scheme extraction, and the
+  end-to-end property that a token the endpoint issued is one the bearer surface
+  accepts.
+
+  `session.go` is now at 100% and `oauth.go` at 95.6%; the package went 57.2% to
+  75.5%. Eight mutations, including a protected operation slipped into the
+  auth-bypass allowlist, are caught.
+
+- **The coverage metric did not count the shipped mock gateway.** CI computed
+  coverage with `-coverpkg=./pkg/ibkr,./internal,./cmd/...`, which is `./internal`
+  and not `./internal/...` - so the mock gateway's 823 statements were outside the
+  metric, while the mock gateway ships as `cmd/ibkr-mock-gateway`. The effect was
+  visible: the package gained 18 points of coverage and the reported total did not
+  move, because none of it was measured.
+
+  Corrected to `./internal/...`. The real figure is **65.4%**, and the floor moves
+  from 60% to 62%.
+
+### Changed
+
+- **WebSocket `contextcheck` is closed, not deferred.** The carried-forward note
+  described satisfying the linter as a breaking `ctx` parameter on the public
+  `Subscription.Close()`. Running the linter with the exclusion removed shows 7
+  findings, none of which is a lost cancellation: two tag a connection-scoped gauge
+  with the connection's context on purpose - the inherited context is the
+  per-subscription one, cancelled when the subscription ends - and the rest are
+  inside `Close`, which waits on nothing. Its one potentially blocking call reaches
+  `WSConn.send`, which enqueues onto a buffered channel and selects on the
+  connection's context rather than writing to the socket, so it cannot strand on a
+  wedged peer. The exclusion stays, with the verified reasoning recorded.
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-mock-gateway-auth/`](./docs/runs/2026-09-27-mock-gateway-auth/).
+
+## [1.1.15] - 2026-09-27
+
+A published claim about operation coverage was ambiguous enough to be read as "one
+operation is unimplemented", which is false. The ambiguity came from a real gap in
+the test suite: nothing checked operation coverage by opId.
+
+### Fixed
+
+- **Operation coverage is now checked by opId, not only by method and path.** The
+  existing coverage tests match a SPEC row against the route table on normalized
+  method and path. An operation that shares a path with another one therefore
+  satisfies them through the other one's route, and no test says the operation is
+  unroutable. `TestEveryOpIDIsRoutedOrExplained` closes that: every distinct
+  operation in `docs/SPEC.md` must either be registered in the route table or
+  appear in `pathCollisionOps` naming the operation that shadows it.
+
+  The exception is verified rather than trusted. An entry fails the build if the
+  operation is actually routed (a stale excuse), if the shadowing operation has no
+  route either (an entry hiding a genuinely missing route), or if the two do not
+  really share a method and normalized path (a false reason). All four branches,
+  plus the deletion of the entry itself, are mutation-verified.
+
+  `sharedOpIDs` does the same job in the other direction, for operations the spec
+  labels with more than one route - one opId serving two endpoints would otherwise
+  have them share a single fixture silently. A new one must be declared, and a
+  declared one that no longer applies must be removed.
+
+  The test reports the real figures rather than leaving them to be inferred:
+  **192 distinct operations, 191 routed, 1 explained by a path collision**
+  (`submitModelPortfolioOrder`).
+
+- **Corrected the 1.1.14 changelog entry**, which described that collision in a way
+  that read as an unimplemented operation. The SDK implements and tests
+  `SubmitModelPortfolioOrder`; all 193 operations in `docs/SPEC.md` are implemented.
+  The gap is confined to the mock gateway's path-based router, and the correction
+  is recorded inline in the 1.1.14 entry.
+
+### Added
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-opid-coverage/`](./docs/runs/2026-09-27-opid-coverage/).
+
+## [1.1.14] - 2026-09-27
+
+The CLI could not be tested, and the reason turned out to be a bug rather than an
+oversight: dispatching an order rewrote the process argument vector.
+
+### Fixed
+
+- **The CLI corrupted `os.Args` when dispatching a subcommand.** `runOrders`,
+  `runPortfolio` and `runConfig` passed a subcommand's arguments down with
+  `os.Args = append(os.Args[:2], args[1:]...)`. That `append` writes into the
+  backing array `os.Args` itself points at, so every command overwrote the
+  arguments every later command would see. Two commands run in one process
+  corrupted each other, and the test harness reads that same array - which is why
+  these commands had no tests at all. The expression is removed rather than
+  repaired.
+
+  `cmd/ibkr` now takes an explicit `env` carrying argv, stdout, stderr and a
+  client factory from `run` down, so no subcommand reads the process. `dispatch`
+  is split out of `run` so the routing table is reachable directly, and
+  `newClient` is a field, so a test can substitute a factory. Direct `os`
+  references now exist only in `main.go` and `env.go`.
+
+  The public API is unchanged: `pkg/ibkr` was not touched, and `cmd/ibkr` is a
+  binary.
+
+### Added
+
+- **20 tests for `cmd/ibkr`**, covering each leaf's help path, each parent's
+  unknown-subcommand error, the dispatch table, and the bounds on flag parsing.
+  `TestOrders_ArgsAreNotLeakedBetweenInvocations` asserts on `os.Args` itself
+  before and after two invocations; reinserting the original `append` makes it
+  fail.
+  `TestArgParsing_ConsecutiveFlagsBothApply` guards a subtler variant: the loops
+  skip a consumed value by advancing their own index, and rewriting them as
+  `for i, a := range args` compiles and looks equivalent, but assigning to a range
+  variable does not advance the iteration - so `-gateway g -rest r positions` would
+  parse `gateway=g` and silently discard `-rest r`. The mutation is caught.
+
+- **Run artifacts** in
+  [`docs/runs/2026-09-27-cli-testability/`](./docs/runs/2026-09-27-cli-testability/).
+
+### Changed
+
+- **CI coverage floor raised from 58% to 60%**, against 63.5% actual. Total
+  coverage went from 62.0% to 63.5% as `cmd/ibkr` became testable. The floor was
+  ratcheted up in steps (35 → 48 → 58) while the suite could not grow, because the
+  one obviously untestable package was untestable for a reason.
+
+- Sixteen copies of `if i+1 < len(args)` across the flag parsers collapsed into
+  two bounds-checked helpers, `argAt` and `argValue`. This replaces two `gosec`
+  G602 findings structurally rather than with `//nolint`: a suppression silenced
+  the normal lint profile and then made `nolintlint` report the directive as unused
+  in the `--tests=false` profile, where `gosec` reported nothing at all. Both
+  profiles are now clean with no suppression.
+
+### Not included
+
+Both remaining gaps are blocked on credentials and are unchanged by this release:
+
+- **D15 live verification** - `year` is omitted for
+  `listTaxDocumentsAvailable`, as the spec marks it optional. Confirming the
+  gateway accepts the request needs a real account.
+- **`submitModelPortfolioOrder` has no route in the mock gateway**, because its
+  path collides with `submitNewOrder`. Routing it would send portfolio orders to
+  the wrong endpoint, so confirming the collision requires an FA-enabled paper
+  account.
+
+  > **Corrected in 1.1.15.** The 1.1.14 wording of this entry said "191 of 192
+  > unique fixture operations are routed", and called the duplicate
+  > `getTradingSchedule` row "a fixture artifact". Both statements invited the
+  > reading that an operation was unimplemented, which is wrong: the SDK
+  > implements and tests `SubmitModelPortfolioOrder`
+  > (`pkg/ibkr/models.go`, `TestModels_SubmitModelPortfolioOrder`). All 193
+  > operations in `docs/SPEC.md` are implemented. The gap is confined to the mock
+  > gateway's path-based router. 1.1.15 adds a test that reports these numbers
+  > directly instead of leaving them to be inferred.
+
+WebSocket `contextcheck` remains excluded: `Subscription.Close()` takes no context
+by design, as it is commonly called from a `defer`, and adding one is a breaking
+API change.
+
+## [1.1.13] - 2026-09-27
+
+A money-moving request was rounding the caller's amount, eleven public SDK
+methods had no test at all, and the linter could be fooled by a test.
+
+### Fixed
+
+- **Bank instructions sent a rounded amount.** The deposit, withdraw and internal
+  cash transfer request bodies declared `amount` as a `float32`, and the wrapper
+  filled them by parsing the caller's decimal string through a float. A caller
+  moving `12345678.91` put `12345679` on the wire. These are the same defect
+  1.1.9 fixed for tax vouchers, in the request direction.
+
+  The spec declares the field as `type: number`, so it must go out as a bare JSON
+  number — retyping it to `string` would break the send. It is now a
+  `json.Number`, which marshals as a number and carries the caller's digits
+  unaltered. An unset amount still becomes `0`, because a zero-value
+  `json.Number` is the empty string and `encoding/json` refuses to marshal it.
+
+  The three existing assertions on this field used `250.75`, `500.25` and
+  `1000.50` — all exactly representable as a `float32`, so they passed whether or
+  not the amount had been rounded. They now compare the literal on the wire.
+
+### Added
+
+- **Tests for eleven previously untested `ModelManager` methods.** The
+  model-portfolio configuration API — presets, accounts in a model, invested
+  accounts, model listing, target positions, model orders — had no coverage at
+  all; the four existing model tests covered rebalance, invest/divest, the cash
+  analyzer and the portfolio-order collision. One of the new tests is a
+  cross-check rather than a smoke test: `ModelsPager` must agree with the
+  `AllModels` it wraps, since the models example now uses the pager.
+- **A second golangci-lint pass in CI with test files excluded.** The normal pass
+  runs with `run.tests: true`, which makes `unused` count a function as used when
+  only a test references it — so production code kept alive solely by its own test
+  was invisible. `float32ToStr` survived that way for a release: a lossy money
+  formatter held open by a test that asserted the rounding it caused.
+
+### Changed
+
+- `examples/live` now demonstrates the error recovery it described.
+  `handleAuthError` and `isAuthError` classify an auth failure and re-acquire the
+  token; the example's step 4 previously just printed the error and moved on.
+- `httpStatusCheck` is removed from that example. It took a raw
+  `*http.Response`, which the SDK never returns, so a reader copying it would
+  reach for something they do not get — `Error.HTTPStatus` is the actual
+  mechanism.
+
+## [1.1.12] - 2026-09-27
+
+Audits every fixed wait in the test suite. Eleven of twenty-six were defects, one
+of those tests was not flaky but vacuous, and the slow tests turned out to be
+pointing at a production latency cost.
+
+### Fixed
+
+- **`Session.Initialize` waited a full second before its first poll.** The loop
+  slept for one second and only then started polling `auth_status`, so every
+  session initialization paid a fixed one-second penalty before it could discover
+  a session that was already established. It now polls first and waits second,
+  which converges at the same rate and takes the second off the happy path.
+- **Eleven tests waited a fixed interval for an event that was already
+  guaranteed**, and could therefore only fail when the machine was slow. They now
+  drive the code under test, or wait for a signal it emits. Six were in
+  `session_test.go` (two of them sleeping 250 ms against a 50 ms tickle interval —
+  five times the interval, a bare guess) and five were `select` blocks whose only
+  arms were `time.After` and `ctx.Done()`, which a grep for `time.Sleep` does not
+  find.
+- **`TestSession_StartTickle_Idempotent` could not fail.** It slept, then compared
+  two reads of a token that `tickleFn` always returned identically, so the reads
+  matched whether or not a second tickle loop had been started. It now injects a
+  manual clock whose tickers each get their own channel, ticks once, and asserts
+  exactly one ticker and one round — so a double-start is detected. Confirmed by
+  breaking the idempotency guard in `startTickle`.
+
+  The remaining fifteen fixed waits are legitimate and are unchanged: circuit
+  breaker cooldowns, injected latency in the fault-injection and timeout tests,
+  the OAuth test's deliberate window proving a call did *not* return early, and
+  the goroutine-leak settle.
+
+### Changed
+
+- `fakeSink`, `fakeSystemSink` and `fakeOutOfOrderSink` gained buffered notify
+  channels so tests can wait for a delivery instead of a duration. A nil channel
+  is still safe for tests that only inspect the recorded slices, and the wait
+  helpers now fail with a clear message on a nil channel rather than hanging until
+  the context expires.
+- `Clock.Sleep` and its `sleepFunc` hook are removed, unused since `Initialize`
+  stopped sleeping.
+
+### Verified
+
+Full suite, race detector, 10 full-repo runs at `GOMAXPROCS=2`, 25 runs of the
+goroutine-owning session tests, and 12 race runs at `GOMAXPROCS=1` all pass. A
+script confirms no bare fixed waits remain. Coverage is unchanged at 60.0%.
+
+## [1.1.11] - 2026-09-27
+
+Closes the *class* of defect fixed narrowly in 1.1.9, and deletes the dead code
+that was left behind by it.
+
+### Added
+
+- **`check_money.py` now rejects rendering money through a binary float.** The
+  existing rule only inspected exported struct fields, so it was structurally
+  blind to function bodies — and the 1.1.9 tax-voucher defect lived entirely
+  inside one, where a decoded `float32` was re-rendered with
+  `strconv.FormatFloat` and the cents silently vanished above 2^24. Two vectors
+  are now rejected in production `pkg/ibkr` code: a direct `strconv.FormatFloat`
+  call, and any helper that takes a binary float and returns a string, which is
+  how the same defect returns once the direct call is removed. Both were
+  confirmed by reintroducing each and watching the gate fail with the specific
+  diagnostic. A genuine need is an explicit entry in `ALLOWED_FLOAT_FORMATS`,
+  which has to state why; the list is empty today.
+
+  This matters because the generated client still contains 426 `float32` fields,
+  198 of them monetary. None of them currently reaches a caller — `rawToString`
+  extracts money through `json.Number`, which preserves the gateway's digits —
+  so this is preventative rather than a fix for live corruption. But nothing
+  previously stopped the next person from routing one of them through a float.
+
+### Changed
+
+- `docs/design/07-money-and-numbers.md` now describes what the gate actually
+  does. It claimed the check matched money field *name* patterns
+  (`Price`, `Amount`, `Qty`, …); it does not — it rejects every exported float
+  field and carries a small explicit allowlist. It also did not mention the
+  float-formatting rule.
+
+### Removed
+
+- **`float32ToStr`, and its test.** After 1.1.9 retargeted the tax-voucher fields
+  at `json.Number`, the helper had no production caller left. It survived as
+  dead code because `run.tests: true` in the lint config means `unused` counts a
+  function as used when only a test references it — so the one thing keeping it
+  alive was a test that asserted the rounding loss it existed to cause
+  (`16777217` → `"16777216"`). The new gate closes that blind spot for this
+  shape: a float-to-string helper in production `pkg/ibkr` now fails the build
+  whether or not anything calls it.
+
+## [1.1.10] - 2026-09-27
+
+Tests only. No production code, no generated code, no API change, no dependency
+change: the sole file touched is `internal/ws_test.go`.
+
+### Fixed
+
+- **`TestWS_DialAndSubscribe` no longer depends on machine speed.** It slept a
+  fixed 500ms and then asserted that at least one market-data update had arrived.
+  The mock gateway emits its scripted ticks synchronously while handling the
+  subscribe frame, so the update is already on the wire before `Subscribe`
+  returns; the sleep was not waiting for anything, and the assertion could only
+  fail when the machine was slow. The test now waits for the delivery event with
+  the context deadline as its bound.
+
+  This makes the test both non-flaky and stronger. It runs in about 10ms instead
+  of 500ms, and it now also asserts that the first update's `ConID` is the one
+  that was subscribed - a claim the previous version never made.
+
+  Verified over 15 consecutive runs, and over 4 runs under `-race` with
+  `GOMAXPROCS=2`, which is the contention that previously broke it.
+
+### Not changed
+
+The other `time.Sleep` and `time.After` call sites in the test suite are not the
+same defect and were deliberately left alone. `oauth_test.go` waits 200ms to
+prove a call did *not* return early, which cannot be expressed as a wait on an
+event; the circuit-breaker tests sleep for a cooldown, which is a genuine
+time-based state transition; and the fault-injection tests sleep to simulate
+injected latency. Widening any of those would make the suite slower without
+making it more truthful.
+
+## [1.1.9] - 2026-09-27
+
+The lint gate now runs, and it found five real defects that nothing else was
+watching for.
+
+### Fixed
+
+- **`SubmitDocument` discarded its `mimeType` argument.** The signature accepted a
+  MIME type, defaulted it to `application/pdf`, and then built the multipart part
+  with `CreateFormFile`, which hardcodes `application/octet-stream`. The caller's
+  argument never reached the wire. The part is now constructed explicitly, with
+  the filename escaped per RFC 7578.
+- **The default response size limit was never applied.** `internal/transport.go`
+  declared `defaultMaxResponseBytes` and applied the cap only when
+  `MaxResponseBytes` was explicitly configured, leaving the constant unreferenced
+  and every default-configured client with no limit at all on the response body it
+  buffers. The cap is now always applied.
+- **Exceeding that limit failed silently.** `maxBytesReader` returned a short read
+  and its own documentation claimed the truncation was "detected by the caller and
+  surfaced as a typed error" - no caller did that anywhere, so an oversized
+  response decoded as corrupt JSON with no indication why. It now returns the new
+  `internal.ErrResponseTooLarge`, and an exact fit still succeeds.
+- **A panic in a subscription goroutine was swallowed.** The recover block in
+  `pkg/ibkr/ws.go` was empty, under a comment reading "sink is already gone; log
+  and exit"; it did neither. A panic there would have made a live subscription go
+  quietly quiet. It now logs through the client logger and closes the
+  subscription.
+- **A WebSocket resilience test was not testing anything.** It compared errors with
+  `==` against `ErrWSDisconnected`, but the WebSocket layer wraps its errors, so
+  the comparison could never match and the test could not detect the disconnect it
+  exists to detect. Now uses `errors.Is`.
+
+### Changed
+
+- **`.golangci.yml` was rejected by the linter and had never analysed any code.**
+  It declared `version: "2"` but used the v1 schema, so `linters-settings` and the
+  `issues.exclude-*` keys were all invalid. The job passed by never running. The
+  config is migrated to the v2 schema, revive's `exported` rule is configured
+  correctly (it had also been failing to set up and silently reporting nothing),
+  and every remaining exclusion carries a comment explaining its reason. The gate
+  now reports **0 issues** over a true finding count of 192.
+- 32 exported symbols gained doc comments; 9 redundant conversions, 33 unchecked
+  writes and 2 ignored `json.Unmarshal` calls were made explicit; 4 unused wire
+  structs, 2 unused helpers and 1 unused test helper were deleted.
+- `examples/models` uses `ModelsPager` instead of the deprecated `AllModels`.
+- The mock gateway sets `tls.Config.MinVersion` explicitly instead of relying on
+  the zero value.
+
+### Added
+
+- **Tests for `cmd/ibkr`, which had none.** `run`, `parseGlobalFlags` and
+  `runCompletion` now take their arguments and output streams as parameters
+  instead of reading `os.Args`, so the dispatch table, help, version, flag
+  parsing and the generated shell completions are all reachable from a test.
+- **A design-doc checker for `docs/design/07-money-and-numbers.md`**, bringing
+  verified design documents from 8 of 9 to **9 of 9**. `check_money.py` proves no
+  exported field is a float; this check additionally requires that the four
+  `json.Number` money fields the document names are still `json.Number` in the
+  generated client, so a spec edit cannot quietly put a float back.
+- Regression tests for the response size cap: default applied without opt-in,
+  overflow reported rather than truncated, exact fit accepted, and a 101 upgrade
+  response left unwrapped so WebSocket dialing keeps working.
+- Five red cases and a control for the new money checker.
+
+### Fixed in the tooling itself
+
+- The design-checker red tests asserted on error messages containing hard-coded
+  line numbers, so adding a doc comment anywhere above a declaration broke them
+  with a misleading "failed for the wrong reason". The comparison now strips line
+  numbers from both sides.
+
+## [1.1.8] - 2026-09-27
+
+Five wire-contract and numeric-precision defects, plus two CI gates that existed
+but were never enforced. Two of the defects had been carried as "needs live
+gateway evidence" and turned out to be decidable from the committed spec.
+
+### Fixed
+
+- **Bulk instruction cancel silently dropped the caller's reason.**
+  `CancelInstructionsBulk` built each instruction with only `InstructionId`, even
+  though the generated `CancelInstruction` carries `Reason` and the single-cancel
+  path sets it. A reason supplied to a money-moving operation was discarded before
+  the request left the process.
+- **Bulk external asset transfer V2 sent `quantity` as a JSON string.** The spec
+  models `TradingInstrumentV2.Quantity` as a number, and the single-item path
+  already emitted one, but the bulk path hand-rolled a local struct with
+  `Quantity string` — so the bulk endpoint received a different type for the same
+  field than the single endpoint did. The bulk path now converts with the same
+  `strToDecimal` helper, and its triplicated inline position type is collapsed
+  into one named type.
+- **Tax voucher money was silently rounded.** `divAmount`, `withHeldAmount`,
+  `fee` and `quantity` generated as `float32`, whose 24-bit mantissa rounds
+  anything above 2^24 (16777216). An input of `12345678.91` was reported to the
+  caller as `"12345679"`. These four fields are now `json.Number`, which accepts
+  the JSON number the gateway actually sends and preserves its digits. The
+  existing spec patch that retypes money to `string` cannot be used here: that
+  would fail to decode, because Go cannot unmarshal a number into a string.
+- **The available-tax-years call sent `year=`.** The spec marked the tax year as
+  required on the operation that reports which years exist, so the generated
+  field was non-pointer and the wrapper sent a present-and-empty parameter. The
+  parameter is now optional for that one operation and is omitted. The shared
+  component is untouched for operations that genuinely require a year.
+- `AssetTransferRequest.Quantity` is now documented as the V1 single-instrument
+  field. No behaviour change — the V2 paths were already correct to ignore it.
+
+### Added
+
+- `scripts/check_money.py` (the ADR 0008 guard) now runs in CI. It existed as a
+  Make target but was never enforced, so a float money field could land in
+  `pkg/ibkr` without failing the build.
+- `make license-check` now runs in CI, so a missing SPDX header fails the build.
+
+### Changed
+
+- `patch_spec.py` gains two defects: one retyping always-numeric money fields to
+  `json.Number`, one relaxing the tax year on the available-years operation.
+- `docs/design/07-money-and-numbers.md` now records both reasons the SDK uses
+  `json.Number` internally, including the float32-rounding case this release
+  fixes.
+
+## [1.1.7] - 2026-09-27
+
+Docs and tooling only. No production code, no generated code, no dependency
+change: the only file touched under `pkg/` is the `Version` constant.
+
+### Changed
+
+- **`check_design` is now a release gate.** It previously ran only when a
+  maintainer typed `make docs-check`; neither CI nor the pre-PR `make check`
+  invoked it, so drift in the design documents could not fail anything. The
+  `docs` job gained a `setup-go` step and a `Check design docs against the code`
+  step, and `make check` is now `fmt vet money-check design-check test`. For the
+  first time, a design document that disagrees with the code stops the build.
+
+- **The checker now verifies 8 of 9 design documents, up from 2.** New coverage
+  for `02-client.md` (5 checks), `04-generated-wrapping.md` (2),
+  `05-streaming.md` (3), `06-errors-retries.md` (6), `08-concurrency.md` (3) and
+  `09-orders-and-confirmation.md` (6) - **25 checks in total**, each one observed
+  failing when its claim is broken, so none of them is inert.
+  `07-money-and-numbers.md` is deliberately excluded: `check_money.py` already
+  enforces its main claim over the whole tree, and a second gate over the same
+  fact would be one more thing to keep in step and no stronger.
+
+- **The checker is backed by a mutation harness of 232 subtests** across five
+  suites, including **two negative controls** that swap a strict branch for a
+  naive one and require the specific cases to go red, so a future edit cannot
+  quietly weaken a check. A third control breaks two documents at once and
+  requires both messages from a single run, proving the harness is not inert.
+
+### Fixed
+
+- **Five false statements in design documents**, all found by the new checks and
+  all resolved in favour of the code:
+
+  - `09-orders-and-confirmation.md` documented `Reply.Message string` where the
+    code declares `Messages []string` (`pkg/ibkr/trade.go`). A caller following
+    the document got a **compile error**. Its `OrderRequest` block also listed
+    `TimeInForce` before `StopPrice` and omitted `ParentID` and `IsSingleGroup`
+    entirely.
+  - `02-client.md` documented `WithOAuth2JWTKey(key []byte)` and
+    `WithOAuth2JWTKeyPath(path string)`. Neither compiles: the real signature
+    takes `*rsa.PrivateKey`, and the path form is `WithOAuth2JWTKeyFile`. The
+    same block's completeness note claimed to omit two fields that the block
+    lists directly above it.
+  - `06-errors-retries.md` omitted `RetryPolicy.Metrics`, which the struct
+    declares and which drives the retry backoff and retry metrics.
+
+### Fixed (tooling hygiene)
+
+- **Every `golangci-lint` finding in `scripts/` is resolved.** `golangci-lint
+  run` over `./scripts/...` now reports **0 issues** uncapped; the run recorded 8
+  before. Every `//nolint` carries a site-specific reason.
+
+- **`scripts/changelog-gen.sh` and `scripts/sbom-gen.sh` now carry the SPDX
+  header** that `AGENTS.md` requires of every source file.
+  `addlicense -check scripts pkg internal cmd` exits 0.
+
+### Known, deliberately unchanged
+
+- The `lint & security` job **remains red**: `golangci-lint run` uncapped over
+  `./pkg/... ./internal/... ./cmd/... ./scripts/...` reports **733 issues**, all
+  of them in library code, and `.golangci.yml` still **fails**
+  `golangci-lint config verify` - a v1 file declaring `version: 2`, so
+  golangci-lint silently discards its `linters-settings` and `issues` blocks and
+  the author's exclusions have never applied. This release is out of that
+  scope; the state is documented in
+  [`docs/runs/2026-09-27-design-checkers/report.md`](./docs/runs/2026-09-27-design-checkers/report.md)
+  and is **not** fixed here. The three blocked wire-contract items from v1.1.6
+  (bulk-cancel `Reason`, the V2 `quantity` number/string divergence, the ignored
+  `AssetTransferRequest.Quantity`) also remain open.
+
+## [1.1.6] - 2026-09-27
+
+The mock gateway shipped a fixture-shape check that could not fail, and two
+fixtures it should have caught. Both classes of defect are closed here, along
+with the check itself.
+
+### Fixed
+
+- **The mock gateway was lying about the API contract in two places.**
+
+  `createSsoSessions` sent `accessToken` and `tokenType`, but the generated
+  `CreateSessionResponse` tags them `access_token` and `token_type`
+  (`client/client.gen.go:11717`, `:11721`). Decoding is non-strict, so
+  `CreateSessionResponse.AccessToken` was permanently `""` - the fixture looked
+  like it returned a token, and the SDK never saw one.
+
+  `getRequestsStatus` sent `executedAt`, a key belonging to a different
+  operation. The real type carries `dateSubmitted`, so
+  `RESTRequestInfo.ExecutedAt` was permanently nil on the default path. Its test
+  asserted that nil as though it were correct; the assertion is now inverted to
+  require the populated value, using a `-05:00` timestamp that crosses midnight
+  so the UTC normalisation is genuinely exercised rather than copied.
+
+- **A wasted round trip on every `TradeConfirmations.ListAvailable` call.** The
+  method acquired an OAuth2 token and passed it as a request parameter, but the
+  transport's `Auth` middleware overwrites the `Authorization` header at
+  RoundTrip time, so the acquisition was discarded. Removed; the header still
+  arrives, via the middleware, and the test now pins its exact value so a header
+  carrying an empty token cannot satisfy it.
+
+### Changed
+
+- **The fixture shape check now works, and is stricter than a naive fix.**
+  `internal/mockgateway/shape_test.go` set `DisallowUnknownFields` on a decoder
+  whose target was `var js any`. `any` has no fields, so the option could never
+  fire: the check only ever validated JSON well-formedness and could not detect a
+  wrong-key fixture - the exact class of defect the two items above are
+  instances of. It now resolves each operation's real response type,
+  key-checks the body against it, and derives from `pkg/ibkr` call sites (via
+  `go/ast`) which operations production actually decodes through the generated
+  type at all. **113 of the 184 operations** `pkg/ibkr` reaches are not: they
+  unmarshal `resp.Body` into their own structs, so for those the generated type
+  is irrelevant and comparing against it was invalid. Final state: **180
+  passed, 4 skipped, 0 failed** of 191 fixtures, with enforcement tighter than
+  the naive version - key-checked against a single response type rose from 50 to
+  59 operations, per-key `oneOf` checking from 1 to 2. Both historical bugs stay
+  caught by `TestValidateShapeRejectsMismatchedKeys`. Coverage gaps are reported
+  with the `file:line` that justifies each exemption, never silent.
+
+- **Twelve further fixtures corrected to their generated shape**: five forecast
+  operations (the generated types are objects, the fixtures were arrays), three
+  OAuth token endpoints (`token` is declared by no field), two market-data and
+  portfolio acknowledgements (`status` is not a declared key), `ackServerPrompt`
+  (the type is a bare JSON string), and `cancelOpenOrder` (`order_id` is `int64`
+  there, versus `string` in its sibling operations).
+
+- **Dead code removed**: `strToDecimalPtr`, `makeTradingInstrumentRef` and
+  `f32PtrToInt64Ptr` in `rest_banking.go` had no production caller - the only
+  references were tests that existed solely to reach them. An orphaned test
+  helper, `sortedKeys`, was removed with them. 383 insertions, 0 deletions
+  elsewhere: no exported API changed.
+
+### Testing
+
+- **Four `rest_banking.go` request payloads are now pinned byte for byte** -
+  exact key set and exact JSON type per key - so the deferred wire-contract
+  decisions can be made with a provable before and after rather than a guess.
+  Three remain **open and blocked** on a human decision or a real gateway, and
+  are **not** fixed here: whether bulk-cancel accepts a `Reason`
+  (`rest_banking.go` copies only `InstructionId`, so every element ships
+  `reason: ""`), the V2 `quantity` number/string divergence (a JSON number on
+  the single path, a JSON string on the bulk path, from the identical caller
+  input `"10"`), and the ignored `AssetTransferRequest.Quantity` on both V2
+  paths. The pinning tests say so in their own comments.
+
+## [1.1.5] - 2026-09-27
+
+### Fixed
+
+- **`instructionSetId` was silently truncated on three banking
+  acknowledgements.** `rest_banking.go` rendered the ID with
+  `strconv.FormatFloat(float64(id), 'f', -1, 32)` on an `int` field. A 32-bit
+  float keeps only 24 mantissa bits, so any ID above 2^24 (16,777,216) was
+  rounded — the spec's own documented example, `1988905739`, came back as
+  `1988905700`, off by 39. Callers polling or reconciling by that ID addressed
+  the wrong instruction. Now uses `strconv.Itoa`, matching the three sibling
+  sites in the same file that already did.
+
+- **REST error detail was being discarded.** `wrapOp` unconditionally wrapped
+  its argument in a new `*Error`, so the 79-plus `>= 400` guards that pass a
+  typed `*Error` produced an outer error with `Code: ""` and `HTTPStatus: 0`,
+  with the real values buried one level down in `.Err`. Callers following the
+  documented `errors.As(err, &e); e.HTTPStatus` idiom in `docs/ERRORS.md` read
+  zero. `wrapOp` now adopts an existing `*Error`, filling only a missing `Op`.
+
+- **`RESTRequestInfo.ExecutedAt` was never populated** and the method had an
+  `if` whose two branches were identical. The 200 body is a `oneOf` union; it is
+  now decoded properly and `ExecutedAt` is filled from the `dateSubmitted`
+  field, the only timestamp the spec provides for that operation. The field name
+  is a known misnomer (it carries submission time) and is kept for API
+  compatibility.
+
+- **Dead code removed**: five unused response types and their `toPublic`
+  converters in `rest.go` had no caller anywhere in the module.
+
+### Changed
+
+- **`TradeConfirmationRequest.Gzip` is documented as not sent**: the upstream
+  body schema has no `gzip` property and the operation takes no gzip query
+  parameter, so there is nothing to forward it into. The field is retained for
+  API compatibility. `RESTStatements` does support gzip.
+
+- **`ActiveCountries` documentation corrected**: it returns display names such
+  as "United States", not ISO codes. Each upstream record also carries
+  `countryCode`, which this method does not return.
+
+### Added
+
+- **Coverage is now 58.7%**, with the CI floor raised from 48% to **58%** — the
+  third step of a ratchet that started at 35% in v1.1.3. The reports,
+  tax-vouchers and REST-banking surfaces gain end-to-end tests in this release,
+  following the accounts, utilities and notifications surfaces in v1.1.4; no
+  production code changed to make them pass.
+
+## [1.1.4] - 2026-09-27
+
+### Fixed
+
+- **REST connection reuse was completely broken: every request dialled a fresh
+  connection.** `internal.Timeout` installed `defer cancel()` inside its
+  `RoundTrip` closure, so the request context was cancelled the moment
+  `RoundTrip` returned, before the caller read the response body. `net/http`
+  reacts to an already-cancelled request context by closing the connection
+  instead of returning it to the keep-alive pool, which also defeated
+  `cancelOnCloseBody` — the wrapper whose documented purpose is exactly to defer
+  that cancel until the body is consumed. Measured with 24 sequential REST
+  calls: **24 new TCP connections before the fix, 0 after**. The cancel func is
+  now handed to the body wrapper on success and called explicitly on the error
+  paths, so no request timer leaks.
+
+- **The logout response body was never drained or closed.**
+  `internal.httpAPI.logout` discarded the `*http.Response` returned by
+  `client.Do`, dropping one connection per `Client.Close()`. Draining to EOF
+  before closing is required here: `net/http` still discards the connection on a
+  bare `Close`, so a close without a drain would not have fixed it. The
+  `defer cancel()` already in that function remains load-bearing and was left in
+  place.
+
+- **`UpdateTasks` silently dropped `isCompleted: false`.** The internal wire
+  struct tagged a plain `bool` with `omitempty`, and `encoding/json` omits
+  `false` for `omitempty`, so a request marking a task not-completed or declined
+  serialised to `{"taskId":"t2"}` with the field absent. The call is a `PATCH`,
+  where absence means "leave unchanged", which made that update inexpressible.
+  The tag no longer carries `omitempty`. The exported `TaskUpdate.IsCompleted`
+  type is unchanged, so this is not an API change.
+
+### Added
+
+- **REST coverage work continued.** The accounts surface gained end-to-end
+  tests. CI coverage is now **50.0%** against a floor of **48%**, up from 35% in
+  the previous release.
+
+## [1.1.3] - 2026-09-26
+
+### Fixed
+
+- **The mock gateway leaked a goroutine per parked WebSocket handler.**
+  `serveWS` blocked on `c.Read(context.Background())`, a context that is never
+  cancelled, and `httptest.Server.Close` does not track hijacked connections, so
+  a handler outlived the server that started it. This surfaced as an
+  intermittent `TestWS_Resilience` failure that named no subtest: the parent
+  failed because a handler from an earlier subtest was still alive when its leak
+  check ran. `go test ./internal/ -count=2` reproduced it reliably.
+  `StreamHub.closeAll` now closes every registered stream socket with
+  `CloseNow`, which is what actually unblocks a read parked on an
+  uncancellable context, and `Server.Close` exposes it.
+
+- **`WSConn.waitForDone` was dead code** with zero callers; the live path inlines
+  the same logic. Removed.
+
+### Added
+
+- **`waitForGoroutinesToSettle`** gives the WebSocket tests a bounded settle
+  before their goroutine-leak assertion, and is tested in both directions to
+  prove it reports a real leak rather than tolerating one.
+
+### Changed
+
+- **Four inaccurate claims in the run records are corrected.** The `ws-shutdown`
+  report's `-race` note described an environment property rather than a project
+  limitation. The `audit-remediation` run recorded coverage as 37.5% against a
+  35% floor and called the margin thin; that figure came from a profile two days
+  older than the tests that produced it, and a fresh measurement gives 43.3%, an
+  8.3-point margin. Its claim that the coverage gate "cannot detect a
+  replacement" was misattributed and false, since `check_design` verifies both
+  presence and order. Its "goleak in 4 of 42 test files" note understated what
+  exists, since both goroutine-owning packages already leak-check from `TestMain`.
+
+## [1.1.2] - 2026-09-26
+
+### Added
+
+- **`TestModelOrderRouteCollision`** documents a known limitation of the mock
+  gateway's path-based router: `submitNewOrder`
+  (`POST /v1/api/iserver/account/{accountId}/orders`) and
+  `submitModelPortfolioOrder` (`POST /v1/api/iserver/account/{modelCode}/orders`)
+  are identical once placeholders are normalized, and the SDK sends a
+  byte-identical payload for both, so the first-declared route always wins. A body
+  predicate was implemented and then removed after the payloads were found to be
+  identical. `OpSubmitModelPortfolioOrder` is now declared but deliberately left
+  unrouted, since a registered route there could never be selected.
+
+- **`TestModels_SubmitModelPortfolioOrder` now verifies the full response
+  decode.** The test installs the broker's real snake_case response shape on the
+  shared route for the duration of the call, exercising request build, the
+  transport chain, the generated client, and decoding into the public type. It
+  asserts `order_id`, `order_status`, the `id` reply field, and the `message`
+  array. Previously it could only assert that one response entry came back.
+
+### Changed
+
+- `test/integration_test.go` records why the mutating model endpoints are
+  excluded: the suite declares itself read-only, and those operations submit
+  orders or move money. It also gains a read-only `AllocationModels` case that
+  skips when the account lacks financial-advisor entitlement.
+
+### Documentation
+
+- Marks E3 complete in the `blueprint-hardening` todos and report, which had both
+  said `review` after the work shipped in v1.1.1.
+- Rewrites the `ws-shutdown` next-phase document: collapses the two duplicated
+  "Recommended next phase" headings, folds the completed P2, P3, E3, and spec
+  drift items into a single "Completed since this run was written" section, and
+  marks P4 as not started.
+- Adds `docs/runs/2026-09-26-audit-remediation/` with the full artifact set and
+  an index row, so the v1.0.7 through v1.1.2 work has a home.
+
+### Known limitations
+
+- The mock gateway cannot route `SubmitModelPortfolioOrder` separately, and the
+  integration suite stays read-only, so whether a real gateway dispatches that
+  operation correctly is unverified. The response decode itself is covered.
+
+## [1.1.1] - 2026-09-26
+
+### Added
+
+- **Multi-drop reconnect scripting in the mock gateway.** `StreamScript` gains
+  `DropConnections int`, which closes the first N accepted connections after
+  their first subscribe frame. `DropFirstConnection` still works and is
+  equivalent to `DropConnections: 1`. `StreamHub.AcceptedConnections` exposes the
+  running connection count so a test can assert how many reconnects happened.
+
+- **Coverage for previously untested paths:**
+  - late-dial discard, so a connection dialled as shutdown begins is force-closed
+    and never published;
+  - dispatch-level sequence-gap detection, asserting a lower `_updated` value
+    surfaces exactly one `*WSGapError` while still delivering the tick;
+  - `ForceRefresh` joining an in-flight fetch instead of starting a second one,
+    and honouring context cancellation while waiting on it;
+  - `RESTSurface.Invalidate` being safe and idempotent on a closed client;
+  - the OAuth2 example's `isAuthError`, `handleAuthError`, and
+    `httpStatusCheck` helpers.
+
+### Fixed
+
+- **Streamed `Update.Status` was unreachable.** Field `6509` was listed in
+  `wsReservedField`, so `dispatch` dropped it before delivery and the
+  `Subscription.Deliver` branch that populates `Update.Status` could never run.
+  The status code is now delivered, so delayed, frozen, and not-subscribed states
+  are visible on streamed updates as documented.
+
+- **`check_design` never compared anything.** Its middleware-order extraction
+  matched `*ast.Ident` against `cfg.Field` conditions, but those parse as
+  `*ast.SelectorExpr`, and `cfg.Retry.enabled()` as a `*ast.CallExpr`, so the
+  extracted order was always empty and the code-versus-document comparison was
+  vacuous. Extraction now walks the `ms = append(ms, ...)` calls directly, fails
+  loudly if it finds nothing, and diffs the assembled order against the
+  documented chain. Reordering or adding middleware in the code without updating
+  `docs/design/01-transport.md` now fails the check.
+
+- **`make codegen` and `make codegen-verify` failed on Windows.** Both scripts
+  embedded the `mktemp -d` path into the oapi-codegen config, but that path is an
+  MSYS path which the native Windows binary cannot resolve. They now convert it
+  with `cygpath -m`, which yields a forward-slash Windows path that needs no YAML
+  escaping.
+
+- **`make docs-spec` crashed on Windows.** `gen_spec_index.py` read the spec
+  without an explicit encoding, and Windows defaults to cp1252, which cannot
+  decode the spec's non-ASCII characters. Both the read and the write now pin
+  UTF-8, matching the earlier `patch_spec.py` fix.
+
+### Changed
+
+- `docs/design/01-transport.md` now lists the `maxBytes` layer, which the code
+  has always assembled but the diagram omitted.
+- Corrected inaccurate claims in `docs/TESTING.md` (fixture location, goleak
+  scope, `TestMain` behaviour, race invocation, codegen scheduling) and
+  `docs/STREAMING.md` (channel closure on error, per-channel overflow policy,
+  what the overflow test actually asserts).
+- Corrected `CHANGELOG.md` history: 53 fuzz functions rather than 47, the shape
+  test is a structural check rather than 180 per-operation comparisons, the
+  migration guide is 219 lines, and fuzz corpora are not stored under
+  `testdata/`.
+- Dropped the pre-alpha wording from the Japanese, Korean, and Spanish READMEs;
+  the project is stable and unofficial, matching the English README.
+- Corrected the README lifecycle and transport-chain diagrams to match the code,
+  including that `Client.Close` closes the WebSocket before session release.
+
+## [1.1.0] - 2026-09-26
+
+### Added
+
+- **Eight model-portfolio and allocation operations are now exposed.** The v2.40
+  spec carries 193 operations but only 185 had public wrappers. Adds
+  `ModelManager.IsFullMaster`, `ModelCashAnalyzer`, `RebalanceToExistingTargets`,
+  `RebalanceToNewTargets`, `RebalanceToSpecificTargets`, `TwsInvestDivest`,
+  `SubmitModelPortfolioOrder`, and `AllocationManager.AllocationModels`, with
+  matching mock gateway routes and fixtures. `docs/SPEC.md` is regenerated to
+  193 operations and 451 schemas, and the canonical coverage counts move from
+  115/70/185 to 123/70/193.
+
+  Money and quantity values in the new public types are strings, per ADR 0008.
+  `RebalanceToNewTargets`, `RebalanceToSpecificTargets`, `TwsInvestDivest`, and
+  `SubmitModelPortfolioOrder` take hand-marshalled request bodies because their
+  generated request types embed anonymous structs that cannot be named from
+  another package.
+
+  `SubmitModelPortfolioOrder` has no dedicated mock route: its path template
+  normalizes to the same method and path as the Phase-1 `submitNewOrder` route,
+  and the mock router is first-match, so that route always wins. The operation
+  still satisfies the SPEC coverage check, which compares normalized
+  method and path. Its response decode is therefore not exercised by the mock
+  and needs a real gateway to verify.
+
+### Fixed
+
+- **`make docs-spec` crashed on Windows.** `gen_spec_index.py` read the spec
+  without an explicit encoding, and Windows defaults to cp1252, which cannot
+  decode the spec's non-ASCII characters. Both the read and the write now pin
+  UTF-8, matching the earlier `patch_spec.py` fix.
+
+## [1.0.8] - 2026-09-25
+
+### Fixed
+
+- **Reconnect notification ordering.** `reconnect` called `notifyReconnect`
+  before `resubscribeAll`, so a consumer reacting to `ErrWSReconnected` could
+  read its `Updates` channel before the subscribe frames had been issued and
+  lose the first updates after a reconnect. Resubscribing now precedes the
+  notification, matching the order already documented in
+  [docs/STREAMING.md](./docs/STREAMING.md). Adds a regression test that fails
+  under the previous ordering.
+
+### Changed
+
+- Added `.gitattributes` enforcing `* text=auto eol=lf`. Without it, a Windows
+  checkout can leave CRLF in the working tree, which makes a local
+  `gofmt -s -l .` and `make check` report files that are correctly stored as LF
+  in git. This is the same class of problem that previously shipped CRLF in
+  `client/client.gen.go` and broke the codegen drift check.
+- Aligned `.github/workflows/pre-commit.yml` with `ci.yml`: the gofmt
+  exclusion now matches Windows path separators, and `actions/setup-go` moves
+  from the pinned `@v5` to `@v7` used by every other workflow.
+- Documented the golangci-lint, gofmt-pattern, and Windows line-ending CI
+  fixes that shipped inside the `v1.0.7` range without a changelog entry.
+
+## [1.0.7] - 2026-09-25
+
+### Fixed
+
+- **golangci-lint was installed from a non-existent module path.** The lint job
+  ran `go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest`;
+  the v2 module moved that command to `.../golangci-lint/v2/cmd/golangci-lint`,
+  so the install could not succeed. CI steps also gained an explicit
+  `shell: bash` default, and the release workflow was restructured.
+- **`gofmt` exclusion pattern was POSIX-only.** The format check excluded the
+  generated client with `grep -v '^client/'`, which does not match the
+  backslash-separated paths `gofmt` emits on Windows. It now uses
+  `grep -vE '(^|[\\/])client[\\/]'`, matching `ci.yml`.
+- **Windows checkout line endings.** CI now sets `core.autocrlf false` and
+  re-checks out the tree on Windows so formatting checks see consistent
+  endings. This treats the symptom; the underlying cause is addressed by the
+  `.gitattributes` added in `[Unreleased]`.
+- **Coverage gate never enforced anything.** `.github/workflows/ci.yml` parsed
+  the total with `awk -F'[.%]' '{print $3}'`, which extracts an empty field from
+  `total: ... 36.8%`. The subsequent `[ "$TOTAL" -lt 60 ]` then errored rather
+  than comparing, so the step passed unconditionally. The parser now reads the
+  last field and strips `%`, and the threshold uses a float comparison instead of
+  `[ -lt ]` (which rejects decimals). Threshold set to 35%, the current measured
+  coverage, as a ratchet baseline.
+- **`codegen drift` CI job failing on every run.** The committed
+  `client/client.gen.go` blob used CRLF line endings and the repository has no
+  `.gitattributes`. `validate_codegen.sh` diffs the committed file against a
+  fresh generation, and on Linux the generator emits LF, so the check failed even
+  though the generated code was otherwise identical. Regenerated with LF; the
+  drift check now passes.
+- **`make codegen` / `make codegen-verify` crashed on Windows.**
+  `patch_spec.py` wrote the patched spec to `sys.stdout`, which defaults to
+  cp1252 on Windows and cannot encode the spec's non-ASCII characters. stdout is
+  now reconfigured to UTF-8.
+
+### Changed
+
+- **`patch_spec.py` defect 8:** money and quantity fields declared inline under
+  `paths` are now retyped from `number` to `string` (ADR 0008). Defect 7 only
+  walked `components.schemas`, so eight fields across three operations still
+  generated as `float32`. The new allowlist is deliberately separate from defect
+  7 so that live banking request schemas (`FopInstruction`, `DwacInstruction`,
+  `ComplexAssetTransferInstruction`, `singleOrderSubmissionRequest`) keep their
+  existing wire format. See `docs/CODEGEN.md`.
+- Regenerated `client/client.gen.go` from the patched v2.40.0 spec. All six
+  money/quantity fields on `SubmitModelPortfolioOrderJSONBody` and both
+  `AmtToInvest` fields are now `*string`.
+
+### Documentation
+
+- `docs/CODEGEN.md` — documented all eight spec defects, added a line-endings
+  section explaining the drift failure, and corrected the measured line count
+  (72,532 → 75,688).
+
+## [1.0.6] - 2026-09-24
+
+### Added
+
+- Added explicit `RESTSurface.ForceRefresh` and `RESTSurface.Invalidate`
+  lifecycle controls while preserving automatic token refresh.
+- Hardened OAuth single-flight result delivery and prevented invalidated
+  in-flight results from repopulating the access-token cache.
+- Updated the OAuth2 live example to avoid printing token material.
+
+### Fixed
+
+- Made the optional Gitee CI mirror authenticate with `GITEE_TOKEN` and skip
+  cleanly when the secret is not configured.
+
+## [1.0.5] - 2026-09-24
+
+### Fixed
+
+- Fixed the release workflow's Gitee mirror step to push a detached tag
+  checkout as `HEAD:main`.
+
+## [1.0.4] - 2026-09-24
+
+### Fixed
+
+- Fixed the WebSocket shutdown hang caused by the D4 sequence-gap change: an
+  uninitialized `lastUpdated` map could panic while holding `WSConn.mu`.
+- Made explicit WebSocket close cancel active I/O and close the socket without
+  waiting indefinitely for a graceful handshake.
+- Prevented reconnect from publishing a connection after shutdown began.
+- Reserved market-data field `6509` consistently.
+
+### Changed
+
+- Added regression coverage for sequence tracking, silent peers, active
+  subscriptions, and repeated WebSocket close/reconnect runs.
+- Corrected the prior run report's diagnosis of the Windows failure.
+- Made `money-check` struct-aware so generated code, unexported adapters, and
+  function bodies no longer create false positives; the gate now passes.
+- Reconciled current release/spec references and removed stale error aliases
+  from the user-facing documentation.
+
+## [1.0.3] - 2026-09-24
+
+### Added
+
+- **Phase B CI hardening:** golangci-lint + gosec, single release workflow with
+  GoReleaser, coverage threshold 60%, OS×Go test matrix, DCO enforcement,
+  dependency-review, TruffleHog secret scanner, CycloneDX SBOM, GoDoc exported
+  enforcement.
+- **Phase C reliability/observability:** `internal/ws.go` unit tests, ws
+  resilience tests + fuzz targets, injectable `Clock` + `DialWSFunc`, missing
+  metrics, composite `Health()` probe, OTel tracing bridge, fuzz targets in CI.
+- **Order state machine + duplicate-submission protection:** `OrderState` with
+  legal transitions and a per-`TradeManager` `ClientOrderID` registry that
+  rejects duplicate submissions (`pkg/ibkr/orderstate.go`).
+- **Bracket / OCA / multi-leg orders:** `OrderRequest.ParentID` and
+  `IsSingleGroup` with builder helpers, plus `TimeInForce` `FOK`/`GTD` values and
+  `OrderRequest.Validate` (`pkg/ibkr/ids.go`, `pkg/ibkr/trade.go`,
+  `pkg/ibkr/builders.go`).
+- **Typed WebSocket events:** `OrderEvent`, `NotificationEvent`, and
+  `UserMessageEvent` are parsed and delivered on `Subscription.SystemUpdates()`
+  (`pkg/ibkr/events.go`).
+- **Account/portfolio streaming:** `AccountManager.SubscribeAccount` and
+  `PortfolioManager.SubscribePortfolio` deliver typed `AccountUpdateEvent`
+  (`acq`) and `PortfolioEvent` (`pos`) values on dedicated channels
+  (`pkg/ibkr/ws.go`). See [docs/STREAMING.md](./docs/STREAMING.md).
+- **Delayed-data / permission surfacing:** `MarketDataStatus` (field `6509`) is
+  exposed on `Snapshot.Status` and `Update.Status`
+  (`pkg/ibkr/marketdata.go`, `pkg/ibkr/ws.go`).
+- **`ClientOrderID` round-trip:** populated on `Order` and `OrderStatus` from
+  broker responses (`pkg/ibkr/trade.go`).
+- **WebSocket gap detection:** `WSGapError` is emitted when the `_updated`
+  sequence jumps backwards (`internal/ws.go`).
+- **Docs:** `docs/GATEWAY-SETUP.md` and `docs/PERMISSIONS.md`; README
+  architecture flow diagram; cancellation and reconciliation examples
+  (`examples/mock/cancel-order`, `examples/mock/reconcile-open-orders`).
+
+### Fixed
+
+- **Misleading live examples:** removed the unused `IBKR_USERNAME` /
+  `IBKR_PASSWORD` requirement (the gateway is browser-authenticated), made
+  `options-chain` use SDK managers, and corrected the OAuth2 "force refresh"
+  example.
+
+### Removed
+
+- **`RESTSSOSessions.CreateSessionRaw`:** removed because it leaked the generated
+  `*client.CreateSsoSessionsResponse` through a public signature
+  (`docs/design/04-generated-wrapping.md`). Use `CreateSession`.
+
+## [1.0.1] - 2026-09-21
+
+### Added
+
+- **WS system frame routing:** `Subscription.SystemUpdates()` channel exposes
+  `sts`, `ntf`, `sor`, `usr` frames separately from market data. Existing
+  `Updates()` behavior is unchanged. See `pkg/ibkr/ws.go`.
+
+### Fixed
+
+- **`decodeJSON` consistency:** All 7 `json.Unmarshal` calls in
+  `pkg/ibkr/rest_accounts.go` now use `decodeJSONBytes` (`UseNumber` mode),
+  preserving decimal precision per ADR 0008.
+- **`patch_spec.py` defect 5:** ConID and banking ID fields (`conid`,
+  `clientInstructionId`, `instructionId`, `instructionSetId`, `ibReferenceId`)
+  now generate as `int64` instead of `float32` — eliminates silent precision
+  loss for IDs exceeding 2^24.
+- **`patch_spec.py` defect 6:** `twsInvestDivestResponse` schema renamed to
+  `TwsInvestDivestResponseData` to avoid collision with the auto-generated
+  HTTP response wrapper type (v2.40.0 spec).
+- **`patch_spec.py` defect 7:** 16 money amount fields (SMA, Balance,
+  BuyingPower, NetLiquidationValue, etc.) now generate as `string` instead
+  of `float64` per ADR 0008.
+- **`portfolio.go`/`rest_banking.go`:** Updated calls to match regenerated
+  client signatures (Params structs, int64 ID types).
+
+### Changed
+
+- **Spec updated to v2.40.0:** `specs/ibkr_spec.json` refreshed; all 7 defects
+  applied before codegen.
+- **`client/client.gen.go` regenerated:** ConID as `int64`, banking IDs as
+  `int64`, money fields as `string`.
+
+## [1.0.0] - 2026-09-21
+
+This release marks the first stable API surface. All public symbols in `pkg/ibkr`
+are now covered by a stability contract (ADR 0015). The API is production-ready
+for Go 1.26+.
+
+### Breaking changes from v0.x
+
+This release is not fully API-compatible with v0.x. A migration guide and
+automated codemod are provided.
+
+- **57 methods** renamed: the `Get` prefix is removed per Go naming conventions.
+  Run `scripts/codemod.sh` to automate the mechanical renames. See
+  `docs/MIGRATION.md` for the full table and manual steps.
+- **`float32` → `int64`** for banking IDs (`ClientInstructionID`,
+  `InstructionID`, `IbReferenceID`).
+- **14 initialism casing fixes** (e.g. `EchoHTTPSResponse` → `EchoHTTPSResponse`,
+  `RealizedPnL` → `RealizedPnL`). Automated via `scripts/codemod.sh`.
+- **`ErrStreamDisconnected` / `ErrStreamReconnected`** removed; use
+  `ErrWSDisconnected` / `ErrWSReconnected`.
+
+### Stability Hardening
+
+- **Goroutine safety (S1):** All 6 async goroutine paths now recover from panics.
+  `TestGoleak` integration covers every goroutine-creating function. ` goleak`
+  is a test-only dependency; no runtime cost.
+- **Backpressure (S2):** Context deadline propagation through all WS/tickle/token
+  paths. New `WithRequestTimeout` option sets a hard timeout per operation.
+- **Production resilience (S3):** `WithEndpointTimeout` and
+  `WithCircuitBreakerBudget` options. Error budget tracking in `internal/breaker.go`
+  with `BreakerMetrics` export.
+- **Fault injection (S4):** 36 fault-injection tests across `internal/` and
+  `pkg/ibkr/` covering transport errors, timeout, circuit breaker, and order
+  submission paths.
+- **Performance baseline (S5):** HTTP/2 connection pooling in `internal/transport.go`.
+  Allocation benchmarks in `pkg/ibkr/alloc_test.go`. Baseline stored in
+  `benchmark.baseline`; CI compares every run.
+
+### Ecosystem
+
+- **CLI tool (E1):** `cmd/ibkr/` binary with `accounts`, `positions`, `orders`,
+  `stream`, `portfolio`, `config`, and `completion` subcommands.
+- **Migration guide (E2):** `docs/MIGRATION.md` and `scripts/codemod.sh`
+  (74 rename rules) covering all v0.x → v1.0 breaking changes.
+- **API reference site (E3):** `docs/api.html`, `docs/architecture.html`,
+  `docs/decisions.html` with CSS/JS assets.
+- **Release automation (E4):** `.github/workflows/release-automation.yml` with
+  semver enforcement, `.github/workflows/supply-chain.yml` with govulncheck and
+  SBOM generation. Gitee auto-push on release.
+- **Supply-chain security (E5):** `go mod verify`, `govulncheck`, secret scanning,
+  SLSA-level provenance generation.
+
+### Architectural
+
+- **Interface segregation (A1):** Five interfaces in `internal/interfaces.go`:
+  `TokenProvider`, `RoundTripper`, `SessionMachine`, `WSClient`, `RateLimiter`.
+  `internal/fake/` package with five fake implementations for testing.
+- **Typed builders (A2):** `OrderBuilder`, `ContractBuilder`,
+  `TransferInstructionBuilder` in `pkg/ibkr/builders.go`.
+- **Middleware plugin (A3):** `WithTransportMiddleware` option in
+  `pkg/ibkr/middleware.go`. Example in `examples/middleware/`.
+- **Unified pagers (A4):** Generic `*Pager[T]` in `pkg/ibkr/pager.go`. Four
+  concrete pagers: `ModelsPager`, `FYIsPager`, `TransactionsPager`,
+  `SubaccountsPager`. Four old slice-returning methods deprecated.
+- **Multi-client transport (A5):** `TransportPool` in `pkg/ibkr/transport_pool.go`
+  with shared `*http.Client`, session, and rate limiter across clients.
+
+### OpenTelemetry Support
+
+- **OTel metrics bridge (P2):** `contrib/otel/` module ships a first-class
+  `OTelMetrics` implementation of `ibkr.Metrics` bridging to OpenTelemetry
+  counters, histograms, and gauges. Instrument creation is lazy and cached.
+  Import `github.com/shing1211/ibkrapi4go/contrib/otel` only when needed;
+  the core SDK carries no OTel dependency (ADR 0004).
+
+### Examples
+
+- **3 new live examples** in `examples/` require paper trading credentials
+  (`IBKR_GATEWAY`, `IBKR_USERNAME`, `IBKR_PASSWORD`). All operations are
+  read-only.
+  - `live-portfolio/`: Session.Initialize, Account.List, Portfolio
+    Positions/Ledger/Summary
+  - `options-chain/`: symbol search + options strike lookup for a given month
+  - `screener/`: ScannerParameters discovery + live market scanner
+- **Mock examples** (`mock/`, `portfolio/`, `orders/`, `marketdata-streaming/`,
+  `models/`, `middleware/`) target the in-repo mock gateway and need no
+  credentials.
+
+### Deprecated
+
+- `ScannerManager.ScannerResults` — use `Scanner().ScannerResults` via the
+  `ScannerManager` returned by `Client.Scanner()`
+- `PortfolioManager.Subaccounts` — use `SubaccountsPager` instead
+- `FYIManager.FYIs` — use `FYIsPager` instead
+- `PerformanceManager.Transactions` — use `TransactionsPager` instead
+- `ModelManager.Models` — use `ModelsPager` instead
+- `DefaultServerURL` — use `DefaultGatewayURL` instead
 
 ## [0.3.0] - 2026-09-18
 
@@ -129,9 +2084,10 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
 - **Integration test scaffold:** `test/integration_test.go` with
   `//go:build integration` gate and env-gated skip; `make test-integration`
   target.
-- **Shape conformance guard:** `TestFixtureShapeConformance` (180 passing
-  tests) in `pkg/ibkr/fixture_shape_conformance_test.go` using
-  `fixtures.go` `All()` method.
+- **Shape conformance guard:** `TestFixtureShapeConformance` in
+  `internal/mockgateway/shape_test.go`, which walks every default fixture and
+  validates the first JSON value parses. It is a structural check, not a
+  per-operation shape comparison.
 - **Spec drift detection:** `.github/workflows/spec-drift.yml` (daily cron +
   workflow_dispatch) with `scripts/check_spec_version.py`.
 - **`docs/STABILITY.md`:** user-facing stability contract derived from ADR 0015.
@@ -232,10 +2188,11 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   HTTP round-trip latency (mock gateway), WebSocket subscribe/unsubscribe, and
   session init. Baseline stored in `benchmark.baseline`. See
   [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md).
-- **Fuzz tests (`pkg/ibkr/fuzz_test.go`, `internal/fuzz_test.go`):** 47 `testing.F`
+- **Fuzz tests (`pkg/ibkr/fuzz_test.go`, `internal/fuzz_test.go`):** 53 `testing.F`
   fuzz functions covering all major public JSON decode types, plus response decode
-  fuzzing across all 185 op response shapes using mock gateway fixtures. No
-  panics found; corpus generated in `testdata/fuzz/`.
+  fuzzing across all op response shapes using mock gateway fixtures. No
+  panics found. Fuzz corpora are generated on demand by `make fuzz` into the Go
+  build cache, not committed under `testdata/`.
 - **Benchmark CI gate (`.github/workflows/ci.yml`):** `benchmarks` job compares
   current results against `benchmark.baseline`; fails on >10% regression in
   ns/op. `scripts/bench_compare.go` is pure stdlib.
@@ -303,7 +2260,32 @@ fields (`ClientInstructionID`, `InstructionID`, `IbReferenceID`) are now
   `Dividends`, `Utilities.Enumerations`, `ComplexAssetTransferBrokers`,
   and `RequiredForms`.
 
-[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.30...HEAD
+[1.1.30]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.29...v1.1.30
+[1.1.29]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.28...v1.1.29
+[1.1.28]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.27...v1.1.28
+[1.1.13]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.12...v1.1.13
+[1.1.12]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.11...v1.1.12
+[1.1.11]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.10...v1.1.11
+[1.1.10]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.9...v1.1.10
+[1.1.9]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.8...v1.1.9
+[1.1.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.7...v1.1.8
+[1.1.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.6...v1.1.7
+[1.1.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.5...v1.1.6
+[1.1.5]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.4...v1.1.5
+[1.1.4]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.3...v1.1.4
+[1.1.3]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.2...v1.1.3
+[1.1.2]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.1...v1.1.2
+[1.1.1]: https://github.com/shing1211/ibkrapi4go/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.8...v1.1.0
+[1.0.8]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.7...v1.0.8
+[1.0.7]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.6...v1.0.7
+[1.0.6]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.5...v1.0.6
+[1.0.5]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.4...v1.0.5
+[1.0.4]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/shing1211/ibkrapi4go/compare/v1.0.0...v1.0.1
 [0.3.0]: https://github.com/shing1211/ibkrapi4go/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/shing1211/ibkrapi4go/compare/v0.1.0...v0.1.1

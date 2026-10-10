@@ -211,6 +211,23 @@ func (m *AllocationManager) AllocationPresets(ctx context.Context) ([]Allocation
 	return out, nil
 }
 
+// AllocationModels returns the configured allocation models keyed by model
+// name, each mapped to its comma-separated instrument list.
+func (m *AllocationManager) AllocationModels(ctx context.Context) (map[string]string, error) {
+	const op = "Allocation.GetAllocationModels"
+	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
+		return m.client.generated.GetAllocationModels(ctx)
+	})
+	if err != nil {
+		return nil, err
+	}
+	var raw map[string]string
+	if err := decodeJSON(resp, op, &raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
 // SetAllocationPreset sets the default allocation preset.
 func (m *AllocationManager) SetAllocationPreset(ctx context.Context, presets []AllocationPreset) error {
 	const op = "Allocation.SetAllocationPreset"

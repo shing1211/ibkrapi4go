@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/shing1211/ibkrapi4go/client"
 )
@@ -118,7 +117,33 @@ func (m *PerformanceManager) SinglePerformancePeriod(ctx context.Context, accoun
 	}, nil
 }
 
+// TransactionsPager returns a paginated iterator over transactions for the
+// given accounts.
+//
+//	pager := client.Performance().TransactionsPager(ctx, accountIDs, startDate, endDate)
+//	for pager.Next(ctx) {
+//	    tx := pager.Value()
+//	    // ...
+//	}
+//	if err := pager.Err(); err != nil { ... }
+func (m *PerformanceManager) TransactionsPager(_ context.Context, accountIDs []string, startDate, endDate string) *Pager[Transaction] {
+	fetched := false
+	return NewPager(func(ctx context.Context, page int) ([]Transaction, error) {
+		if fetched || page > 0 {
+			return nil, nil
+		}
+		txs, err := m.Transactions(ctx, accountIDs, startDate, endDate)
+		if err != nil {
+			return nil, err
+		}
+		fetched = true
+		return txs, nil
+	})
+}
+
 // Transactions returns transactions for the given accounts.
+//
+// Deprecated: Use TransactionsPager instead for paginated iteration.
 func (m *PerformanceManager) Transactions(ctx context.Context, accountIDs []string, startDate, endDate string) ([]Transaction, error) {
 	const op = "Performance.GetTransactions"
 	bodyJSON := map[string]interface{}{
@@ -154,9 +179,4 @@ func (m *PerformanceManager) Transactions(ctx context.Context, accountIDs []stri
 		})
 	}
 	return out, nil
-}
-
-// conIDToString converts a ConID to string.
-func conIDToString(c ConID) string {
-	return strconv.Itoa(int(c))
 }

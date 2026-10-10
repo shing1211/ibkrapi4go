@@ -10,12 +10,8 @@
 
 ## Pre-1.0 policy
 
-The project is **alpha**. All 185 operations are implemented and the core feature
-set is complete (see [ROADMAP.md](./ROADMAP.md)). Until `v1.0.0`:
-
-- The public API may still change in a **MINOR** release; breaking changes are
-  called out explicitly in the changelog.
-- Tags may be deleted or rewritten before `v1.0.0`.
+v1.0.0 is the first stable release. All 193 operations are implemented and the
+core feature set is complete (see [ROADMAP.md](./ROADMAP.md)):
 
 See [STABILITY.md](./STABILITY.md) and [ADR 0015](./adr/0015-stability.md) for the full stability contract.
 
@@ -55,8 +51,10 @@ git push origin main --tags
 git push gitee  main --tags
 ```
 
-Create the corresponding Gitee release from the same changelog section. Docs stay
-in English except the translated READMEs (`README.<locale>.md`); see
+Create the corresponding Gitee release from the same changelog section. The CI
+mirror step uses the optional `GITEE_TOKEN` repository secret; without it, the
+step is skipped and the GitHub release still completes. Docs stay in English
+except the translated READMEs (`README.<locale>.md`); see
 [TRANSLATING.md](../TRANSLATING.md).
 
 ## Deprecation
@@ -77,4 +75,4 @@ in English except the translated READMEs (`README.<locale>.md`); see
 |------|-----------|
 | Go | latest two minor releases (currently 1.26+) |
 | OS | Linux, macOS, Windows |
-| Gateway | current Client Portal Gateway (spec v2.39.0) |
+| Gateway | current Client Portal Gateway (spec v2.40.0) |

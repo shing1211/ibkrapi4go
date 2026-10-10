@@ -269,6 +269,7 @@ func TestRESTAccounts_MutationsAreSingleAttempt(t *testing.T) {
 
 func TestRESTAccounts_SubmitDocument(t *testing.T) {
 	var gotContentType, gotAccountID, accountPath string
+	var gotPartType, gotPartName string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/oauth2/api/v1/token":
@@ -276,8 +277,20 @@ func TestRESTAccounts_SubmitDocument(t *testing.T) {
 		case "/gw/api/v1/accounts/documents":
 			accountPath = r.URL.Path
 			gotContentType = r.Header.Get("Content-Type")
-			r.ParseMultipartForm(32 << 20)
+			r.Body = http.MaxBytesReader(w, r.Body, 32<<20)
+			if err := r.ParseMultipartForm(32 << 20); err != nil { //nolint:gosec // G120: the body is bounded by the MaxBytesReader on the line above; the rule cannot see that
+				http.Error(w, "invalid multipart body", http.StatusBadRequest)
+				return
+			}
 			gotAccountID = r.FormValue("accountId")
+			if files := r.MultipartForm.File["file"]; len(files) == 1 {
+				fh := files[0]
+				gotPartName = fh.Filename
+				if f, err := fh.Open(); err == nil {
+					gotPartType = fh.Header.Get("Content-Type")
+					f.Close()
+				}
+			}
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, `{}`)
 		default:
@@ -314,5 +327,14 @@ func TestRESTAccounts_SubmitDocument(t *testing.T) {
 	}
 	if accountPath != "/gw/api/v1/accounts/documents" {
 		t.Errorf("account path = %q; want /gw/api/v1/accounts/documents", accountPath)
+	}
+	// The uploaded part must carry the caller's mimeType. It previously went out
+	// as application/octet-stream because CreateFormFile hardcodes it, so the
+	// mimeType argument was accepted, defaulted, and then discarded.
+	if gotPartType != "application/pdf" {
+		t.Errorf("file part Content-Type = %q; want application/pdf - the mimeType argument must reach the wire", gotPartType)
+	}
+	if gotPartName != "doc.pdf" {
+		t.Errorf("file part filename = %q; want doc.pdf", gotPartName)
 	}
 }

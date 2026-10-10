@@ -27,25 +27,30 @@ flow and safety rules.
 
 ```go
 type OrderRequest struct {
-    ConID      ConID
-    Side       Side        // Buy | Sell
-    Quantity   string      // never float64
-    OrderType  OrderType   // Market | Limit | Stop | ...
-    LimitPrice string      // empty for market orders
+    ConID       ConID
+    Side        Side        // Buy | Sell
+    Quantity    string      // never float64
+    OrderType   OrderType   // Market | Limit | Stop | ...
+    LimitPrice  string      // empty for market orders
+    StopPrice   string      // for STOP/STOP_LIMIT orders
     TimeInForce TimeInForce
-    // ...
+    OutsideRTH  bool        // outside regular trading hours
+    AllOrNone   bool        // fill completely or not at all
+    ClientOrderID string    // client-supplied order id
+    ParentID    string      // parent order id, for grouping
+    IsSingleGroup bool      // quantity is per-conid rather than a total
 }
 
 type SubmitResult struct {
-    OrderID   string
-    Status    string
-    Replies   []Reply     // non-empty => confirmation required
+    OrderID string
+    Status  string
+    Replies []Reply // non-empty => confirmation required
 }
 
 type Reply struct {
-    ID      string
-    Message string
-    // ...
+    ID          string
+    Messages    []string // human-readable warning texts
+    MessageIDs  []string // additional message ids
 }
 
 // Submit places an order. If Result.Replies is non-empty the order is NOT yet
@@ -63,14 +68,13 @@ orders. The SDK documents this prominently and never retries.
 
 ## Reconciliation
 
-After an ambiguous submit, callers should:
+After an ambiguous submit, callers should use `OpenOrders` to check whether the
+intended order was received before resubmitting:
 
 ```go
 orders, err := cli.Trade().OpenOrders(ctx)
 // check whether the intended order exists before resubmitting
 ```
-
-The SDK may provide a helper `Trade().Reconcile(ctx, account, fingerprint)`.
 
 ## Error mapping
 

@@ -32,8 +32,23 @@ type RetryPolicy struct {
     MaxDelay      time.Duration // default 5s
     Jitter        bool          // default true (full jitter)
     RetryOnStatus []int         // default 429,500,502,503,504
+    Metrics       Metrics       // optional; nil (the zero value) is valid and reports nothing
 }
 ```
+
+`Metrics` is observability plumbing rather than a retry knob. It is never
+assigned by `DefaultRetryPolicy`, because nil *is* its zero value: left unset,
+the middleware reports nothing. When set, it receives the backoff and retry
+counts (`internal/retry.go`, `MetricHTTPRetryBackoffMS` and
+`MetricHTTPRetries`).
+
+A field comment beginning `optional;` is how this document states that a field
+has no assigned default. `check_design` reads that marker and requires
+`DefaultRetryPolicy` to leave the field alone, so the claim fails in both
+directions: an assignment appearing later is drift the check reports. Every
+other field below carries a `// default X` clause naming the value
+`DefaultRetryPolicy` assigns, and a field carrying neither clause is a failure
+rather than an exemption.
 
 Rules:
 

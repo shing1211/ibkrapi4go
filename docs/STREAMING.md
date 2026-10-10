@@ -68,10 +68,62 @@ Design rules:
 - `Subscribe` returns a `*Subscription` with `Updates()` and `Errors()` channels.
 - One `Update` is emitted per field code in a frame; a conid's updates are
   delivered to every subscription that requested it.
-- Channels are closed (not just abandoned) on close/error.
+- Channels are closed when the subscription is closed. On error the SDK does
+  **not** close them; it delivers the error on `Errors()` and keeps streaming, so
+  a caller that handles a reconnect or a gap can keep reading.
 - `Subscription.Close()` is idempotent and unsubscribes server-side.
 - `ctx` cancellation closes the subscription.
 - `Subscription.Dropped()` reports updates dropped under backpressure.
+
+## Account and portfolio streaming
+
+The same multiplexed connection also streams account values and portfolio
+positions. Subscribe through the account/portfolio managers:
+
+```go
+acct, err := cli.Account().SubscribeAccount(ctx, nil)
+if err != nil { return err }
+defer acct.Close()
+
+port, err := cli.Portfolio().SubscribePortfolio(ctx, nil)
+if err != nil { return err }
+defer port.Close()
+
+for {
+    select {
+    case <-ctx.Done():
+        return ctx.Err()
+    case e := <-acct.AccountUpdates():
+        fmt.Printf("account %s net=%s cash=%s\n", e.Account, e.NetLiquidity, e.Cash)
+    case p := <-port.PortfolioUpdates():
+        fmt.Printf("position %d qty=%s avg=%s mv=%s pnl=%s\n",
+            p.Conid, p.Position, p.AvgCost, p.MarketValue, p.UnrealizedPNL)
+    case err := <-acct.Errors():
+        log.Println("stream error:", err)
+    }
+}
+```
+
+`SubscribeAccount` sends the gateway `account` method; `SubscribePortfolio`
+sends `portfolio`. Both return a `*Subscription` that shares the connection,
+reconnect, and backpressure behavior described below, and both honor the same
+`MaxSubscriptions`/`MaxFieldsPerRequest` limits and `ctx` cancellation. Closing
+the subscription unsubscribes server-side.
+
+### Typed events
+
+| Channel | Frame | Struct | Fields |
+|---------|-------|--------|--------|
+| `AccountUpdates()` | `acq` | `AccountUpdateEvent` | `Account`, `NetLiquidity`, `Cash`, `Equity`, `MaintMargin`, `Received` |
+| `PortfolioUpdates()` | `pos` | `PortfolioEvent` | `Conid`, `Position`, `AvgCost`, `MarketValue`, `UnrealizedPNL`, `Received` |
+
+A `pos` frame may carry a single position object or an array; each position is
+emitted as a separate `PortfolioEvent`. Money and quantities are decimal strings
+(ADR 0008).
+
+Order status (`sor`), notifications (`ntf`), and user messages (`usr`) continue
+to arrive on every subscription's `SystemUpdates()` channel alongside the typed
+account/portfolio channels.
 
 ## Connection management
 
@@ -79,6 +131,8 @@ Design rules:
 - A reader goroutine dispatches frames to per-subscription channels; a writer
   goroutine serializes outbound frames (avoids concurrent-write issues).
 - Heartbeat: ping every 30s; pong deadline 10s.
+- `Client.Close` cancels the connection's owned I/O context and force-closes the
+  socket, so shutdown does not wait on a blocked read or close handshake.
 
 ## Reconnect
 
@@ -113,8 +167,12 @@ Exact IBKR ceilings are account/entitlement dependent.
 
 Per-subscription channels are buffered (default 256). On overflow the SDK:
 
-1. Logs a warning and increments a dropped-update counter, then
+1. Increments a dropped-update counter (see `Dropped()`), then
 2. Drops the **oldest** update (keeps the connection alive).
+
+`SystemUpdates()`, `AccountUpdates()`, and `PortfolioUpdates()` are also
+buffered, but on overflow they drop the **newest** event and do not log or count
+it.
 
 This is a deliberate choice: dropping stale quotes is preferable to blocking the
 reader and stalling all subscriptions. Callers needing every tick should use a
@@ -123,7 +181,9 @@ larger buffer or persist server-side.
 ## Testing
 
 - Mock gateway WebSocket hub ([MOCK-GATEWAY.md](./MOCK-GATEWAY.md)): subscribe →
-  receive → unsubscribe.
-- Reconnect test with a server that drops the connection once.
-- Buffer-overflow test asserts the drop policy and counter.
+  receive → unsubscribe for market data, account (`acq`), and portfolio (`pos`).
+- Reconnect test with a server that drops the connection once (market data and
+  account streams).
+- Buffer-overflow test asserts that `Dropped()` becomes non-zero. It does not
+  assert which value was retained or the ordering of the survivors.
 - `goleak` asserts no goroutines survive `Close()`.

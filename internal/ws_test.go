@@ -1,0 +1,1028 @@
+// Copyright 2026 shing1211
+// SPDX-License-Identifier: Apache-2.0
+
+package internal
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/coder/websocket"
+
+	"github.com/shing1211/ibkrapi4go/internal/mockgateway"
+)
+
+func TestBackoffDelay(t *testing.T) {
+	base := 100 * time.Millisecond
+	max := 2 * time.Second
+
+	got := backoffDelay(0, base, max)
+	if got < 0 || got > base {
+		t.Errorf("attempt 0: got %v, want 0..%v", got, base)
+	}
+
+	got = backoffDelay(1, base, max)
+	if got < 0 || got > base*2 {
+		t.Errorf("attempt 1: got %v, want 0..%v", got, base*2)
+	}
+
+	got = backoffDelay(5, base, max)
+	if got < 0 || got > max {
+		t.Errorf("attempt 5: got %v, want 0..%v", got, max)
+	}
+
+	got = backoffDelay(-1, base, max)
+	if got < 0 || got > base {
+		t.Errorf("attempt -1: got %v, want 0..%v (treated as 0)", got, base)
+	}
+
+	got = backoffDelay(10, base, max)
+	if got < 0 || got > max {
+		t.Errorf("attempt 10: got %v, want 0..%v (capped at 5)", got, max)
+	}
+}
+
+func TestWsURLFromGateway(t *testing.T) {
+	tests := []struct {
+		gateway string
+		want    string
+		wantErr bool
+	}{
+		{"https://localhost:5000", "wss://localhost:5000/v1/api/ws", false},
+		{"http://localhost:5000", "ws://localhost:5000/v1/api/ws", false},
+		{"wss://localhost:5000", "wss://localhost:5000/v1/api/ws", false},
+		{"ws://localhost:5000", "ws://localhost:5000/v1/api/ws", false},
+		{"https://host/prefix/", "wss://host/prefix/v1/api/ws", false},
+		{"http://host/prefix", "ws://host/prefix/v1/api/ws", false},
+		{"ftp://localhost", "", true},
+		{"", "", true},
+	}
+
+	for _, tt := range tests {
+		got, err := wsURLFromGateway(tt.gateway)
+		if tt.wantErr {
+			if err == nil {
+				t.Errorf("wsURLFromGateway(%q): want error, got nil", tt.gateway)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("wsURLFromGateway(%q): unexpected error: %v", tt.gateway, err)
+			continue
+		}
+		if got != tt.want {
+			t.Errorf("wsURLFromGateway(%q) = %q, want %q", tt.gateway, got, tt.want)
+		}
+	}
+}
+
+func TestWsScalarString(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+		ok    bool
+	}{
+		{`"hello"`, "hello", true},
+		{`"123"`, "123", true},
+		{`123`, "123", true},
+		{`123.45`, "123.45", true},
+		{`true`, "true", true},
+		{`false`, "false", true},
+		{`null`, "", false},
+		{`""`, "", true},
+		{`{}`, "", false},
+		{`[]`, "", false},
+		{`[1,2]`, "", false},
+		{`{"a":1}`, "", false},
+		{`  "str"  `, "str", true},
+		{`  42  `, "42", true},
+	}
+
+	for _, tt := range tests {
+		got, ok := wsScalarString(json.RawMessage(tt.input))
+		if ok != tt.ok {
+			t.Errorf("wsScalarString(%q) ok = %v, want %v", tt.input, ok, tt.ok)
+			continue
+		}
+		if ok && got != tt.want {
+			t.Errorf("wsScalarString(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestWsReservedField(t *testing.T) {
+	// 6509 is deliberately absent: it carries the market-data status code and
+	// must reach pkg/ibkr so Update.Status can be populated.
+	reserved := []string{"conid", "_updated", "server_id", "6119", "topic", "method", "id"}
+	for _, k := range reserved {
+		if !wsReservedField(k) {
+			t.Errorf("wsReservedField(%q) = false, want true", k)
+		}
+	}
+
+	notReserved := []string{"31", "55", "6509", "field_name", "something_else", "CONID", "Conid"}
+	for _, k := range notReserved {
+		if wsReservedField(k) {
+			t.Errorf("wsReservedField(%q) = true, want false", k)
+		}
+	}
+}
+
+func TestParseSystemFrame(t *testing.T) {
+	tests := []struct {
+		name  string
+		input map[string]json.RawMessage
+		want  *WSSystemFrame
+	}{
+		{
+			name:  "sts frame",
+			input: map[string]json.RawMessage{"sts": toRaw(`"connected"`), "topic": toRaw(`"sts"`)},
+			want:  &WSSystemFrame{Type: "sts", Status: "connected", Topic: "sts"},
+		},
+		{
+			name:  "ntf frame",
+			input: map[string]json.RawMessage{"ntf": toRaw(`"hello"`), "topic": toRaw(`"ntf"`)},
+			want:  &WSSystemFrame{Type: "ntf", Topic: "ntf", Payload: toRaw(`"hello"`)},
+		},
+		{
+			name:  "sor frame",
+			input: map[string]json.RawMessage{"sor": toRaw(`{"order_id":123}`)},
+			want:  &WSSystemFrame{Type: "sor", Payload: toRaw(`{"order_id":123}`)},
+		},
+		{
+			name:  "usr frame",
+			input: map[string]json.RawMessage{"usr": toRaw(`{"user":"x"}`)},
+			want:  &WSSystemFrame{Type: "usr", Payload: toRaw(`{"user":"x"}`)},
+		},
+		{
+			name:  "empty map",
+			input: map[string]json.RawMessage{},
+			want:  nil,
+		},
+		{
+			name:  "market data with conid",
+			input: map[string]json.RawMessage{"conid": toRaw(`265598`), "31": toRaw(`"150.25"`)},
+			want:  nil,
+		},
+		{
+			name:  "random fields no system key",
+			input: map[string]json.RawMessage{"foo": toRaw(`"bar"`)},
+			want:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := parseSystemFrame(tt.input)
+			if tt.want == nil {
+				if got != nil {
+					t.Errorf("parseSystemFrame() = %v, want nil", got)
+				}
+				return
+			}
+			if got == nil {
+				t.Fatalf("parseSystemFrame() = nil, want %+v", tt.want)
+			}
+			if got.Type != tt.want.Type {
+				t.Errorf("Type = %q, want %q", got.Type, tt.want.Type)
+			}
+			if got.Status != tt.want.Status {
+				t.Errorf("Status = %q, want %q", got.Status, tt.want.Status)
+			}
+			if got.Topic != tt.want.Topic {
+				t.Errorf("Topic = %q, want %q", got.Topic, tt.want.Topic)
+			}
+		})
+	}
+}
+
+func toRaw(s string) json.RawMessage { return json.RawMessage(s) }
+
+type fakeSink struct {
+	mu      sync.Mutex
+	updates []WSUpdate
+	errs    []error
+	conids  map[int]bool
+	// notify is signalled on every delivery or failure so a test can block until
+	// an event rather than sleeping for a fixed interval. It is buffered and
+	// signalled non-blockingly, so the WebSocket read loop is never held up by a
+	// test that is not waiting.
+	//
+	// A nil channel is safe: a non-blocking send on nil takes the default branch
+	// and does nothing, so the many tests that only inspect the slices after the
+	// fact need no change.
+	notify chan struct{}
+}
+
+// newFakeSink returns a sink that can also be waited on.
+func newFakeSink(conids ...int) *fakeSink {
+	set := make(map[int]bool, len(conids))
+	for _, c := range conids {
+		set[c] = true
+	}
+	return &fakeSink{conids: set, notify: make(chan struct{}, 64)}
+}
+
+func (s *fakeSink) signal() {
+	if s.notify == nil {
+		return
+	}
+	select {
+	case s.notify <- struct{}{}:
+	default:
+	}
+}
+
+func (s *fakeSink) Wants(conid int) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.conids[conid]
+}
+
+func (s *fakeSink) Deliver(u WSUpdate) {
+	s.mu.Lock()
+	s.updates = append(s.updates, u)
+	s.mu.Unlock()
+	s.signal()
+}
+
+func (s *fakeSink) Fail(err error) {
+	s.mu.Lock()
+	s.errs = append(s.errs, err)
+	s.mu.Unlock()
+	s.signal()
+}
+
+// waitForUpdate blocks until at least one update has been delivered, the sink has
+// failed, or ctx expires. It returns the updates seen so far.
+//
+// This replaces a fixed sleep. Sleeping for a fixed interval and then asserting
+// "something arrived" is a race: the assertion can only fail when the machine is
+// slow, which is precisely when a suite most needs to be telling the truth about
+// something else. Waiting on the event with a bounded deadline is both
+// non-flaky and a stronger claim - it asserts the update really was delivered,
+// not merely that some time passed.
+func (s *fakeSink) waitForUpdate(ctx context.Context) ([]WSUpdate, error) {
+	if s.notify == nil {
+		// Selecting on a nil channel blocks forever, so without this a sink built
+		// as a bare struct literal would hang until the context expired and
+		// report a delivery timeout, which reads like a product bug rather than
+		// a test-wiring mistake.
+		return nil, fmt.Errorf("fakeSink has no notify channel; construct it with newFakeSink")
+	}
+	for {
+		s.mu.Lock()
+		n := len(s.updates)
+		errs := append([]error(nil), s.errs...)
+		s.mu.Unlock()
+		if n > 0 {
+			return s.updatesSnapshot(), nil
+		}
+		if len(errs) > 0 {
+			return nil, errs[0]
+		}
+		select {
+		case <-s.notify:
+		case <-ctx.Done():
+			return s.updatesSnapshot(), ctx.Err()
+		}
+	}
+}
+
+// waitForUpdates blocks until at least n updates have been delivered, or ctx
+// expires. It is waitForUpdate generalised to a count, for tests that assert on
+// an exact number of deliveries.
+func (s *fakeSink) waitForUpdates(ctx context.Context, n int) ([]WSUpdate, error) {
+	if s.notify == nil {
+		return nil, fmt.Errorf("fakeSink has no notify channel; construct it with newFakeSink")
+	}
+	for {
+		s.mu.Lock()
+		got := len(s.updates)
+		errs := append([]error(nil), s.errs...)
+		s.mu.Unlock()
+		if got >= n {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return append([]WSUpdate(nil), s.updates...), nil
+		}
+		if len(errs) > 0 {
+			return nil, errs[0]
+		}
+		select {
+		case <-s.notify:
+		case <-ctx.Done():
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return append([]WSUpdate(nil), s.updates...), ctx.Err()
+		}
+	}
+}
+
+func (s *fakeSink) updatesSnapshot() []WSUpdate {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]WSUpdate(nil), s.updates...)
+}
+
+type fakeSystemSink struct {
+	mu     sync.Mutex
+	frames []WSSystemFrame
+	errs   []error
+	// notify is signalled on every system frame, so a test can wait for a frame
+	// to arrive instead of sleeping a fixed interval and hoping. nil is safe:
+	// the non-blocking send falls through to the default arm.
+	notify chan struct{}
+}
+
+func newFakeSystemSink() *fakeSystemSink {
+	return &fakeSystemSink{notify: make(chan struct{}, 64)}
+}
+
+func (s *fakeSystemSink) WantsSystem() bool { return true }
+
+func (s *fakeSystemSink) DeliverSystem(f WSSystemFrame) {
+	s.mu.Lock()
+	s.frames = append(s.frames, f)
+	s.mu.Unlock()
+	if s.notify == nil {
+		return
+	}
+	select {
+	case s.notify <- struct{}{}:
+	default:
+	}
+}
+
+// waitForSystemFrames blocks until at least n system frames have been delivered,
+// or ctx expires.
+func (s *fakeSystemSink) waitForSystemFrames(ctx context.Context, n int) ([]WSSystemFrame, error) {
+	for {
+		s.mu.Lock()
+		got := len(s.frames)
+		errs := append([]error(nil), s.errs...)
+		s.mu.Unlock()
+		if got >= n {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return append([]WSSystemFrame(nil), s.frames...), nil
+		}
+		if len(errs) > 0 {
+			return nil, errs[0]
+		}
+		if s.notify == nil {
+			return nil, fmt.Errorf("fakeSystemSink has no notify channel; construct it with newFakeSystemSink")
+		}
+		select {
+		case <-s.notify:
+		case <-ctx.Done():
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return append([]WSSystemFrame(nil), s.frames...), ctx.Err()
+		}
+	}
+}
+
+func (s *fakeSystemSink) Fail(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.errs = append(s.errs, err)
+}
+
+func TestWS_DialAndSubscribe(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
+	defer server.Close()
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := DialWS(ctx, "http://"+server.Listener.Addr().String(), WSOptions{
+		Logger:  NopLogger(),
+		Metrics: NopMetrics(),
+	})
+	if err != nil {
+		t.Fatalf("DialWS: %v", err)
+	}
+	defer conn.Close()
+
+	sink := newFakeSink(265598)
+	handle, err := conn.Subscribe(ctx, sink, nil, []int{265598}, []string{"31"})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+	defer handle.Close()
+
+	// The mock gateway emits the scripted ticks as it handles the subscribe
+	// frame, so an update is guaranteed to be on the wire by the time Subscribe
+	// returns. The test waits for it to be delivered rather than sleeping a fixed
+	// 500ms and hoping: the deadline is the 5s context, so a real regression still
+	// fails promptly while a slow machine no longer fails at all.
+	updates, err := sink.waitForUpdate(ctx)
+	if err != nil {
+		t.Fatalf("no update delivered: %v", err)
+	}
+	if len(updates) == 0 {
+		t.Fatalf("expected at least one update, got none")
+	}
+	if got := updates[0].ConID; got != 265598 {
+		t.Errorf("first update conid = %d; want 265598", got)
+	}
+}
+
+func TestWS_SubscribeDeliversToCorrectSink(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
+	defer server.Close()
+	defer srv.Close()
+	hub := srv.Stream()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := DialWS(ctx, "http://"+server.Listener.Addr().String(), WSOptions{
+		Logger:  NopLogger(),
+		Metrics: NopMetrics(),
+	})
+	if err != nil {
+		t.Fatalf("DialWS: %v", err)
+	}
+	defer conn.Close()
+
+	sinkA := newFakeSink(111)
+	sinkB := newFakeSink(222)
+
+	_, err = conn.Subscribe(ctx, sinkA, nil, []int{111}, []string{"31"})
+	if err != nil {
+		t.Fatalf("Subscribe A: %v", err)
+	}
+	_, err = conn.Subscribe(ctx, sinkB, nil, []int{222}, []string{"31"})
+	if err != nil {
+		t.Fatalf("Subscribe B: %v", err)
+	}
+
+	hub.Push(mockgateway.Tick{ConID: 111, Field: "31", Value: "100.00"})
+	hub.Push(mockgateway.Tick{ConID: 222, Field: "31", Value: "200.00"})
+	hub.Push(mockgateway.Tick{ConID: 333, Field: "31", Value: "300.00"})
+
+	// Wait for each sink to receive rather than sleeping 500ms. The three pushes
+	// are broadcast to every subscriber, so a fixed wait was only ever a guess
+	// about how long delivery took - and the guess could fail on a slow machine
+	// even though delivery was correct.
+	if _, err := sinkA.waitForUpdate(ctx); err != nil {
+		t.Fatalf("sinkA received no update: %v", err)
+	}
+	if _, err := sinkB.waitForUpdate(ctx); err != nil {
+		t.Fatalf("sinkB received no update: %v", err)
+	}
+
+	sinkA.mu.Lock()
+	aUpdates := len(sinkA.updates)
+	sinkA.mu.Unlock()
+
+	sinkB.mu.Lock()
+	bUpdates := len(sinkB.updates)
+	sinkB.mu.Unlock()
+
+	if aUpdates == 0 {
+		t.Errorf("sinkA got no updates for conid 111")
+	}
+	if bUpdates == 0 {
+		t.Errorf("sinkB got no updates for conid 222")
+	}
+}
+
+func TestWS_SystemFrameDeliversToSystemSink(t *testing.T) {
+	helloScript := mockgateway.StreamScript{Hello: true}
+	srv := mockgateway.New(mockgateway.WithStreamScript(&helloScript))
+	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
+	defer server.Close()
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := DialWS(ctx, "http://"+server.Listener.Addr().String(), WSOptions{
+		Logger:  NopLogger(),
+		Metrics: NopMetrics(),
+	})
+	if err != nil {
+		t.Fatalf("DialWS: %v", err)
+	}
+	defer conn.Close()
+
+	sysSink := newFakeSystemSink()
+	_, err = conn.Subscribe(ctx, newFakeSink(265598), sysSink, []int{265598}, []string{"31"})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+
+	// The gateway sends the status frame as part of the subscribe handshake, so
+	// this used to sleep 500ms and then look. Waiting for the frame is both
+	// faster and the stronger claim.
+	if _, err := sysSink.waitForSystemFrames(ctx, 1); err != nil {
+		t.Fatalf("expected at least one system frame: %v", err)
+	}
+}
+
+func TestWS_CloseUnsubscribes(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
+	defer server.Close()
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := DialWS(ctx, "http://"+server.Listener.Addr().String(), WSOptions{
+		Logger:  NopLogger(),
+		Metrics: NopMetrics(),
+	})
+	if err != nil {
+		t.Fatalf("DialWS: %v", err)
+	}
+
+	handle, err := conn.Subscribe(ctx, &fakeSink{conids: map[int]bool{265598: true}}, nil, []int{265598}, []string{"31"})
+	if err != nil {
+		t.Fatalf("Subscribe: %v", err)
+	}
+
+	if n := conn.ActiveSubscriptions(); n != 1 {
+		t.Fatalf("ActiveSubscriptions = %d, want 1", n)
+	}
+
+	handle.Close()
+
+	if n := conn.ActiveSubscriptions(); n != 0 {
+		t.Fatalf("ActiveSubscriptions after Close = %d, want 0", n)
+	}
+
+	conn.Close()
+}
+
+func TestWS_CloseIdempotent(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
+	defer server.Close()
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := DialWS(ctx, "http://"+server.Listener.Addr().String(), WSOptions{
+		Logger:  NopLogger(),
+		Metrics: NopMetrics(),
+	})
+	if err != nil {
+		t.Fatalf("DialWS: %v", err)
+	}
+
+	conn.Close()
+	conn.Close()
+	conn.Close()
+}
+
+func TestWS_ActiveSubscriptions(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
+	defer server.Close()
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := DialWS(ctx, "http://"+server.Listener.Addr().String(), WSOptions{
+		Logger:  NopLogger(),
+		Metrics: NopMetrics(),
+	})
+	if err != nil {
+		t.Fatalf("DialWS: %v", err)
+	}
+	defer conn.Close()
+
+	if n := conn.ActiveSubscriptions(); n != 0 {
+		t.Fatalf("initial ActiveSubscriptions = %d, want 0", n)
+	}
+
+	h1, err := conn.Subscribe(ctx, &fakeSink{conids: map[int]bool{111: true}}, nil, []int{111}, []string{"31"})
+	if err != nil {
+		t.Fatalf("Subscribe 1: %v", err)
+	}
+	if n := conn.ActiveSubscriptions(); n != 1 {
+		t.Fatalf("after sub 1: ActiveSubscriptions = %d, want 1", n)
+	}
+
+	h2, err := conn.Subscribe(ctx, &fakeSink{conids: map[int]bool{222: true}}, nil, []int{222}, []string{"31"})
+	if err != nil {
+		t.Fatalf("Subscribe 2: %v", err)
+	}
+	if n := conn.ActiveSubscriptions(); n != 2 {
+		t.Fatalf("after sub 2: ActiveSubscriptions = %d, want 2", n)
+	}
+
+	h1.Close()
+	if n := conn.ActiveSubscriptions(); n != 1 {
+		t.Fatalf("after close 1: ActiveSubscriptions = %d, want 1", n)
+	}
+
+	h2.Close()
+	if n := conn.ActiveSubscriptions(); n != 0 {
+		t.Fatalf("after close 2: ActiveSubscriptions = %d, want 0", n)
+	}
+}
+
+func TestWS_ConcurrentSubscribeClose(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
+	defer server.Close()
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := DialWS(ctx, "http://"+server.Listener.Addr().String(), WSOptions{
+		Logger:  NopLogger(),
+		Metrics: NopMetrics(),
+	})
+	if err != nil {
+		t.Fatalf("DialWS: %v", err)
+	}
+	defer conn.Close()
+
+	var wg sync.WaitGroup
+	errCh := make(chan error, 20)
+
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			sink := &fakeSink{conids: map[int]bool{i: true}}
+			h, err := conn.Subscribe(ctx, sink, nil, []int{i}, []string{"31"})
+			if err != nil {
+				errCh <- err
+				return
+			}
+			h.Close()
+		}()
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		t.Errorf("concurrent error: %v", err)
+	}
+}
+
+func TestWS_RecordSequence(t *testing.T) {
+	conn := &WSConn{}
+
+	last, seen, gap := conn.recordSequence(123, 100)
+	if last != 0 || seen || gap != 0 {
+		t.Fatalf("first sequence = (%d, %v, %d), want (0, false, 0)", last, seen, gap)
+	}
+
+	last, seen, gap = conn.recordSequence(123, 100)
+	if last != 100 || !seen || gap != 0 {
+		t.Fatalf("duplicate sequence = (%d, %v, %d), want (100, true, 0)", last, seen, gap)
+	}
+
+	last, seen, gap = conn.recordSequence(123, 98)
+	if last != 100 || !seen || gap != 2 {
+		t.Fatalf("out-of-order sequence = (%d, %v, %d), want (100, true, 2)", last, seen, gap)
+	}
+}
+
+func TestWS_DispatchDetectsSequenceGap(t *testing.T) {
+	sink := &fakeSink{conids: map[int]bool{265598: true}}
+	c := &WSConn{
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 8),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+		ctx:         context.Background(),
+		opts:        WSOptions{Logger: NopLogger(), Metrics: NopMetrics(), Telemetry: NopTelemetry(), Clock: &Clock{}},
+	}
+	c.subs[&wsSub{sink: sink, method: "subscribe", conids: []int{265598}, fields: []string{"31"}}] = struct{}{}
+
+	frame := func(seq int) []byte {
+		return []byte(`{"conid":265598,"31":"150.00","_updated":"` + strconv.Itoa(seq) + `"}`)
+	}
+
+	// First frame establishes the baseline; no gap may be reported.
+	c.dispatch(frame(100))
+	sink.mu.Lock()
+	errsAfterFirst := len(sink.errs)
+	sink.mu.Unlock()
+	if errsAfterFirst != 0 {
+		t.Fatalf("first frame reported %d errors, want 0", errsAfterFirst)
+	}
+
+	// Advancing is contiguous, so still no gap.
+	c.dispatch(frame(101))
+	sink.mu.Lock()
+	errsAfterSecond := len(sink.errs)
+	sink.mu.Unlock()
+	if errsAfterSecond != 0 {
+		t.Fatalf("contiguous frame reported %d errors, want 0", errsAfterSecond)
+	}
+
+	// A lower sequence is a gap of 2 and must surface as *WSGapError.
+	c.dispatch(frame(99))
+	sink.mu.Lock()
+	errs := append([]error(nil), sink.errs...)
+	sink.mu.Unlock()
+	if len(errs) != 1 {
+		t.Fatalf("gap frame reported %d errors, want exactly 1: %v", len(errs), errs)
+	}
+	var gap *WSGapError
+	if !errors.As(errs[0], &gap) {
+		t.Fatalf("error = %T (%v), want *WSGapError", errs[0], errs[0])
+	}
+	if gap.Conid != 265598 || gap.LastSeq != 101 || gap.ReceivedSeq != 99 {
+		t.Errorf("gap = %+v; want Conid 265598 LastSeq 101 ReceivedSeq 99", gap)
+	}
+
+	// The tick itself is still delivered: a gap is a warning, not a drop.
+	sink.mu.Lock()
+	updates := len(sink.updates)
+	sink.mu.Unlock()
+	if updates < 3 {
+		t.Errorf("delivered %d updates, want at least 3 including the gapped frame", updates)
+	}
+}
+
+func TestWS_DispatchDeliversMarketDataStatusField(t *testing.T) {
+	sink := &fakeSink{conids: map[int]bool{265598: true}}
+	c := &WSConn{
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 8),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+		ctx:         context.Background(),
+		opts:        WSOptions{Logger: NopLogger(), Metrics: NopMetrics(), Telemetry: NopTelemetry(), Clock: &Clock{}},
+	}
+	c.subs[&wsSub{sink: sink, method: "subscribe", conids: []int{265598}, fields: []string{"31", "6509"}}] = struct{}{}
+
+	// A delayed quote carries a three-character status code: availability,
+	// consolidated, book. "BD" + " " + "N" means delayed, not consolidated.
+	c.dispatch([]byte(`{"conid":265598,"31":"150.00","6509":"BD N","_updated":"1"}`))
+
+	sink.mu.Lock()
+	updates := append([]WSUpdate(nil), sink.updates...)
+	sink.mu.Unlock()
+
+	var status *WSUpdate
+	for i := range updates {
+		if updates[i].Field == "6509" {
+			status = &updates[i]
+		}
+	}
+	if status == nil {
+		t.Fatalf("field 6509 was not delivered; got fields %+v", updates)
+	}
+	if status.Value == "" {
+		t.Error("field 6509 delivered with an empty value")
+	}
+	if len(updates) < 2 {
+		t.Errorf("delivered %d updates, want the quote and the 6509 status", len(updates))
+	}
+}
+
+func TestWS_DialDiscardsConnectionAfterClose(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
+	defer server.Close()
+	defer srv.Close()
+
+	gatewayURL := "http://" + server.Listener.Addr().String()
+	wsURL, err := wsURLFromGateway(gatewayURL)
+	if err != nil {
+		t.Fatalf("wsURLFromGateway: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	dialing := make(chan struct{})
+	release := make(chan struct{})
+	var dialed atomic.Pointer[websocket.Conn]
+
+	c := &WSConn{
+		wsURL: wsURL,
+		opts: WSOptions{
+			Logger:        NopLogger(),
+			Metrics:       NopMetrics(),
+			Telemetry:     NopTelemetry(),
+			Clock:         &Clock{},
+			ReconnectBase: time.Millisecond,
+			ReconnectMax:  2 * time.Millisecond,
+			DialWS: func(ctx context.Context, wsURL string, httpClient *http.Client) (*websocket.Conn, error) {
+				close(dialing)
+				<-release
+				// Dial on a context detached from c.ctx: Close cancels c.ctx, which
+				// would abort the handshake first. Using a fresh context models the
+				// race where the handshake completes just as shutdown begins, which
+				// is exactly the window the closed check in dial guards.
+				dctx, dialCancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer dialCancel()
+				conn, _, err := websocket.Dial(dctx, wsURL, &websocket.DialOptions{HTTPClient: httpClient})
+				if err == nil {
+					dialed.Store(conn)
+				}
+				return conn, err
+			},
+		},
+		ctx:         ctx,
+		cancel:      cancel,
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 64),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+	}
+
+	dialErr := make(chan error, 1)
+	go func() { dialErr <- c.dial(ctx) }()
+
+	<-dialing
+	if err := c.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	close(release)
+
+	select {
+	case err := <-dialErr:
+		if !errors.Is(err, ErrClosed) {
+			t.Fatalf("dial after close = %v, want ErrClosed", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("dial did not return after close")
+	}
+
+	conn := dialed.Load()
+	if conn == nil {
+		t.Fatal("expected the dial to have produced a connection")
+	}
+
+	c.mu.Lock()
+	stored := c.conn
+	c.mu.Unlock()
+	if stored != nil {
+		t.Error("a connection was published after shutdown began")
+	}
+
+	readCtx, readCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer readCancel()
+	if _, _, err := conn.Read(readCtx); err == nil {
+		t.Error("the discarded connection is still open; it should be force-closed")
+	}
+}
+
+func TestWSGapError(t *testing.T) {
+	err := &WSGapError{Conid: 123, LastSeq: 100, ReceivedSeq: 97}
+	if msg := err.Error(); msg == "" {
+		t.Error("WSGapError.Error() returned empty string")
+	}
+	if !strings.Contains(err.Error(), "sequence gap") {
+		t.Error("WSGapError.Error() should contain 'sequence gap'")
+	}
+}
+
+type reconnectOrderSink struct {
+	mu       sync.Mutex
+	conn     *WSConn
+	notified bool
+	queued   int
+}
+
+func (s *reconnectOrderSink) Wants(int) bool { return true }
+
+func (s *reconnectOrderSink) Deliver(WSUpdate) {}
+
+func (s *reconnectOrderSink) Fail(err error) {
+	if !errors.Is(err, ErrWSReconnected) {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.notified = true
+	s.queued = len(s.conn.out)
+}
+
+func TestWS_ResubscribePrecedesReconnectNotification(t *testing.T) {
+	srv := mockgateway.New()
+	server := httptest.NewServer(srv.Handler())
+	defer settleGoroutines(t)
+	defer server.Close()
+	defer srv.Close()
+
+	gatewayURL := "http://" + server.Listener.Addr().String()
+	wsURL, err := wsURLFromGateway(gatewayURL)
+	if err != nil {
+		t.Fatalf("wsURLFromGateway: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c := &WSConn{
+		wsURL: wsURL,
+		opts: WSOptions{
+			Logger:        NopLogger(),
+			Metrics:       NopMetrics(),
+			Telemetry:     NopTelemetry(),
+			Clock:         &Clock{},
+			ReconnectBase: time.Millisecond,
+			ReconnectMax:  2 * time.Millisecond,
+			DialWS: func(ctx context.Context, wsURL string, httpClient *http.Client) (*websocket.Conn, error) {
+				dctx, dialCancel := context.WithTimeout(ctx, 10*time.Second)
+				defer dialCancel()
+				conn, _, err := websocket.Dial(dctx, wsURL, &websocket.DialOptions{HTTPClient: httpClient})
+				return conn, err
+			},
+		},
+		ctx:         ctx,
+		cancel:      cancel,
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 64),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+	}
+	if err := c.dial(ctx); err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer func() {
+		c.mu.Lock()
+		conn := c.conn
+		c.mu.Unlock()
+		if conn != nil {
+			_ = conn.CloseNow()
+		}
+	}()
+
+	sink := &reconnectOrderSink{conn: c}
+	c.mu.Lock()
+	c.subs[&wsSub{sink: sink, method: "subscribe", conids: []int{265598}, fields: []string{"31"}}] = struct{}{}
+	c.mu.Unlock()
+
+	attempt := 0
+	if err := c.reconnect(&attempt); err != nil {
+		t.Fatalf("reconnect: %v", err)
+	}
+
+	sink.mu.Lock()
+	notified, queued := sink.notified, sink.queued
+	sink.mu.Unlock()
+
+	if !notified {
+		t.Fatal("ErrWSReconnected was not delivered to the subscription")
+	}
+	if queued == 0 {
+		t.Fatal("outbound queue was empty when ErrWSReconnected was delivered: " +
+			"resubscribe must be issued before the reconnect notification")
+	}
+
+	select {
+	case frame := <-c.out:
+		var got struct {
+			Method string `json:"method"`
+			Params struct {
+				Conids []int `json:"conids"`
+			} `json:"params"`
+		}
+		if err := json.Unmarshal(frame, &got); err != nil {
+			t.Fatalf("unmarshal resubscribe frame: %v", err)
+		}
+		if got.Method != "subscribe" {
+			t.Errorf("resubscribe frame method = %q, want %q", got.Method, "subscribe")
+		}
+		if len(got.Params.Conids) != 1 || got.Params.Conids[0] != 265598 {
+			t.Errorf("resubscribe frame conids = %v, want [265598]", got.Params.Conids)
+		}
+	default:
+		t.Fatal("no frame available on the outbound queue")
+	}
+}

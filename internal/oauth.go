@@ -41,6 +41,8 @@ type OAuthConfig struct {
 	Logger *slog.Logger
 	// Metrics receives token refresh counters. Nil disables metrics.
 	Metrics Metrics
+	// Clock provides time for expiry checks. Nil uses the real clock.
+	Clock *Clock
 
 	// JWTKey is the RSA private key for JWT-bearer token exchange.
 	// When set, the token source uses client_assertion grant (private_key_jwt)
@@ -66,8 +68,17 @@ type TokenSource struct {
 	token        string
 	expiry       time.Time
 	refreshToken string
-	lastErr      error
-	inflight     chan struct{}
+	generation   uint64
+	inflight     *tokenFlight
+
+	clock *Clock
+}
+
+type tokenFlight struct {
+	generation uint64
+	done       chan struct{}
+	token      string
+	err        error
 }
 
 // NewTokenSource builds a TokenSource from cfg.
@@ -85,6 +96,9 @@ func NewTokenSource(cfg OAuthConfig) *TokenSource {
 	if cfg.Logger == nil {
 		cfg.Logger = NopLogger()
 	}
+	if cfg.Clock == nil {
+		cfg.Clock = &Clock{}
+	}
 	var jwtKey *rsa.PrivateKey
 	switch {
 	case cfg.JWTKey != nil:
@@ -96,7 +110,7 @@ func NewTokenSource(cfg OAuthConfig) *TokenSource {
 			jwtKey = nil
 		}
 	}
-	return &TokenSource{cfg: cfg, client: hc, jwtKey: jwtKey, logger: cfg.Logger, metrics: cfg.Metrics, refreshToken: cfg.RefreshToken}
+	return &TokenSource{cfg: cfg, client: hc, jwtKey: jwtKey, logger: cfg.Logger, metrics: cfg.Metrics, refreshToken: cfg.RefreshToken, clock: cfg.Clock}
 }
 
 // SetMetrics installs a metrics sink. It is safe to call after construction and
@@ -118,41 +132,47 @@ func (ts *TokenSource) RefreshToken() string {
 // Token returns a valid access token, refreshing it when missing or near expiry.
 func (ts *TokenSource) Token(ctx context.Context) (string, error) {
 	ts.mu.Lock()
-	if ts.token != "" && time.Now().Before(ts.expiry.Add(-ts.cfg.EarlyRefresh)) {
+	if ts.token != "" && ts.clock.Now().Before(ts.expiry.Add(-ts.cfg.EarlyRefresh)) {
 		tok := ts.token
 		ts.mu.Unlock()
 		return tok, nil
 	}
-	if ch := ts.inflight; ch != nil {
+	if flight := ts.inflight; flight != nil && flight.generation == ts.generation {
 		ts.mu.Unlock()
 		select {
-		case <-ch:
+		case <-flight.done:
+			return flight.token, flight.err
 		case <-ctx.Done():
 			return "", ctx.Err()
 		}
-		ts.mu.Lock()
-		tok, err := ts.token, ts.lastErr
-		ts.mu.Unlock()
-		return tok, err
 	}
-	ch := make(chan struct{})
-	ts.inflight = ch
+	generation := ts.generation
+	flight := &tokenFlight{
+		generation: generation,
+		done:       make(chan struct{}),
+	}
+	ts.inflight = flight
 	ts.mu.Unlock()
 
 	tok, expiry, newRefresh, err := ts.fetch(ctx)
 
 	ts.mu.Lock()
-	ts.inflight = nil
-	ts.lastErr = err
-	if err == nil {
-		ts.token = tok
-		ts.expiry = expiry
-		if newRefresh != "" {
-			ts.refreshToken = newRefresh
+	if ts.inflight == flight {
+		ts.inflight = nil
+	}
+	if ts.generation == generation {
+		if err == nil {
+			ts.token = tok
+			ts.expiry = expiry
+			if newRefresh != "" {
+				ts.refreshToken = newRefresh
+			}
 		}
 	}
-	close(ch)
 	ts.mu.Unlock()
+	flight.token = tok
+	flight.err = err
+	close(flight.done)
 	if err != nil {
 		ts.logger.Warn("ibkr.oauth token refresh failed", "err", redact(err.Error()))
 		incrCounter(ctx, ts.metrics, MetricOAuthTokenFailures, 1)
@@ -166,10 +186,35 @@ func (ts *TokenSource) Token(ctx context.Context) (string, error) {
 // ForceRefresh discards the cached token and fetches a new one.
 func (ts *TokenSource) ForceRefresh(ctx context.Context) (string, error) {
 	ts.mu.Lock()
-	ts.token = ""
-	ts.expiry = time.Time{}
+	if flight := ts.inflight; flight != nil && flight.generation == ts.generation {
+		ts.mu.Unlock()
+		select {
+		case <-flight.done:
+			return flight.token, flight.err
+		case <-ctx.Done():
+			return "", ctx.Err()
+		}
+	}
+	ts.invalidateLocked()
 	ts.mu.Unlock()
 	return ts.Token(ctx)
+}
+
+// Invalidate clears the cached access token without discarding the refresh token.
+func (ts *TokenSource) Invalidate() {
+	if ts == nil {
+		return
+	}
+	ts.mu.Lock()
+	ts.invalidateLocked()
+	ts.mu.Unlock()
+}
+
+func (ts *TokenSource) invalidateLocked() {
+	ts.generation++
+	ts.token = ""
+	ts.expiry = time.Time{}
+	ts.inflight = nil
 }
 
 func (ts *TokenSource) fetch(ctx context.Context) (string, time.Time, string, error) {
@@ -232,9 +277,9 @@ func (ts *TokenSource) fetchWithSecret(ctx context.Context) (string, time.Time, 
 	if tr.AccessToken == "" {
 		return "", time.Time{}, "", &Error{Op: "OAuth.Token", Message: "token response missing access_token", Err: ErrNotAuthenticated}
 	}
-	expiry := time.Now().Add(time.Duration(tr.ExpiresIn) * time.Second)
+	expiry := ts.clock.Now().Add(time.Duration(tr.ExpiresIn) * time.Second)
 	if tr.ExpiresIn <= 0 {
-		expiry = time.Now().Add(time.Minute)
+		expiry = ts.clock.Now().Add(time.Minute)
 	}
 	return tr.AccessToken, expiry, tr.RefreshToken, nil
 }
@@ -295,9 +340,9 @@ func (ts *TokenSource) fetchWithJWTAssertion(ctx context.Context) (string, time.
 	if tr.AccessToken == "" {
 		return "", time.Time{}, "", &Error{Op: "OAuth.Token", Message: "token response missing access_token", Err: ErrNotAuthenticated}
 	}
-	expiry := time.Now().Add(time.Duration(tr.ExpiresIn) * time.Second)
+	expiry := ts.clock.Now().Add(time.Duration(tr.ExpiresIn) * time.Second)
 	if tr.ExpiresIn <= 0 {
-		expiry = time.Now().Add(time.Minute)
+		expiry = ts.clock.Now().Add(time.Minute)
 	}
 	return tr.AccessToken, expiry, tr.RefreshToken, nil
 }

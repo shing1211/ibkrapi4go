@@ -82,11 +82,23 @@ func (s *Server) Recorder() *Recorder { return s.recorder }
 // Fixtures returns the fixture registry.
 func (s *Server) Fixtures() *Fixtures { return s.fixtures }
 
+// Hub returns the StreamHub for the mock gateway. Tests use it to inject
+// frames directly (e.g., to simulate gaps).
+func (s *Server) Hub() *StreamHub { return s.stream }
+
 // Scenario returns the fault-injection scenario.
 func (s *Server) Scenario() *Scenario { return s.scenario }
 
 // Stream returns the WebSocket streaming hub.
 func (s *Server) Stream() *StreamHub { return s.stream }
+
+// Close releases every open stream connection.
+//
+// httptest.Server.Close does not track hijacked connections, so a serveWS
+// handler parked on a blocked Read would otherwise outlive the test that
+// started it. Tests should defer Close alongside the httptest server's own
+// Close.
+func (s *Server) Close() { s.stream.closeAll() }
 
 // PushTick broadcasts a scripted market-data tick to subscribed WebSocket
 // clients and returns the number of connections written to.
@@ -303,7 +315,7 @@ func mkBearerRoute(op string, methods []string, pattern string) route {
 }
 
 // defaultRoutes returns the Phase-1 (T1) routes, the remaining CPAPI routes
-// (T2), and the IB REST + OAuth2 routes (T3). All 185 operations in
+// (T2), and the IB REST + OAuth2 routes (T3). All 193 operations in
 // docs/SPEC.md resolve here.
 func defaultRoutes() []route {
 	post := []string{http.MethodPost}

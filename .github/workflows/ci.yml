@@ -11,23 +11,48 @@ permissions:
 jobs:
   build:
     name: build & test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ['1.26', '1.27']
     steps:
       - uses: actions/checkout@v7
 
+      - name: Normalize checkout line endings on Windows
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git checkout-index --all --force
+
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26'
+          go-version: ${{ matrix.go-version }}
           check-latest: true
 
       - name: Check for Go module
         id: hasmod
         run: echo "present=$([ -f go.mod ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
 
+      - name: Check conventional commits
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if ! [[ "$PR_TITLE" =~ ^(feat|fix|docs|refactor|perf|test|ci|chore|build)(\(.+\))?!?: ]]; then
+            echo "PR title does not follow conventional commits: $PR_TITLE"
+            echo "Expected: feat(scope): description"
+            exit 1
+          fi
+
       - name: Format check
         if: steps.hasmod.outputs.present == 'yes'
         run: |
-          unformatted="$(gofmt -s -l . | grep -v '^client/' || true)"
+          unformatted="$(gofmt -s -l . | grep -vE '(^|[\\/])client[\\/]' || true)"
           if [ -n "$unformatted" ]; then
             echo "::error::gofmt needed on:"; echo "$unformatted"; exit 1
           fi
@@ -42,14 +67,30 @@ jobs:
 
       - name: Run tests with coverage
         if: steps.hasmod.outputs.present == 'yes'
-        run: go test -coverprofile=coverage.out -covermode=atomic ./...
+        run: go test -coverprofile=coverage.out -covermode=atomic -coverpkg=./pkg/ibkr,./internal/...,./cmd/... ./...
+
+      - name: Check coverage threshold
+        if: steps.hasmod.outputs.present == 'yes'
+        run: |
+          TOTAL=$(go tool cover -func=coverage.out | awk '/^total:/ {gsub(/%/,"",$NF); print $NF}')
+          echo "Total coverage: $TOTAL%"
+          if ! awk -v total="$TOTAL" -v min=62 'BEGIN { exit !(total < min) }'; then
+            :
+          else
+            echo "::error::Coverage ($TOTAL%) is below the 62% threshold"
+            exit 1
+          fi
 
       - name: Upload coverage to codecov
         if: steps.hasmod.outputs.present == 'yes'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage.out
           fail_ci_if_error: false
+
+      - name: Verify go.sum integrity
+        if: steps.hasmod.outputs.present == 'yes'
+        run: go mod verify
 
       - name: Skip notice
         if: steps.hasmod.outputs.present == 'no'
@@ -65,11 +106,27 @@ jobs:
         with:
           python-version: '3.x'
 
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+
       - name: Check markdown links
         run: python3 scripts/check_links.py
 
       - name: Check README translations
         run: python3 scripts/check_i18n.py
+
+      - name: Check design docs against the code
+        run: go run ./scripts/check_design
+
+      - name: Check money types against ADR 0008
+        run: python3 scripts/check_money.py
+
+      - name: Check that every internal/ package is imported
+        run: python3 scripts/check_internal_refs.py
+
+      - name: Verify SPDX headers
+        run: make license-check
 
   codegen:
     name: codegen drift
@@ -115,3 +172,71 @@ jobs:
       - name: Skip notice
         if: steps.hasmod.outputs.present == 'no'
         run: echo "No go.mod yet; public SDK not implemented. Skipping benchmarks."
+
+  lint:
+    name: lint & security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+
+      # Pinned, not @latest. golangci-lint ships new gosec rules in patch
+      # releases - v2.14.0 added G117, G120, G124 and G703, which v2.9.0 does
+      # not have - so an unpinned install makes the lint verdict depend on the
+      # day it runs. That is not hypothetical: six //nolint:gosec directives were
+      # deleted as "unused" on the strength of a local 2.9.0 run, and CI then
+      # failed on the rules 2.9.0 cannot see. Bump this deliberately, in a commit
+      # that also reconciles the directives.
+      # oapi-codegen below is pinned for the same reason.
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
+
+      - name: Run golangci-lint
+        run: golangci-lint run ./pkg/... ./internal/... ./cmd/... ./scripts/...
+
+      # A second pass with test files excluded. The normal run has
+      # `run.tests: true`, which makes `unused` count a function as used when only
+      # a test references it - so production code kept alive solely by its own test
+      # is invisible. `float32ToStr` survived that way for a release: a lossy
+      # money formatter, held open by a test that asserted the rounding it caused.
+      # This pass closes the class rather than that one instance.
+      - name: Run golangci-lint without test files
+        run: golangci-lint run --tests=false ./pkg/... ./internal/... ./cmd/... ./scripts/...
+
+  dco:
+    name: DCO check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Check DCO
+        uses: docker://ghcr.io/dco/dco-action:v1
+        with:
+          args: '--verbose'
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v5
+
+  fuzz:
+    name: fuzz smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.26'
+      - name: Run fuzz targets
+        run: |
+          go test -fuzz=FuzzParseStreamFrame -fuzztime=30s ./internal/
+          go test -fuzz=FuzzWSDispatch -fuzztime=30s ./internal/

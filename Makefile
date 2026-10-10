@@ -10,8 +10,8 @@ OAPI_CODEGEN_VERSION ?= v2.8.0
 .DEFAULT_GOAL := help
 
 .PHONY: help tools fmt vet test test-race test-integration coverage check \
-        codegen codegen-verify docs-spec docs-check \
-        license license-check mock-gateway clean
+        codegen codegen-verify docs-spec docs-check design-check \
+        managers-table license license-check mock-gateway fuzz clean
 
 help: ## List targets
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -43,10 +43,19 @@ coverage: ## Write coverage.out and coverage.html
 		echo "wrote coverage.out and coverage.html"; \
 	else echo "no go.mod yet; skipping"; fi
 
-check: fmt vet money-check test ## Format, vet, check money types, and test
+check: fmt vet money-check internal-refs-check design-check test ## Format, vet, check money types and internal package references, check design docs, and test
 
 money-check: ## Fail if pkg/ibkr exposes float money fields (ADR 0008)
 	python3 scripts/check_money.py
+
+internal-refs-check: ## Fail if a package under internal/ is imported by nothing
+	python3 scripts/check_internal_refs.py
+
+design-check: ## Fail if a design doc disagrees with the code it describes
+	go run ./scripts/check_design
+
+managers-table: ## Regenerate the generated manager table in docs/design/03-managers.md
+	go run ./scripts/check_design -fix
 
 codegen: ## Regenerate client/ from the OpenAPI spec
 	./scripts/codegen.sh
@@ -57,12 +66,16 @@ codegen-verify: ## Fail if generated code drifts from committed output
 docs-spec: ## Regenerate docs/SPEC.md from the spec
 	python3 scripts/gen_spec_index.py specs/ibkr_spec.json > docs/SPEC.md
 
-docs-check: ## Check markdown links and README translations
+docs-check: ## Check markdown links, README translations, and design doc accuracy
 	python3 scripts/check_links.py
 	python3 scripts/check_i18n.py
+	go run ./scripts/check_design
 
 mock-gateway: ## Run the standalone mock IBKR gateway
 	$(GO) run ./cmd/ibkr-mock-gateway
+
+fuzz: ## Run fuzz targets for 60s
+	go test -fuzz=FuzzParseStreamFrame -fuzztime=60s ./internal/
 
 license: ## Apply SPDX headers to sources
 	@if [ -f go.mod ]; then \

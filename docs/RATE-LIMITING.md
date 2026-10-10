@@ -9,32 +9,49 @@ triggering them, and backs off correctly when it does.
 |-------|--------:|--------|-----|
 | Per endpoint (path+method) | 10 req/s | `WithRateLimit(rps, burst)` | `IBKR_RATE_LIMIT` |
 | Client-wide | 50 req/s | `WithGlobalRateLimit(rps)` | `IBKR_GLOBAL_RATE_LIMIT` |
-| Auth/session endpoints | 1 req/s | fixed | — |
+| Auth/session endpoints | 1 req/s | `WithAuthRateLimit(rps, burst)` | — |
 
 Burst defaults to `2×rps` for the per-endpoint limiter unless overridden.
 
 These figures are **defaults**, not guarantees from IBKR. Individual endpoints
-may be stricter; the backoff path handles that.
+may be stricter; the backoff path handles that. The auth figure in particular is a
+client-side precaution rather than a measured gateway property — see
+[ADR 0018](./adr/0018-auth-rate-limit.md), which records that as an open question.
 
 ## Algorithm
 
 Token bucket (`golang.org/x/time/rate`), one bucket per endpoint key plus one
 global bucket. A request waits for **both** buckets.
 
-Implemented in `internal/ratelimit.go` (`NewLimiter`, `Limiter.Wait`) and the
-`RateLimit` transport middleware; configured with `WithRateLimit` /
-`WithGlobalRateLimit` or `IBKR_RATE_LIMIT` / `IBKR_GLOBAL_RATE_LIMIT`.
+Implemented in `internal/ratelimit.go` (`NewLimiter`, `Limiter.Wait`,
+`Limiter.SetAuthRateLimit`) and the `RateLimit` transport middleware; configured with
+`WithRateLimit` / `WithGlobalRateLimit` / `WithAuthRateLimit` or the `IBKR_RATE_LIMIT` /
+`IBKR_GLOBAL_RATE_LIMIT` environment variables.
 
 - Keys are **normalized** paths (`METHOD /v1/api/portfolio/{}/summary`): numeric,
   account-id, and UUID-shaped segments are replaced with `{}`, so per-account
   calls share a bucket.
 - Buckets are created lazily and swept when idle to bound memory.
-- Auth/session paths (`/iserver/auth/*`, `/tickle`, `/logout`, `/sso/validate`)
-  use a fixed 1 req/s bucket.
+- Auth/session paths (`/iserver/auth/*`, `/tickle`, `/sso/validate`) use the auth
+  bucket, which defaults to a fixed 1 req/s with burst 1.
+- `/v1/api/logout` is **not** an auth path. It is a best-effort teardown whose result
+  is discarded, so it uses the per-endpoint bucket: pacing it blocked process exit for
+  ~1s on every run for no benefit ([ADR 0018](./adr/0018-auth-rate-limit.md)).
 - `Wait` respects the caller's context; cancellation returns
   `context.Canceled`/`context.DeadlineExceeded`.
 - `WithRateLimit(0, …)` disables per-endpoint limiting; `WithGlobalRateLimit(0)`
-  disables the global bucket.
+  disables the global bucket. The limiter is only constructed when one of those is
+  enabled, so turning both off also removes auth pacing.
+
+## Short-lived processes
+
+The 1 req/s auth default costs a one-shot process ~1s before its first auth status
+poll, and the poll succeeds on the first try against a local gateway, so the wait
+buys no information. A CLI that initialises a session and exits is the common case.
+
+`WithAuthRateLimit` exists for that shape: measured 2.002s to 0.004s for a
+initialize-then-close cycle. A long-running client should leave the default alone —
+it is not making auth calls back to back, so it is not paying this.
 
 ## Backoff on 429
 
@@ -57,6 +74,9 @@ elsewhere.
 - Unit test: burst up to `burst`, then throttles.
 - Unit test: `429` + `Retry-After: 2` delays ~2s (fake clock).
 - Unit test: unsafe methods are not retried on `429`.
+- Unit test: auth paths stay paced (`TestLimiter_AuthPathsAreSlow`) **and** logout
+  does not (`TestLimiter_LogoutIsNotAuthPaced`) — paired on purpose, so neither
+  classification can change alone.
 
 ## Interaction with streaming
 

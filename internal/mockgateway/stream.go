@@ -51,6 +51,11 @@ type StreamScript struct {
 	// it sends its first subscribe frame, exercising the client's reconnect
 	// path.
 	DropFirstConnection bool
+	// DropConnections closes the first N accepted connections immediately after
+	// they send their first subscribe frame, so a client can be driven through
+	// several consecutive reconnects. Takes precedence over
+	// DropFirstConnection when greater than zero.
+	DropConnections int
 	// OnSubscribe, when set, returns the ticks to emit for a subscribe frame.
 	// It is called synchronously from the connection's read loop, so it must not
 	// block. When nil the default script is used.
@@ -66,6 +71,15 @@ type StreamScript struct {
 	// notice on subscribe. The pkg/ibkr client ignores these frames; they are
 	// provided for protocol fidelity and for callers that inspect raw frames.
 	Hello bool
+}
+
+// drops reports whether the connection with the given ordinal should be dropped
+// after its first subscribe frame.
+func (s StreamScript) drops(ordinal int) bool {
+	if s.DropConnections > 0 {
+		return ordinal <= s.DropConnections
+	}
+	return s.DropFirstConnection && ordinal == 1
 }
 
 // StreamHub coordinates the scripted WebSocket connections of a Server. It is
@@ -103,6 +117,13 @@ func (h *StreamHub) Subscribers() int {
 	return len(h.conns)
 }
 
+// AcceptedConnections returns the total number of WebSocket connections the
+// hub has accepted, including ones that were later dropped. It is the
+// connection ordinal of the most recent connection.
+func (h *StreamHub) AcceptedConnections() int {
+	return int(h.accepted.Load())
+}
+
 // Push broadcasts a tick to every connection subscribed to its conid and returns
 // the number of connections the frame was written to. The emitted frame is
 // deterministic for a given tick and server seed.
@@ -131,6 +152,20 @@ func (h *StreamHub) Push(t Tick) int {
 // the number of successful writes. Use the StatusFrame, NotificationFrame,
 // UserFrame, and OrderFrame helpers for the `sts`/`ntf`/`usr`/`sor` frame
 // families.
+// Broadcast sends frame to every registered connection and returns the number of
+// connections it wrote to.
+//
+// The connection set is snapshotted under the lock and the sends happen outside it.
+// That ordering is required, not incidental: sendFrame can block on a stalled peer
+// for up to streamWriteTimeout, so holding the hub mutex across the send loop would
+// let one unresponsive client stall every other client and every hub operation.
+//
+// It is a review rule rather than a tested one. A test that proved it needed the
+// write to block, and the write fails in tens of milliseconds against a client that
+// is not reading rather than running to the timeout - so any timing budget either
+// always passes or is too tight to survive a loaded machine. The three behaviours
+// that are observable (the fan-out count, the closed-connection skip, and
+// closeAll draining the hub) are covered in stream_hub_test.go; this one is not.
 func (h *StreamHub) Broadcast(frame any) int {
 	h.mu.Lock()
 	conns := make([]*streamConn, 0, len(h.conns))
@@ -159,6 +194,34 @@ func (h *StreamHub) remove(sc *streamConn) {
 	h.mu.Lock()
 	delete(h.conns, sc)
 	h.mu.Unlock()
+}
+
+// closeAll closes every registered stream connection.
+//
+// Closing the socket is what unblocks a handler parked in c.Read: the read
+// context is context.Background, so there is no cancellation path into it.
+// CloseNow returns immediately and the handler unwinds on its own, which is why
+// callers still need a bounded settle after this returns.
+// closeAll marks every registered connection closed and closes its socket.
+//
+// Like Broadcast, it snapshots the set under the lock and acts outside it, for the
+// same reason: teardown can block on a wedged socket.
+//
+// Removal is deliberately not done here. CloseNow unblocks each handler's read
+// loop, and serveWS's deferred remove is what drops the connection from the hub, so
+// the map drains as a consequence of closing rather than inside this call.
+func (h *StreamHub) closeAll() {
+	h.mu.Lock()
+	conns := make([]*streamConn, 0, len(h.conns))
+	for sc := range h.conns {
+		conns = append(conns, sc)
+	}
+	h.mu.Unlock()
+
+	for _, sc := range conns {
+		sc.close()
+		_ = sc.conn.CloseNow()
+	}
 }
 
 // nextUpdated returns a monotonic, seed-derived `_updated` stamp. It is
@@ -204,6 +267,16 @@ func UserFrame(payload any) map[string]any {
 // OrderFrame returns a `sor` (order status) frame.
 func OrderFrame(payload any) map[string]any {
 	return map[string]any{"sor": payload}
+}
+
+// AccountFrame returns an "acq" (account) frame.
+func AccountFrame(payload any) map[string]any {
+	return map[string]any{"acq": payload}
+}
+
+// PortfolioFrame returns a "pos" (portfolio) frame.
+func PortfolioFrame(payload any) map[string]any {
+	return map[string]any{"pos": payload}
 }
 
 // streamConn is one accepted WebSocket connection and its subscription state.
@@ -293,10 +366,6 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 		_ = c.Close(websocket.StatusNormalClosure, "closed")
 	}()
 
-	if s.stream.script.Hello {
-		_ = sc.sendFrame(StatusFrame("connected"))
-	}
-
 	for {
 		_, data, err := c.Read(context.Background())
 		if err != nil {
@@ -308,7 +377,7 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 			if len(conids) == 0 {
 				continue
 			}
-			if s.stream.script.DropFirstConnection && sc.ordinal == 1 {
+			if s.stream.script.drops(sc.ordinal) {
 				return
 			}
 			if !s.handleSubscribe(sc, conids, fields) {
@@ -316,6 +385,16 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 			}
 		case streamOpUnsubscribe:
 			sc.unsubscribe(conids)
+		case streamOpAccount:
+			if s.stream.script.drops(sc.ordinal) {
+				return
+			}
+			s.handleAccountSubscribe(sc, fields)
+		case streamOpPortfolio:
+			if s.stream.script.drops(sc.ordinal) {
+				return
+			}
+			s.handlePortfolioSubscribe(sc, fields)
 		}
 	}
 }
@@ -338,6 +417,7 @@ func (s *Server) handleSubscribe(sc *streamConn, conids []int, fields []string) 
 	sc.subscribe(conids)
 
 	if script.Hello {
+		_ = sc.sendFrame(StatusFrame("connected"))
 		_ = sc.sendFrame(NotificationFrame("smd", map[string]any{"conids": conids}))
 	}
 
@@ -356,6 +436,33 @@ func (s *Server) handleSubscribe(sc *streamConn, conids []int, fields []string) 
 		}
 	}
 	return true
+}
+
+// handleAccountSubscribe emits deterministic account frames.
+func (s *Server) handleAccountSubscribe(sc *streamConn, fields []string) {
+	if script := s.stream.script; script.Hello {
+		_ = sc.sendFrame(StatusFrame("connected"))
+	}
+	accountPayload := map[string]any{
+		"account":     "U123456",
+		"net":         "50000",
+		"cash":        "45000",
+		"equity":      "45000",
+		"maintmargin": "10000",
+	}
+	_ = sc.sendFrame(AccountFrame(accountPayload))
+}
+
+// handlePortfolioSubscribe emits deterministic portfolio frames.
+func (s *Server) handlePortfolioSubscribe(sc *streamConn, fields []string) {
+	if script := s.stream.script; script.Hello {
+		_ = sc.sendFrame(StatusFrame("connected"))
+	}
+	positions := []map[string]any{
+		{"conid": 265598, "pos": "100", "avgCost": "150", "mktVal": "15500", "unrealizedPnl": "500"},
+		{"conid": 276555, "pos": "50", "avgCost": "200", "mktVal": "10500", "unrealizedPnl": "250"},
+	}
+	_ = sc.sendFrame(PortfolioFrame(positions))
 }
 
 // limitMessage returns a non-empty error message when the subscribe exceeds the
@@ -378,6 +485,8 @@ const (
 	streamOpIgnore streamOp = iota
 	streamOpSubscribe
 	streamOpUnsubscribe
+	streamOpAccount
+	streamOpPortfolio
 )
 
 // parseStreamFrame decodes a subscribe or unsubscribe frame. It accepts the
@@ -403,6 +512,10 @@ func parseStreamFrame(data []byte) (streamOp, []int, []string) {
 			return streamOpSubscribe, f.Params.Conids, f.Params.Fields
 		case "unsubscribe":
 			return streamOpUnsubscribe, f.Params.Conids, nil
+		case "account":
+			return streamOpAccount, nil, f.Params.Fields
+		case "portfolio":
+			return streamOpPortfolio, nil, f.Params.Fields
 		default:
 			return streamOpIgnore, nil, nil
 		}

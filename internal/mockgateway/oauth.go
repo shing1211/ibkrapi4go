@@ -100,7 +100,7 @@ func (s *Server) serveToken(w http.ResponseWriter, req *Request) {
 	}
 
 	access, refresh, expiresIn := s.oauth.issue()
-	body, err := json.Marshal(struct {
+	body, err := json.Marshal(struct { //nolint:gosec // G117: G117 matches the *field name* AccessToken against a secret pattern. This is the mock's synthetic token, never a real credential; the rule is left enabled tree-wide so a real literal would still be caught.
 		AccessToken  string `json:"access_token"`
 		TokenType    string `json:"token_type"`
 		ExpiresIn    int64  `json:"expires_in"`

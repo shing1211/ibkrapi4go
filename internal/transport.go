@@ -15,27 +15,31 @@ import (
 	"time"
 )
 
+const defaultMaxResponseBytes = 32 << 20
+
 // TransportConfig assembles the client's HTTP middleware chain. Zero fields are
 // skipped. Middlewares are applied outermost-first in the order below.
 type TransportConfig struct {
-	RequestID  func() string
-	UserAgent  string
-	AuthHeader string
-	Token      func() (string, bool)
-	Logger     *slog.Logger
-	Telemetry  Telemetry
-	Metrics    Metrics
-	Breaker    *Breaker
-	Retry      RetryPolicy
-	Limiter    *Limiter
-	Timeout    time.Duration
+	RequestID        func() string
+	UserAgent        string
+	AuthHeader       string
+	Token            func() (string, bool)
+	Logger           *slog.Logger
+	Telemetry        Telemetry
+	Metrics          Metrics
+	Breaker          *Breaker
+	Retry            RetryPolicy
+	Limiter          RateLimiter
+	Timeout          time.Duration
+	MaxResponseBytes int64
+	UserMiddleware   []Middleware
 }
 
 // NewClientTransport builds the RoundTripper chain used by the SDK. Order
 // (outer → inner): requestID → userAgent → auth → … → errorDecode → base.
 func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundTripper {
 	if base == nil {
-		base = http.DefaultTransport
+		base = newDefaultTransport()
 	}
 	var ms []func(http.RoundTripper) http.RoundTripper
 	if cfg.RequestID != nil {
@@ -65,13 +69,24 @@ func NewClientTransport(base http.RoundTripper, cfg TransportConfig) http.RoundT
 	if cfg.Timeout > 0 {
 		ms = append(ms, Timeout(cfg.Timeout))
 	}
+	// The cap is always applied, not only when the caller opts in. It used to be
+	// gated on `cfg.MaxResponseBytes > 0`, which left defaultMaxResponseBytes
+	// unreferenced and every default-configured client with no limit at all on
+	// the response body it buffers.
+	maxBytes := cfg.MaxResponseBytes
+	if maxBytes <= 0 {
+		maxBytes = defaultMaxResponseBytes
+	}
+	ms = append(ms, MaxBytes(maxBytes))
 	ms = append(ms, ErrorDecode())
+	ms = append(ms, cfg.UserMiddleware...)
 	return Chain(base, ms...)
 }
 
 // RoundTripFunc lets a plain function satisfy http.RoundTripper.
 type RoundTripFunc func(*http.Request) (*http.Response, error)
 
+// RoundTrip implements http.RoundTripper by calling f.
 func (f RoundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 // Chain builds a middleware stack on top of base. Middlewares are applied
@@ -82,6 +97,18 @@ func Chain(base http.RoundTripper, ms ...func(http.RoundTripper) http.RoundTripp
 		base = ms[i](base)
 	}
 	return base
+}
+
+// newDefaultTransport returns an *http.Transport tuned for IBKR's long-lived
+// HTTPS connections with HTTP/2 multiplexing and connection pooling.
+func newDefaultTransport() *http.Transport {
+	return &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		ForceAttemptHTTP2:   true,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
 }
 
 // RequestID returns a middleware that injects X-request-id from f.
@@ -121,6 +148,13 @@ func Auth(header string, token func() (string, bool)) func(http.RoundTripper) ht
 
 // Timeout returns a middleware that applies d as a per-request deadline when the
 // caller's context has none.
+//
+// On success the cancel func is handed to cancelOnCloseBody instead of being
+// deferred. A deferred cancel fires when this closure returns — before the caller
+// has read the body — and net/http reacts to an already-cancelled request context
+// by closing the connection rather than returning it to the keep-alive pool, so
+// every request would dial afresh. Deferring the cancel also defeats the
+// documented purpose of cancelOnCloseBody below.
 func Timeout(d time.Duration) func(http.RoundTripper) http.RoundTripper {
 	return func(base http.RoundTripper) http.RoundTripper {
 		return RoundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -131,8 +165,102 @@ func Timeout(d time.Duration) func(http.RoundTripper) http.RoundTripper {
 				return base.RoundTrip(req)
 			}
 			ctx, cancel := context.WithTimeout(req.Context(), d)
-			defer cancel()
-			return base.RoundTrip(req.WithContext(ctx))
+			resp, err := base.RoundTrip(req.WithContext(ctx))
+			if err != nil {
+				cancel()
+				return resp, err
+			}
+			if resp == nil {
+				cancel()
+				return resp, nil
+			}
+			// Ownership of cancel moves to the body. Every remaining exit path is
+			// therefore covered: either the body is wrapped and the caller's
+			// Close releases the timer, or the cancel above already ran.
+			resp.Body = &cancelOnCloseBody{body: resp.Body, cancel: cancel}
+			return resp, nil
+		})
+	}
+}
+
+// cancelOnCloseBody wraps resp.Body so that the timeout cancel fires only after
+// the body is fully consumed and closed. This prevents context.Canceled errors
+// when a large or slow success body is read after the transport has returned, and
+// it keeps the request context alive long enough for net/http to return the
+// connection to the keep-alive pool.
+//
+// Close may be called more than once; context.CancelFunc is idempotent, so the
+// repeated cancel is a no-op.
+type cancelOnCloseBody struct {
+	body   io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (c *cancelOnCloseBody) Read(b []byte) (int, error) { return c.body.Read(b) }
+
+func (c *cancelOnCloseBody) Close() error {
+	err := c.body.Close()
+	c.cancel()
+	return err
+}
+
+// maxBytesReader wraps resp.Body with an io.LimitedReader and enforces a byte
+// limit on reads. Close delegates to the original body.
+type maxBytesReader struct {
+	orig io.ReadCloser
+	lim  *io.LimitedReader
+}
+
+// Read serves up to the configured cap. When the cap is consumed and the body
+// still has data, it reports ErrResponseTooLarge instead of returning a short
+// read. Silently truncating would hand the caller a body that decodes as corrupt
+// JSON, which is far harder to diagnose than an explicit error - and the previous
+// version did exactly that, so the "detected by the caller via a short read"
+// contract this type documents was never actually implemented.
+func (m *maxBytesReader) Read(b []byte) (int, error) {
+	n, err := m.lim.Read(b)
+	if m.lim.N > 0 || err != nil {
+		return n, err
+	}
+	// The cap is exhausted. Probe the underlying reader: a byte here means the
+	// response is genuinely longer than the cap, whereas EOF means it fit exactly.
+	var probe [1]byte
+	pn, perr := m.lim.R.Read(probe[:])
+	if pn > 0 {
+		return n, ErrResponseTooLarge
+	}
+	if perr == nil {
+		// A zero-length read with no error is not EOF; report what we have and
+		// let the next Read try again rather than looping.
+		return n, nil
+	}
+	return n, perr
+}
+
+func (m *maxBytesReader) Close() error { return m.orig.Close() }
+
+// MaxBytes returns a middleware that limits the response body size to n bytes,
+// preventing unbounded memory growth on large responses. Exceeding the limit
+// surfaces as ErrResponseTooLarge from the body reader rather than a truncated
+// body.
+//
+// A 1xx response is passed through unwrapped. A WebSocket upgrade replies 101 and
+// then hands the underlying connection to the WebSocket library, which requires
+// the body to be the connection's own io.ReadWriteCloser; wrapping it in a reader
+// makes every WebSocket dial fail with "response body is not a io.ReadWriteCloser".
+func MaxBytes(n int64) func(http.RoundTripper) http.RoundTripper {
+	return func(base http.RoundTripper) http.RoundTripper {
+		return RoundTripFunc(func(req *http.Request) (*http.Response, error) {
+			resp, err := base.RoundTrip(req)
+			if err != nil || resp == nil {
+				return resp, err
+			}
+			if resp.StatusCode >= 100 && resp.StatusCode < 200 {
+				return resp, nil
+			}
+			orig := resp.Body
+			resp.Body = &maxBytesReader{orig: orig, lim: &io.LimitedReader{R: orig, N: n}}
+			return resp, nil
 		})
 	}
 }
@@ -164,7 +292,27 @@ func isErrorStatus(code int) bool { return code >= 400 }
 
 var headerRedact = regexp.MustCompile(`(?i)(Authorization|Cookie|Set-Cookie)\s*:\s*[^\r\n,;]*`)
 
-func redact(s string) string { return headerRedact.ReplaceAllString(s, "$1: <redacted>") }
+var tokenPatterns = []string{
+	`(?i)bearer\s+[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)access_token\s*=\s*[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)refresh_token\s*=\s*[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)client_secret\s*=\s*[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)id_token\s*=\s*[A-Za-z0-9_\-\.~+/]+=*`,
+	`sess=[A-Za-z0-9_\-\.~+/]+=*`,
+	`(?i)x-csrf-token\s*[:=]\s*[A-Za-z0-9_\-\.~+/]+=*`,
+}
+
+var secretRedact = regexp.MustCompile(func() string {
+	var all []string
+	all = append(all, tokenPatterns...)
+	return `(?i)(` + strings.Join(all, `|`) + `)`
+}())
+
+func redact(s string) string {
+	s = headerRedact.ReplaceAllString(s, "$1: <redacted>")
+	s = secretRedact.ReplaceAllString(s, "<redacted>")
+	return s
+}
 
 // carryError reads the response body, parses the IBKR error envelope, and returns
 // a response with the error details stored in headers. The body is replaced with
@@ -233,7 +381,7 @@ func ResponseError(resp *http.Response) *Error {
 	return &Error{
 		Op:         "unknown",
 		Code:       code,
-		Message:    errMsg,
+		Message:    redact(errMsg),
 		HTTPStatus: resp.StatusCode,
 		RequestID:  reqID,
 		Err:        serr,

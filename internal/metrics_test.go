@@ -320,3 +320,94 @@ func TestComponentsWithoutMetricsDoNotPanic(t *testing.T) {
 		t.Fatalf("nil limiter Wait: %v", err)
 	}
 }
+
+func TestNewMetrics_AllConstantsRegistered(t *testing.T) {
+	m := NewInMemoryMetrics()
+	ctx := context.Background()
+
+	m.Counter(ctx, MetricHTTPRetries, 1, Attr{Key: "attempt", Value: "1"})
+	m.Histogram(ctx, MetricHTTPRetryBackoffMS, 1.0, Attr{Key: "attempt", Value: "1"})
+	m.Counter(ctx, MetricWSHeartbeatFailures, 1)
+	m.Counter(ctx, MetricWSDroppedEvents, 1)
+	m.Gauge(ctx, MetricWSQueueDepth, 1.0)
+	m.Gauge(ctx, MetricWSActiveSubscriptions, 1.0)
+	m.Counter(ctx, MetricRateLimit429s, 1, Attr{Key: "method", Value: "GET"}, Attr{Key: "path", Value: "/v1/api/order"})
+	m.Histogram(ctx, MetricOrderLatencyMS, 1.0, Attr{Key: "method", Value: "POST"})
+
+	snap := m.Snapshot()
+	if len(snap.Counters) == 0 && len(snap.Gauges) == 0 && len(snap.Histograms) == 0 {
+		t.Error("expected metrics to be registered")
+	}
+}
+
+func TestInstrument_Records429AndOrderLatency(t *testing.T) {
+	m := NewInMemoryMetrics()
+	rt := Instrument(m)(RoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 429, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}, nil
+	}))
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.test/v1/api/accounts", nil)
+	resp, _ := rt.RoundTrip(req)
+	resp.Body.Close()
+
+	key429 := SeriesKey(MetricRateLimit429s,
+		Attr{Key: "method", Value: "GET"},
+		Attr{Key: "path", Value: "/v1/api/accounts"},
+	)
+	if got := m.Snapshot().Counters[key429]; got != 1 {
+		t.Errorf("429 counter = %d; want 1", got)
+	}
+
+	m2 := NewInMemoryMetrics()
+	rt2 := Instrument(m2)(RoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}, nil
+	}))
+	req2, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, "http://example.test/v1/api/order/U1234567", nil)
+	resp2, _ := rt2.RoundTrip(req2)
+	resp2.Body.Close()
+
+	orderKey := SeriesKey(MetricOrderLatencyMS, Attr{Key: "method", Value: "POST"})
+	if h, ok := m2.Snapshot().Histograms[orderKey]; !ok || h.Count != 1 {
+		t.Errorf("order latency histogram = %#v; want one observation", m2.Snapshot().Histograms)
+	}
+}
+
+func TestRetryPolicy_WithMetrics(t *testing.T) {
+	m := NewInMemoryMetrics()
+	attempts := 0
+	rt := Retry(RetryPolicy{
+		MaxAttempts:   3,
+		BaseDelay:     1 * time.Millisecond,
+		MaxDelay:      10 * time.Millisecond,
+		Jitter:        false,
+		RetryOnStatus: []int{429, 500},
+		Metrics:       m,
+	})(RoundTripFunc(func(req *http.Request) (*http.Response, error) {
+		attempts++
+		if attempts < 3 {
+			return &http.Response{StatusCode: 429, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}, nil
+		}
+		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(""))}, nil
+	}))
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.test/v1/api/accounts", nil)
+	resp, err := rt.RoundTrip(req)
+	if err != nil {
+		t.Fatalf("RoundTrip: %v", err)
+	}
+	resp.Body.Close()
+
+	if attempts != 3 {
+		t.Fatalf("attempts = %d; want 3", attempts)
+	}
+
+	snap := m.Snapshot()
+	retryKey := SeriesKey(MetricHTTPRetries, Attr{Key: "attempt", Value: "1"})
+	if got := snap.Counters[retryKey]; got != 1 {
+		t.Errorf("retry counter[attempt=1] = %d; want 1", got)
+	}
+
+	backoffKey := SeriesKey(MetricHTTPRetryBackoffMS, Attr{Key: "attempt", Value: "1"})
+	if h, ok := snap.Histograms[backoffKey]; !ok || h.Count < 1 {
+		t.Errorf("backoff histogram = %#v; want observations", snap.Histograms)
+	}
+}

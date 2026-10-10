@@ -15,11 +15,25 @@
 // These tests are READ-ONLY: they never submit orders, modify positions, or
 // initiate transfers. They validate that the SDK works against a real gateway
 // and are not run in normal CI.
+//
+// Deliberately excluded, because they mutate state on the account:
+//
+//   - ModelManager.SubmitModelPortfolioOrder (submits orders)
+//   - ModelManager.TwsInvestDivest and ModelManager.RebalanceTo* (move money
+//     and rebalance model portfolios)
+//
+// Their response decoding is covered by the mock-gateway tests in pkg/ibkr. What
+// only a real gateway can confirm is that IBKR dispatches each operationId to
+// the right handler, which is server behaviour the mock cannot represent.
+// Running these for real requires an FA-enabled paper account and a separate
+// opt-in build tag, which this suite deliberately does not provide.
 package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -133,5 +147,34 @@ func TestIntegration_MarketDataSnapshot(t *testing.T) {
 			s.Fields[ibkr.FieldLastPrice],
 			s.Fields[ibkr.FieldBidPrice],
 			s.Fields[ibkr.FieldAskPrice])
+	}
+}
+
+// TestIntegration_AllocationModels is read-only: it only lists the configured
+// allocation models. It is an FA surface, so it skips when the account has no
+// financial-advisor entitlement rather than failing.
+func TestIntegration_AllocationModels(t *testing.T) {
+	cli := testClient(t)
+	defer cli.Close()
+
+	ctx := context.Background()
+	if err := cli.Session().Initialize(ctx); err != nil {
+		t.Fatalf("Session.Initialize: %v", err)
+	}
+
+	models, err := cli.Allocation().AllocationModels(ctx)
+	if err != nil {
+		var apiErr *ibkr.Error
+		if errors.As(err, &apiErr) && (apiErr.HTTPStatus == http.StatusForbidden ||
+			apiErr.HTTPStatus == http.StatusUnauthorized) {
+			t.Skipf("skipping: account lacks FA entitlement for the allocation surface: %v", err)
+		}
+		t.Fatalf("Allocation.AllocationModels: %v", err)
+	}
+	if len(models) == 0 {
+		t.Skip("skipping: no allocation models configured on this account")
+	}
+	for name, instruments := range models {
+		t.Logf("model %s: %s", name, instruments)
 	}
 }

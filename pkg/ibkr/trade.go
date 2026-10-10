@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/shing1211/ibkrapi4go/client"
@@ -38,6 +39,13 @@ type OrderRequest struct {
 	AllOrNone bool
 	// ClientOrderID is an optional caller-supplied order reference.
 	ClientOrderID string
+	// ParentID is the OrderID of the parent order for bracket children.
+	// Empty for standalone orders. When set, this order is linked to the parent.
+	ParentID string
+	// IsSingleGroup marks this order as part of an OCA (One-Cancels-All) group.
+	// All siblings (same ParentID or same group) must have the same value.
+	// When one sibling fills, all other siblings in the group are cancelled.
+	IsSingleGroup bool
 }
 
 func (r OrderRequest) toJSON() orderTicketJSON {
@@ -53,7 +61,36 @@ func (r OrderRequest) toJSON() orderTicketJSON {
 		AllOrNone:     r.AllOrNone,
 		ClientOrderID: r.ClientOrderID,
 	}
+	if r.ParentID != "" {
+		t.ParentID = r.ParentID
+	}
+	if r.IsSingleGroup {
+		t.IsSingleGroup = r.IsSingleGroup
+	}
 	return t
+}
+
+// Validate checks an order request for the combinations the gateway rejects,
+// such as a limit price on a market order, before it is sent.
+func (r OrderRequest) Validate() error {
+	if r.ConID == 0 {
+		return fmt.Errorf("ibkr: OrderRequest.ConID is required")
+	}
+	if r.Side != SideBuy && r.Side != SideSell {
+		return fmt.Errorf("ibkr: OrderRequest.Side must be BUY or SELL")
+	}
+	if r.Quantity == "" {
+		return fmt.Errorf("ibkr: OrderRequest.Quantity is required")
+	}
+	if r.OrderType == "" {
+		return fmt.Errorf("ibkr: OrderRequest.OrderType is required")
+	}
+	if r.TimeInForce != "" {
+		if err := r.TimeInForce.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Reply is an order reply message that must be confirmed before the order is
@@ -83,6 +120,7 @@ func (r *SubmitResult) Accepted() bool { return len(r.Replies) == 0 && r.OrderID
 
 // Order is a working or recently completed order.
 type Order struct {
+	ClientOrderID     string
 	OrderID           string
 	AccountID         AccountID
 	ConID             ConID
@@ -102,6 +140,7 @@ type Order struct {
 
 // OrderStatus is the status of a single order.
 type OrderStatus struct {
+	ClientOrderID     string
 	OrderID           string
 	Status            string
 	ConID             ConID
@@ -144,9 +183,27 @@ type WhatIfResult struct {
 // create two orders (ADR 0009).
 func (m *TradeManager) Submit(ctx context.Context, account AccountID, req OrderRequest) (*SubmitResult, error) {
 	const op = "Trade.Submit"
+
+	if req.ClientOrderID != "" {
+		if rec := m.coidRegistry.Get(req.ClientOrderID); rec != nil {
+			if rec.OrderID != "" {
+				return &SubmitResult{OrderID: rec.OrderID, Status: rec.State.String()}, nil
+			}
+			return nil, &Error{Op: op, Code: "duplicate", Message: "order submit in progress for cOID " + req.ClientOrderID}
+		}
+	}
+
 	body, err := json.Marshal(ordersSubmissionJSON{Orders: []orderTicketJSON{req.toJSON()}})
 	if err != nil {
 		return nil, &Error{Op: op, Message: "encode request: " + err.Error(), Err: err}
+	}
+	if sink := m.client.telemetrySink(); sink != nil {
+		sink.OnOrderSubmit(ctx, internal.OrderEventInfo{
+			Event:         "submit",
+			AccountID:     string(account),
+			ClientOrderID: req.ClientOrderID,
+			ConID:         int(req.ConID),
+		})
 	}
 	resp, err := m.mutate(ctx, op, func() (*http.Response, error) {
 		return m.client.generated.SubmitNewOrderWithBody(ctx, string(account),
@@ -161,6 +218,19 @@ func (m *TradeManager) Submit(ctx context.Context, account AccountID, req OrderR
 			m.countOrder(ctx, internal.MetricOrdersRejected, 1)
 		}
 		return nil, err
+	}
+	if req.ClientOrderID != "" {
+		state := OrderStateSubmitted
+		if result.Accepted() {
+			state = OrderStateAccepted
+		}
+		m.coidRegistry.Set(req.ClientOrderID, &orderRecord{
+			State:         state,
+			ClientOrderID: req.ClientOrderID,
+			OrderID:       result.OrderID,
+			AccountID:     account,
+			ConID:         req.ConID,
+		})
 	}
 	m.countOrder(ctx, internal.MetricOrdersSubmitted, 1)
 	return result, nil
@@ -290,6 +360,7 @@ func (m *TradeManager) OpenOrders(ctx context.Context) ([]Order, error) {
 	out := make([]Order, 0, len(raw.Orders))
 	for _, o := range raw.Orders {
 		out = append(out, Order{
+			ClientOrderID:     rawToString(o, "cOID"),
 			OrderID:           rawToString(o, "orderId"),
 			AccountID:         AccountID(firstNonEmpty(rawToString(o, "account"), rawToString(o, "acct"))),
 			ConID:             ConID(jsonNumberToInt(jsonNumber(o["conid"]))),
@@ -324,6 +395,7 @@ func (m *TradeManager) OrderStatus(ctx context.Context, orderID string) (*OrderS
 		return nil, err
 	}
 	st := &OrderStatus{
+		ClientOrderID:     rawToString(raw, "cOID"),
 		OrderID:           firstNonEmpty(rawToString(raw, "order_id"), rawToString(raw, "orderId")),
 		Status:            firstNonEmpty(rawToString(raw, "order_status"), rawToString(raw, "status")),
 		ConID:             ConID(jsonNumberToInt(jsonNumber(raw["conid"]))),
@@ -495,6 +567,8 @@ type orderTicketJSON struct {
 	AllOrNone     bool      `json:"allOrNone,omitempty"`
 	ClientOrderID string    `json:"cOID,omitempty"`
 	AccountID     AccountID `json:"acctId,omitempty"`
+	ParentID      string    `json:"parentId,omitempty"`
+	IsSingleGroup bool      `json:"isSingleGroup,omitempty"`
 }
 
 type ordersSubmissionJSON struct {

@@ -3,6 +3,8 @@
 
 package ibkr
 
+import "fmt"
+
 // ConID is an IBKR contract identifier.
 type ConID int
 
@@ -55,7 +57,22 @@ type TimeInForce string
 // Time-in-force values.
 const (
 	TimeInForceDay TimeInForce = "DAY"
-	TimeInForceGTC TimeInForce = "GTC"
-	TimeInForceIOC TimeInForce = "IOC"
-	TimeInForceOPG TimeInForce = "OPG"
+	TimeInForceGTC TimeInForce = "GTC" // Good-till-cancelled
+	TimeInForceIOC TimeInForce = "IOC" // Immediate-or-cancel
+	TimeInForceOPG TimeInForce = "OPG" // At-the-opening
+	TimeInForceFOK TimeInForce = "FOK" // Fill-or-kill
+	TimeInForceGTD TimeInForce = "GTD" // Good-till-date
 )
+
+// Validate reports whether t is a known IBKR TIF value.
+func (t TimeInForce) Validate() error {
+	switch t {
+	case TimeInForceDay, TimeInForceGTC, TimeInForceIOC,
+		TimeInForceOPG, TimeInForceFOK, TimeInForceGTD:
+		return nil
+	}
+	if t == "" {
+		return nil // empty is ok (gateway default)
+	}
+	return fmt.Errorf("ibkr: unknown TimeInForce %q", t)
+}

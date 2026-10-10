@@ -33,6 +33,10 @@ type Breaker struct {
 	consecutive int
 	openUntil   time.Time
 	probing     bool
+
+	budget *errorBudget
+
+	clock *Clock
 }
 
 // NewBreaker returns a breaker, or nil when threshold<=0 (disabled).
@@ -44,6 +48,81 @@ func NewBreaker(threshold int, cooldown time.Duration) *Breaker {
 		cooldown = 30 * time.Second
 	}
 	return &Breaker{threshold: threshold, cooldown: cooldown, Logger: NopLogger()}
+}
+
+// errorBudget tracks failures within a rolling window of the most recent
+// outcomes. When at least budget of the last size outcomes were failures, the
+// breaker should open.
+//
+// The window holds outcomes rather than failures, and that is the whole point: a
+// window of failures alone never shrinks on its own, so once the budget had been
+// exhausted the condition stayed true for the life of the client and every
+// subsequent single failure re-opened the circuit. Recording successes means they
+// push old failures out, so the budget recovers the way the documented contract
+// ("budget failures within the last size outcomes") says it does.
+//
+// Entries are not aged out by time. A caller who wants a rate rather than a rolling
+// count should express it as a window size chosen to cover the period of interest.
+type errorBudget struct {
+	mu     sync.Mutex
+	window []bool // true for a failure, most recent last
+	size   int
+	budget int
+}
+
+// newErrorBudget returns a rolling-window error budget, or nil when budget<=0 or
+// size<=0 (disabled). budget is the number of failures among the last size
+// outcomes that exhausts the budget.
+func newErrorBudget(budget, size int) *errorBudget {
+	if budget <= 0 || size <= 0 {
+		return nil
+	}
+	return &errorBudget{
+		window: make([]bool, 0, size),
+		size:   size,
+		budget: budget,
+	}
+}
+
+// record appends one outcome to the window and reports whether the budget is
+// exhausted. It is nil-safe, because Record consults the budget on every outcome
+// and a nil budget means the caller never opted in.
+func (eb *errorBudget) record(failed bool) bool {
+	if eb == nil {
+		return false
+	}
+	eb.mu.Lock()
+	defer eb.mu.Unlock()
+
+	eb.window = append(eb.window, failed)
+	// Bound memory: keep at most size outcomes, dropping the oldest. This is also
+	// what lets the budget recover - a success appended here eventually evicts an
+	// old failure.
+	if len(eb.window) > eb.size {
+		eb.window = eb.window[len(eb.window)-eb.size:]
+	}
+
+	failures := 0
+	for _, f := range eb.window {
+		if f {
+			failures++
+		}
+	}
+	return failures >= eb.budget
+}
+
+// SetErrorBudget installs a rolling-window error budget on the breaker. When at
+// least budget of the last size outcomes were failures, the breaker opens. budget
+// <= 0 or size <= 0 disables the budget. size is the number of recent outcomes the
+// budget looks at and should be >= budget. It is safe to call before concurrent
+// use.
+func (b *Breaker) SetErrorBudget(budget, size int) {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	b.budget = newErrorBudget(budget, size)
+	b.mu.Unlock()
 }
 
 // SetMetrics installs a metrics sink and records the current state. It is safe
@@ -66,6 +145,20 @@ func (b *Breaker) SetMetrics(m Metrics) {
 	setGauge(context.Background(), m, MetricBreakerState, float64(state), Attr{Key: "state", Value: label})
 }
 
+// SetClock installs a clock and returns self for chaining. A nil clock uses
+// the real clock. It is safe to call after construction and before concurrent use.
+func (b *Breaker) SetClock(c *Clock) {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	if c == nil {
+		c = &Clock{}
+	}
+	b.clock = c
+	b.mu.Unlock()
+}
+
 // Allow reports whether a request may proceed. It returns ErrCircuitOpen while
 // the breaker is open.
 func (b *Breaker) Allow() error {
@@ -77,7 +170,11 @@ func (b *Breaker) Allow() error {
 		b.mu.Unlock()
 		return nil
 	}
-	if time.Now().Before(b.openUntil) {
+	clock := b.clock
+	if clock == nil {
+		clock = &Clock{}
+	}
+	if clock.Now().Before(b.openUntil) {
 		b.mu.Unlock()
 		return ErrCircuitOpen
 	}
@@ -99,17 +196,31 @@ func (b *Breaker) Record(err error, status int) {
 	if b == nil {
 		return
 	}
+	clock := b.clock
+	if clock == nil {
+		clock = &Clock{}
+	}
 	b.mu.Lock()
 	if breakerFailure(err, status) {
 		wasProbing := b.probing
 		b.probing = false
 		b.consecutive++
 		transitioned := false
-		if b.consecutive >= b.threshold {
+
+		// Check consecutive threshold.
+		consecutiveTrip := b.consecutive >= b.threshold
+
+		// Record the failure in the rolling budget window. It is recorded whether
+		// or not the consecutive threshold already tripped: the window is a record
+		// of recent outcomes, and skipping entries would make it understate how
+		// many failures actually happened.
+		budgetTrip := b.budget.record(true)
+
+		if consecutiveTrip || budgetTrip {
 			if b.openUntil.IsZero() || wasProbing {
 				transitioned = true
 			}
-			b.openUntil = time.Now().Add(b.cooldown)
+			b.openUntil = clock.Now().Add(b.cooldown)
 		}
 		consecutive, threshold, cooldown := b.consecutive, b.threshold, b.cooldown
 		metrics := b.metrics
@@ -128,6 +239,9 @@ func (b *Breaker) Record(err error, status int) {
 	b.consecutive = 0
 	b.openUntil = time.Time{}
 	b.probing = false
+	// A success is an outcome too, and recording it is what lets the budget
+	// recover: it evicts an older failure from the rolling window.
+	b.budget.record(false)
 	metrics := b.metrics
 	b.mu.Unlock()
 	if wasOpen {

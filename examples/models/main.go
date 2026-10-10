@@ -50,21 +50,27 @@ func main() {
 
 	reqID := time.Now().UnixMilli()
 
-	models, err := cli.Model().AllModels(ctx, reqID)
-	if err != nil {
-		log.Fatalf("Model.GetAllModels: %v", err)
+	// ModelsPager, not AllModels: AllModels is deprecated in favour of the
+	// pager, which fetches lazily instead of materialising every page at once.
+	models := cli.Model().ModelsPager(ctx, reqID)
+	var names []string
+	for models.Next(ctx) {
+		names = append(names, models.Value())
 	}
-	if len(models) == 0 {
+	if err := models.Err(); err != nil {
+		log.Fatalf("Model.ModelsPager: %v", err)
+	}
+	if len(names) == 0 {
 		fmt.Println("(no model portfolios)")
 		return
 	}
 
 	fmt.Println("=== Model portfolios ===")
-	for _, name := range models {
+	for _, name := range names {
 		fmt.Printf("  %s\n", name)
 	}
 
-	first := models[0]
+	first := names[0]
 	fmt.Println("\n=== Positions for:", first, "===")
 	positions, err := cli.Model().AllModelPositions(ctx, first)
 	if err != nil {

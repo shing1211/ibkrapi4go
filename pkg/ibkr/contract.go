@@ -122,7 +122,8 @@ type Strikes struct {
 // TradeManager exposes order and contract operations. It is safe for concurrent
 // use. Order mutations are never retried (ADR 0009).
 type TradeManager struct {
-	client *Client
+	client       *Client
+	coidRegistry *cOIDRegistry
 }
 
 // SearchContracts searches instruments by symbol.

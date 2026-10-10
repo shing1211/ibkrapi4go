@@ -59,23 +59,23 @@ type Position struct {
 // LedgerCurrency is the ledger balance for one currency.
 type LedgerCurrency struct {
 	// AccountCode is the account id the ledger belongs to.
-	AccountCode string
+	AccountCode string `json:"acctcode"`
 	// Currency is the balance currency.
-	Currency string
+	Currency string `json:"currency"`
 	// CashBalance is the cash balance.
-	CashBalance string
+	CashBalance string `json:"cashbalance"`
 	// SettledCash is the settled cash balance.
-	SettledCash string
+	SettledCash string `json:"settledcash"`
 	// NetLiquidationValue is the net liquidation value.
-	NetLiquidationValue string
+	NetLiquidationValue string `json:"netliquidationvalue"`
 	// StockMarketValue is the stock market value.
-	StockMarketValue string
+	StockMarketValue string `json:"stockmarketvalue"`
 	// StockOptionMarketValue is the stock-option market value.
-	StockOptionMarketValue string
+	StockOptionMarketValue string `json:"stockoptionmarketvalue"`
 	// UnrealizedPnL is the unrealized P&L.
-	UnrealizedPnL string
+	UnrealizedPnL string `json:"unrealizedpnl"`
 	// RealizedPnL is the realized P&L.
-	RealizedPnL string
+	RealizedPnL string `json:"realizedpnl"`
 }
 
 // SummaryValue is one key of a portfolio summary.
@@ -127,7 +127,32 @@ func (m *PortfolioManager) Accounts(ctx context.Context) ([]PortfolioAccount, er
 	return accountsFromRaw(raw), nil
 }
 
+// SubaccountsPager returns a paginated iterator over the account's subaccounts.
+//
+//	pager := client.Portfolio().SubaccountsPager(ctx)
+//	for pager.Next(ctx) {
+//	    acct := pager.Value()
+//	    // ...
+//	}
+//	if err := pager.Err(); err != nil { ... }
+func (m *PortfolioManager) SubaccountsPager(_ context.Context) *Pager[PortfolioAccount] {
+	fetched := false
+	return NewPager(func(ctx context.Context, page int) ([]PortfolioAccount, error) {
+		if fetched || page > 0 {
+			return nil, nil
+		}
+		accts, err := m.Subaccounts(ctx)
+		if err != nil {
+			return nil, err
+		}
+		fetched = true
+		return accts, nil
+	})
+}
+
 // Subaccounts returns the account's subaccounts.
+//
+// Deprecated: Use SubaccountsPager instead for paginated iteration.
 func (m *PortfolioManager) Subaccounts(ctx context.Context) ([]PortfolioAccount, error) {
 	const op = "Portfolio.Subaccounts"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
@@ -183,7 +208,7 @@ func (m *PortfolioManager) PositionsPaginated(ctx context.Context, account Accou
 func (m *PortfolioManager) Position(ctx context.Context, account AccountID, conid ConID) (*Position, error) {
 	const op = "Portfolio.Position"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
-		return m.client.generated.GetPositionByConid(ctx, string(account), int64(conid))
+		return m.client.generated.GetPositionByConid(ctx, string(account), int64(conid), nil)
 	})
 	if err != nil {
 		return nil, err
@@ -203,7 +228,7 @@ func (m *PortfolioManager) Position(ctx context.Context, account AccountID, coni
 func (m *PortfolioManager) Ledger(ctx context.Context, account AccountID) (map[string]LedgerCurrency, error) {
 	const op = "Portfolio.Ledger"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
-		return m.client.generated.GetPortfolioLedger(ctx, string(account))
+		return m.client.generated.GetPortfolioLedger(ctx, string(account), nil)
 	})
 	if err != nil {
 		return nil, err
@@ -256,7 +281,7 @@ func (m *PortfolioManager) Allocation(ctx context.Context, account AccountID) (A
 func (m *PortfolioManager) Summary(ctx context.Context, account AccountID) (PortfolioSummary, error) {
 	const op = "Portfolio.Summary"
 	resp, err := m.client.netDo(ctx, op, func() (*http.Response, error) {
-		return m.client.generated.GetPortfolioSummary(ctx, string(account))
+		return m.client.generated.GetPortfolioSummary(ctx, string(account), nil)
 	})
 	if err != nil {
 		return nil, err

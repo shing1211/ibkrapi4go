@@ -170,7 +170,32 @@ func (m *FYIManager) ReadFYIDisclaimer(ctx context.Context, typeCode string) err
 	return nil
 }
 
+// FYIsPager returns a paginated iterator over all FYI notifications.
+//
+//	pager := client.FYI().FYIsPager(ctx, max)
+//	for pager.Next(ctx) {
+//	    n := pager.Value()
+//	    // ...
+//	}
+//	if err := pager.Err(); err != nil { ... }
+func (m *FYIManager) FYIsPager(_ context.Context, max int64) *Pager[FYINotification] {
+	fetched := false
+	return NewPager(func(ctx context.Context, page int) ([]FYINotification, error) {
+		if fetched || page > 0 {
+			return nil, nil
+		}
+		items, err := m.AllFYIs(ctx, max)
+		if err != nil {
+			return nil, err
+		}
+		fetched = true
+		return items, nil
+	})
+}
+
 // AllFYIs returns all FYI notifications.
+//
+// Deprecated: Use FYIsPager instead for paginated iteration.
 func (m *FYIManager) AllFYIs(ctx context.Context, max int64) ([]FYINotification, error) {
 	const op = "FYI.GetAllFYIs"
 	params := &client.GetAllFyisParams{Max: max}

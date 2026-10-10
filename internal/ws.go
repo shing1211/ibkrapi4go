@@ -27,11 +27,57 @@ var (
 	ErrWSReconnected = errors.New("ibkr: ws: reconnected")
 )
 
+// WSGapError signals a sequence discontinuity for a contract. A gap of more
+// than 1 in the _updated sequence indicates missed messages.
+type WSGapError struct {
+	Conid       int
+	LastSeq     int64
+	ReceivedSeq int64
+}
+
+func (e *WSGapError) Error() string {
+	return "ibkr: ws: sequence gap for conid " + itoa(int64(e.Conid)) +
+		": last=" + itoa(e.LastSeq) + " received=" + itoa(e.ReceivedSeq)
+}
+
+// itoa converts an int to a string without importing fmt.
+func itoa(n int64) string {
+	if n == 0 {
+		return "0"
+	}
+	if n < 0 {
+		return "-" + uitoa(uint64(-n))
+	}
+	return uitoa(uint64(n))
+}
+
+func uitoa(n uint64) string {
+	if n == 0 {
+		return "0"
+	}
+	var buf [20]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	return string(buf[i:])
+}
+
 // WSUpdate is a single field update dispatched to a sink.
 type WSUpdate struct {
 	ConID int
 	Field string
 	Value string
+}
+
+// WSSystemFrame is a non-market-data (system) frame received from the gateway.
+type WSSystemFrame struct {
+	Type    string
+	Status  string
+	Topic   string
+	Payload []byte
 }
 
 // WSSink receives routed market-data updates for a subscription. Implementations
@@ -45,6 +91,19 @@ type WSSink interface {
 	Fail(error)
 }
 
+// WSSystemSink receives non-market-data frames (sts, ntf, sor, usr).
+type WSSystemSink interface {
+	// WantsSystem reports whether the sink wants system updates.
+	WantsSystem() bool
+	// DeliverSystem receives a system frame.
+	DeliverSystem(WSSystemFrame)
+	// Fail receives connection-level events (drops, errors, reconnects).
+	Fail(error)
+}
+
+// DialWSFunc dials a WebSocket connection.
+type DialWSFunc func(ctx context.Context, wsURL string, httpClient *http.Client) (*websocket.Conn, error)
+
 // WSOptions configures a WSConn.
 type WSOptions struct {
 	HTTPClient    *http.Client
@@ -55,6 +114,9 @@ type WSOptions struct {
 	Reconnect     bool
 	ReconnectBase time.Duration
 	ReconnectMax  time.Duration
+	Clock         *Clock
+	DialWS        DialWSFunc
+	Telemetry     Telemetry
 }
 
 // WSHandle is a registered subscription on a WSConn.
@@ -65,19 +127,25 @@ type WSHandle struct {
 }
 
 type wsSub struct {
-	sink   WSSink
-	conids []int
-	fields []string
+	sink       WSSink
+	systemSink WSSystemSink
+	method     string
+	conids     []int
+	fields     []string
 }
 
 // WSConn is a single multiplexed WebSocket connection to the gateway.
 type WSConn struct {
-	wsURL string
-	opts  WSOptions
+	wsURL  string
+	opts   WSOptions
+	ctx    context.Context
+	cancel context.CancelFunc
 
 	mu   sync.Mutex
 	conn *websocket.Conn
 	subs map[*wsSub]struct{}
+
+	lastUpdated map[int]int64
 
 	out    chan []byte
 	stopCh chan struct{}
@@ -110,42 +178,102 @@ func DialWS(ctx context.Context, gatewayURL string, opts WSOptions) (*WSConn, er
 	if opts.Logger == nil {
 		opts.Logger = NopLogger()
 	}
-	c := &WSConn{
-		wsURL:  wsURL,
-		opts:   opts,
-		subs:   map[*wsSub]struct{}{},
-		out:    make(chan []byte, 64),
-		stopCh: make(chan struct{}),
-		doneCh: make(chan struct{}),
+	if opts.Clock == nil {
+		opts.Clock = &Clock{}
 	}
-	if err := c.dial(ctx); err != nil {
+	if opts.DialWS == nil {
+		opts.DialWS = func(ctx context.Context, wsURL string, httpClient *http.Client) (*websocket.Conn, error) {
+			dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			// The response is discarded because gorilla/websocket already closes
+			// it: on a failed dial it is closed before returning, and on success
+			// the 101 body is consumed and closed as part of the handshake.
+			//
+			//nolint:bodyclose // handled inside websocket.Dial; closing it here would be wrong.
+			conn, _, err := websocket.Dial(dctx, wsURL, &websocket.DialOptions{HTTPClient: httpClient})
+			return conn, err
+		}
+	}
+	if opts.Telemetry == nil {
+		opts.Telemetry = NopTelemetry()
+	}
+	wsCtx, cancel := context.WithCancel(ctx)
+	c := &WSConn{
+		wsURL:       wsURL,
+		opts:        opts,
+		ctx:         wsCtx,
+		cancel:      cancel,
+		subs:        map[*wsSub]struct{}{},
+		lastUpdated: make(map[int]int64),
+		out:         make(chan []byte, 64),
+		stopCh:      make(chan struct{}),
+		doneCh:      make(chan struct{}),
+	}
+	if err := c.dial(wsCtx); err != nil {
+		cancel()
 		return nil, err
 	}
 	incrCounter(ctx, c.opts.Metrics, MetricWSConnects, 1)
+	c.opts.Telemetry.OnWSConnect(ctx, WSConnInfo{Event: "connect", URL: c.wsURL, Subscriptions: 0})
 	c.wg.Add(3)
-	go func() { defer c.wg.Done(); c.readLoop() }()
-	go func() { defer c.wg.Done(); c.writeLoop() }()
-	go func() { defer c.wg.Done(); c.pingLoop() }()
-	go func() { c.wg.Wait(); close(c.doneCh) }()
+	go c.wgDoneWrapper(c.readLoop)
+	go c.wgDoneWrapper(c.writeLoop)
+	go c.wgDoneWrapper(c.pingLoop)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				c.opts.Logger.Error("ibkr.ws goroutine panicked", "panic", r)
+			}
+		}()
+		c.wg.Wait()
+		close(c.doneCh)
+	}()
 	return c, nil
 }
 
 // Subscribe registers a subscription for conids/fields and sends the subscribe
 // frame. Deliveries begin once frames arrive.
-func (c *WSConn) Subscribe(ctx context.Context, sink WSSink, conids []int, fields []string) (*WSHandle, error) {
+func (c *WSConn) Subscribe(ctx context.Context, sink WSSink, systemSink WSSystemSink, conids []int, fields []string) (*WSHandle, error) {
 	if c.closed.Load() {
 		return nil, ErrClosed
 	}
-	s := &wsSub{sink: sink, conids: conids, fields: fields}
+	s := &wsSub{sink: sink, systemSink: systemSink, method: "subscribe", conids: conids, fields: fields}
 	c.mu.Lock()
 	c.subs[s] = struct{}{}
 	c.mu.Unlock()
+	setGauge(c.ctx, c.opts.Metrics, MetricWSActiveSubscriptions, float64(c.ActiveSubscriptions()))
 	if err := c.send(ctx, "subscribe", subscribeParams(s)); err != nil {
 		c.mu.Lock()
 		delete(c.subs, s)
 		c.mu.Unlock()
 		return nil, err
 	}
+	c.opts.Telemetry.OnWSSubscribe(ctx, WSSubInfo{Event: "subscribe", ConIDs: conids, Fields: fields})
+	return &WSHandle{conn: c, sub: s}, nil
+}
+
+// SubscribeStream registers a non-market-data subscription (for example
+// "account" or "portfolio") and sends the corresponding subscribe frame. It is
+// used for channel/push streams that are not keyed by conid.
+func (c *WSConn) SubscribeStream(ctx context.Context, sink WSSink, systemSink WSSystemSink, method string, fields []string) (*WSHandle, error) {
+	if c.closed.Load() {
+		return nil, ErrClosed
+	}
+	if method == "" {
+		method = "subscribe"
+	}
+	s := &wsSub{sink: sink, systemSink: systemSink, method: method, fields: fields}
+	c.mu.Lock()
+	c.subs[s] = struct{}{}
+	c.mu.Unlock()
+	setGauge(c.ctx, c.opts.Metrics, MetricWSActiveSubscriptions, float64(c.ActiveSubscriptions()))
+	if err := c.send(ctx, method, subscribeParams(s)); err != nil {
+		c.mu.Lock()
+		delete(c.subs, s)
+		c.mu.Unlock()
+		return nil, err
+	}
+	c.opts.Telemetry.OnWSSubscribe(ctx, WSSubInfo{Event: method, Fields: fields})
 	return &WSHandle{conn: c, sub: s}, nil
 }
 
@@ -155,7 +283,9 @@ func (h *WSHandle) Close() error {
 		h.conn.mu.Lock()
 		delete(h.conn.subs, h.sub)
 		h.conn.mu.Unlock()
-		_ = h.conn.send(context.Background(), "unsubscribe", map[string]any{"conids": h.sub.conids})
+		setGauge(h.conn.ctx, h.conn.opts.Metrics, MetricWSActiveSubscriptions, float64(h.conn.ActiveSubscriptions()))
+		h.conn.opts.Telemetry.OnWSUnsubscribe(context.Background(), WSSubInfo{Event: "unsubscribe", ConIDs: h.sub.conids})
+		_ = h.conn.send(context.Background(), "unsubscribe", subscribeParams(h.sub))
 	})
 	return nil
 }
@@ -173,16 +303,21 @@ func (c *WSConn) Close() error {
 	if c.closed.Swap(true) {
 		return nil
 	}
-	close(c.stopCh)
 	c.mu.Lock()
+	subscriptions := len(c.subs)
 	conn := c.conn
 	c.mu.Unlock()
+	c.opts.Telemetry.OnWSDisconnect(c.ctx, WSConnInfo{Event: "disconnect", URL: c.wsURL, Subscriptions: subscriptions})
+	close(c.stopCh)
+	if c.cancel != nil {
+		c.cancel()
+	}
 	if conn != nil {
-		_ = conn.Close(websocket.StatusNormalClosure, "client closing")
+		_ = conn.CloseNow()
 	}
 	select {
 	case <-c.doneCh:
-	case <-time.After(3 * time.Second):
+	case <-c.opts.Clock.After(3 * time.Second):
 	}
 	return nil
 }
@@ -190,13 +325,16 @@ func (c *WSConn) Close() error {
 // --- internals --------------------------------------------------------------
 
 func (c *WSConn) dial(ctx context.Context) error {
-	dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	conn, _, err := websocket.Dial(dctx, c.wsURL, &websocket.DialOptions{HTTPClient: c.opts.HTTPClient})
+	conn, err := c.opts.DialWS(ctx, c.wsURL, c.opts.HTTPClient)
 	if err != nil {
 		return err
 	}
 	c.mu.Lock()
+	if c.closed.Load() {
+		c.mu.Unlock()
+		_ = conn.CloseNow()
+		return ErrClosed
+	}
 	c.conn = conn
 	c.mu.Unlock()
 	return nil
@@ -214,6 +352,11 @@ func (c *WSConn) readLoop() {
 		if c.closed.Load() {
 			return
 		}
+		select {
+		case <-c.ctx.Done():
+			return
+		default:
+		}
 		conn := c.currentConn()
 		if conn == nil {
 			if !c.opts.Reconnect || c.reconnect(&attempt) != nil {
@@ -221,13 +364,16 @@ func (c *WSConn) readLoop() {
 			}
 			continue
 		}
-		_, data, err := conn.Read(context.Background())
+		_, data, err := conn.Read(c.ctx)
 		if err == nil {
 			attempt = 0
 			c.dispatch(data)
 			continue
 		}
 		if c.closed.Load() {
+			return
+		}
+		if c.ctx.Err() != nil {
 			return
 		}
 		if !c.opts.Reconnect {
@@ -245,53 +391,66 @@ func (c *WSConn) reconnect(attempt *int) error {
 	for {
 		delay := backoffDelay(*attempt, c.opts.ReconnectBase, c.opts.ReconnectMax)
 		select {
-		case <-time.After(delay):
+		case <-c.opts.Clock.After(delay):
 		case <-c.stopCh:
 			return ErrClosed
+		case <-c.ctx.Done():
+			return c.ctx.Err()
 		}
 		if c.closed.Load() {
 			return ErrClosed
 		}
-		incrCounter(context.Background(), c.opts.Metrics, MetricWSReconnects, 1)
-		if err := c.dial(context.Background()); err != nil {
+		if c.ctx.Err() != nil {
+			return c.ctx.Err()
+		}
+		incrCounter(c.ctx, c.opts.Metrics, MetricWSReconnects, 1)
+		if err := c.dial(c.ctx); err != nil {
 			c.opts.Logger.Warn("ibkr.ws reconnect failed", "err", err)
 			*attempt++
 			continue
 		}
 		*attempt = 0
-		c.notifyReconnect()
 		c.resubscribeAll()
+		c.notifyReconnect()
+		c.opts.Telemetry.OnWSConnect(c.ctx, WSConnInfo{Event: "reconnect", URL: c.wsURL, Subscriptions: c.ActiveSubscriptions()})
 		return nil
 	}
 }
 
 func (c *WSConn) resubscribeAll() {
 	for _, s := range c.snapshotSubs() {
-		_ = c.send(context.Background(), "subscribe", subscribeParams(s))
+		method := s.method
+		if method == "" {
+			method = "subscribe"
+		}
+		_ = c.send(c.ctx, method, subscribeParams(s))
 	}
 }
 
 func (c *WSConn) writeLoop() {
 	for {
+		setGauge(c.ctx, c.opts.Metrics, MetricWSQueueDepth, float64(len(c.out)))
 		select {
 		case b := <-c.out:
 			conn := c.currentConn()
 			if conn == nil {
 				continue
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
 			if err := conn.Write(ctx, websocket.MessageText, b); err != nil {
 				c.opts.Logger.Warn("ibkr.ws write failed", "err", err)
 			}
 			cancel()
 		case <-c.stopCh:
 			return
+		case <-c.ctx.Done():
+			return
 		}
 	}
 }
 
 func (c *WSConn) pingLoop() {
-	ticker := time.NewTicker(c.opts.PingInterval)
+	ticker := c.opts.Clock.NewTicker(c.opts.PingInterval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -300,14 +459,17 @@ func (c *WSConn) pingLoop() {
 			if conn == nil {
 				continue
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), c.opts.PongTimeout)
+			ctx, cancel := context.WithTimeout(c.ctx, c.opts.PongTimeout)
 			err := conn.Ping(ctx)
 			cancel()
 			if err != nil {
 				c.opts.Logger.Warn("ibkr.ws ping failed", "err", err)
-				_ = conn.Close(websocket.StatusPolicyViolation, "ping timeout")
+				incrCounter(c.ctx, c.opts.Metrics, MetricWSHeartbeatFailures, 1)
+				_ = conn.CloseNow()
 			}
 		case <-c.stopCh:
+			return
+		case <-c.ctx.Done():
 			return
 		}
 	}
@@ -329,7 +491,19 @@ func (c *WSConn) send(ctx context.Context, method string, params map[string]any)
 		return ErrClosed
 	case <-ctx.Done():
 		return ctx.Err()
+	case <-c.ctx.Done():
+		return c.ctx.Err()
 	}
+}
+
+func (c *WSConn) wgDoneWrapper(fn func()) {
+	defer c.wg.Done()
+	defer func() {
+		if r := recover(); r != nil {
+			c.opts.Logger.Error("ibkr.ws goroutine panicked", "panic", r)
+		}
+	}()
+	fn()
 }
 
 func (c *WSConn) dispatch(data []byte) {
@@ -344,6 +518,11 @@ func (c *WSConn) dispatch(data []byte) {
 			return
 		}
 	}
+
+	if frame := parseSystemFrame(m); frame != nil {
+		c.deliverSystem(frame)
+	}
+
 	rawConid, ok := m["conid"]
 	if !ok {
 		return
@@ -353,6 +532,19 @@ func (c *WSConn) dispatch(data []byte) {
 		return
 	}
 	conid := int(jsonNumberToInt64(num))
+
+	// Gap detection: check _updated sequence before reserved-field filtering.
+	if rawUpdated, ok := m["_updated"]; ok {
+		var seqNum json.Number
+		if json.Unmarshal(rawUpdated, &seqNum) == nil {
+			newSeq, _ := seqNum.Int64()
+			lastSeq, seen, gap := c.recordSequence(conid, newSeq)
+			if seen && gap > 1 {
+				c.failAll(&WSGapError{Conid: conid, LastSeq: lastSeq, ReceivedSeq: newSeq})
+			}
+		}
+	}
+
 	updates := make([]WSUpdate, 0, len(m))
 	for k, v := range m {
 		if wsReservedField(k) {
@@ -367,12 +559,97 @@ func (c *WSConn) dispatch(data []byte) {
 	if len(updates) == 0 {
 		return
 	}
+	delivered := false
 	for _, s := range c.snapshotSubs() {
 		if !s.sink.Wants(conid) {
 			continue
 		}
+		delivered = true
 		for _, u := range updates {
 			s.sink.Deliver(u)
+		}
+	}
+	if !delivered {
+		incrCounter(c.ctx, c.opts.Metrics, MetricWSDroppedEvents, int64(len(updates)))
+	}
+}
+
+func (c *WSConn) recordSequence(conid int, sequence int64) (last int64, seen bool, gap int64) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.lastUpdated == nil {
+		c.lastUpdated = make(map[int]int64)
+	}
+	last, seen = c.lastUpdated[conid]
+	c.lastUpdated[conid] = sequence
+	if seen && sequence < last {
+		gap = last - sequence
+	}
+	return last, seen, gap
+}
+
+func parseSystemFrame(m map[string]json.RawMessage) *WSSystemFrame {
+	if len(m) == 0 {
+		return nil
+	}
+	hasConid := false
+	for k := range m {
+		if k == "conid" {
+			hasConid = true
+			break
+		}
+	}
+	if hasConid {
+		return nil
+	}
+
+	var frame WSSystemFrame
+	switch {
+	case m["sts"] != nil:
+		frame.Type = "sts"
+		var status string
+		if json.Unmarshal(m["sts"], &status) == nil {
+			frame.Status = status
+		}
+		if t, ok := m["topic"]; ok {
+			// A non-string topic leaves Topic empty, matching how every other
+			// field above is decoded: a malformed optional field is skipped, not
+			// fatal to the frame.
+			_ = json.Unmarshal(t, &frame.Topic)
+		}
+		return &frame
+	case m["ntf"] != nil:
+		frame.Type = "ntf"
+		if t, ok := m["topic"]; ok {
+			_ = json.Unmarshal(t, &frame.Topic)
+		}
+		frame.Payload = m["ntf"]
+		return &frame
+	case m["sor"] != nil:
+		frame.Type = "sor"
+		frame.Payload = m["sor"]
+		return &frame
+	case m["usr"] != nil:
+		frame.Type = "usr"
+		frame.Payload = m["usr"]
+		return &frame
+	case m["acq"] != nil:
+		frame.Type = "acq"
+		frame.Payload = m["acq"]
+		return &frame
+	case m["pos"] != nil:
+		frame.Type = "pos"
+		frame.Payload = m["pos"]
+		return &frame
+	default:
+		return nil
+	}
+}
+
+func (c *WSConn) deliverSystem(frame *WSSystemFrame) {
+	for _, s := range c.snapshotSubs() {
+		if s.systemSink != nil && s.systemSink.WantsSystem() {
+			s.systemSink.DeliverSystem(*frame)
 		}
 	}
 }
@@ -400,7 +677,10 @@ func (c *WSConn) notifyReconnect() {
 }
 
 func subscribeParams(s *wsSub) map[string]any {
-	params := map[string]any{"conids": s.conids}
+	params := map[string]any{}
+	if len(s.conids) > 0 {
+		params["conids"] = s.conids
+	}
 	if len(s.fields) > 0 {
 		params["fields"] = s.fields
 	}
@@ -410,7 +690,7 @@ func subscribeParams(s *wsSub) map[string]any {
 // wsReservedField reports whether a frame key is metadata rather than a field.
 func wsReservedField(k string) bool {
 	switch k {
-	case "conid", "_updated", "server_id", "6119", "6509", "topic", "method", "id":
+	case "conid", "_updated", "server_id", "6119", "topic", "method", "id":
 		return true
 	default:
 		return false
@@ -484,6 +764,8 @@ func backoffDelay(attempt int, base, max time.Duration) time.Duration {
 	if d > max {
 		d = max
 	}
+	// #nosec G404 -- reconnect backoff jitter, not a security-relevant random
+	// value; see the equivalent annotation in retry.go.
 	return time.Duration(rand.Int63n(int64(d) + 1))
 }
 
@@ -498,4 +780,13 @@ func jsonNumberToInt64(n json.Number) int64 {
 		return int64(f)
 	}
 	return 0
+}
+
+// NewTestWSHandle returns a *WSHandle whose Close method is a no-op. It is
+// intended for use in unit tests where a WSClient fake needs to return a
+// concrete handle without a live connection.
+func NewTestWSHandle() *WSHandle {
+	h := &WSHandle{}
+	h.once.Do(func() {}) // pre-trigger so Close() is safe
+	return h
 }

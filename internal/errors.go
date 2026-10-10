@@ -9,6 +9,9 @@ import (
 	"net/http"
 )
 
+// Error is the structured error surfaced by every SDK operation. The Op names
+// the logical operation ("Accounts.List"), Code is the gateway's own error code
+// when it sent one, and Err carries a sentinel for errors.Is matching.
 type Error struct {
 	Op         string
 	Code       string
@@ -38,6 +41,10 @@ var (
 	ErrClosed           = errors.New("ibkr: client closed")
 	ErrStreamingLimit   = errors.New("ibkr: streaming limit exceeded")
 	ErrCircuitOpen      = errors.New("ibkr: circuit breaker open")
+	// ErrResponseTooLarge reports that a response body exceeded the transport's
+	// byte cap. It is returned from the body reader rather than truncating, so a
+	// capped response fails loudly instead of decoding as corrupt JSON.
+	ErrResponseTooLarge = errors.New("ibkr: response body exceeds configured limit")
 )
 
 // statusSentinel maps HTTP status codes to sentinel errors.

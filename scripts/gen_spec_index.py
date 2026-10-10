@@ -33,7 +33,8 @@ def auth(op: dict) -> str:
 
 
 def main() -> None:
-    spec = json.load(open(sys.argv[1]))
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        spec = json.load(fh)
     paths = spec.get("paths", {})
     info = spec.get("info", {})
     schemas = len(spec.get("components", {}).get("schemas", {}))
@@ -108,6 +109,7 @@ def main() -> None:
     out.append("mismatches, a duplicate `operationId`, and Go type-name collisions.")
     out.append("")
 
+    sys.stdout.reconfigure(encoding="utf-8")
     print("\n".join(out))
 
 

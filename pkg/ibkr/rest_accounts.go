@@ -7,8 +7,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
+	"net/textproto"
 	"strings"
 	"time"
 
@@ -34,7 +36,7 @@ func (m *RESTAccounts) List(ctx context.Context) ([]RESTAccountSummary, error) {
 		return nil, e
 	}
 	var raw []RESTAccountSummary
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -60,7 +62,7 @@ func (m *RESTAccounts) LoginMessages(ctx context.Context) ([]LoginMessage, error
 		return nil, e
 	}
 	var raw loginMessagesWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -92,7 +94,7 @@ func (m *RESTAccounts) BulkStatus(ctx context.Context) ([]RESTAccountStatus, err
 		return nil, e
 	}
 	var raw accountStatusBulkWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -124,7 +126,7 @@ func (m *RESTAccounts) KycURL(ctx context.Context, accountID AccountID) (string,
 		return "", e
 	}
 	var raw au10tixWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return "", e
@@ -150,7 +152,7 @@ func (m *RESTAccounts) LoginMessagesForAccount(ctx context.Context, accountID Ac
 		return nil, e
 	}
 	var raw loginMessagesWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -182,7 +184,7 @@ func (m *RESTAccounts) Status(ctx context.Context, accountID AccountID) (*RESTAc
 		return nil, e
 	}
 	var raw RESTAccountStatus
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -213,7 +215,7 @@ func (m *RESTAccounts) Tasks(ctx context.Context, accountID AccountID, taskType 
 		return nil, e
 	}
 	var raw registrationTasksWrapper
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if err := decodeJSONBytes(resp.Body, op, &raw); err != nil {
 		e := &Error{Op: op, Message: "decode: " + err.Error(), Err: err}
 		internal.LogError(m.surface.owner.cfg.logger, e)
 		return nil, e
@@ -283,6 +285,9 @@ func (m *RESTAccounts) Create(ctx context.Context, payload io.Reader, mimeType s
 }
 
 // SubmitDocument uploads a document (PDF) for the account.
+//
+// mimeType is the Content-Type of the uploaded part. It defaults to
+// application/pdf when empty.
 func (m *RESTAccounts) SubmitDocument(ctx context.Context, accountID AccountID, doc io.Reader, filename, mimeType string) error {
 	const op = "Accounts.SubmitDocument"
 	if err := m.surface.owner.checkOpen(); err != nil {
@@ -293,7 +298,16 @@ func (m *RESTAccounts) SubmitDocument(ctx context.Context, accountID AccountID, 
 	}
 	buf := &bytes.Buffer{}
 	w := multipart.NewWriter(buf)
-	part, err := w.CreateFormFile("file", filename)
+	// CreateFormFile hardcodes the part's Content-Type to
+	// application/octet-stream, which would silently ignore the caller's
+	// mimeType. Build the part by hand so the documented argument is honoured.
+	// The field order matters: `file` first, then `accountId`, matching what the
+	// gateway receives today.
+	hdr := make(textproto.MIMEHeader)
+	hdr.Set("Content-Disposition",
+		fmt.Sprintf(`form-data; name="file"; filename="%s"`, escapeQuotes(filename)))
+	hdr.Set("Content-Type", mimeType)
+	part, err := w.CreatePart(hdr)
 	if err != nil {
 		e := wrapOp(op, err)
 		internal.LogError(m.surface.owner.cfg.logger, e)
@@ -360,14 +374,18 @@ func (m *RESTAccounts) UpdateTasks(ctx context.Context, accountID AccountID, tas
 	if err := m.surface.owner.checkOpen(); err != nil {
 		return err
 	}
+	// IsCompleted deliberately carries no omitempty. This is a PATCH, so a
+	// missing key means "leave unchanged" rather than "set false", and flipping a
+	// task's state is the whole purpose of the call. For a boolean, "absent" is
+	// not a state the API should offer, so the flag is always transmitted.
 	type taskItem struct {
 		TaskID      string `json:"taskId"`
-		IsCompleted bool   `json:"isCompleted,omitempty"`
+		IsCompleted bool   `json:"isCompleted"`
 		Action      string `json:"action,omitempty"`
 	}
 	taskList := make([]taskItem, len(updates))
 	for i, u := range updates {
-		taskList[i] = taskItem{TaskID: u.TaskID, IsCompleted: u.IsCompleted, Action: u.Action}
+		taskList[i] = taskItem(u)
 	}
 	payload := struct {
 		Tasks []taskItem `json:"tasks"`

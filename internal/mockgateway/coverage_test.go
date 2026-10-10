@@ -5,6 +5,7 @@ package mockgateway
 
 import (
 	"os"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -15,7 +16,7 @@ const specPath = "../../docs/SPEC.md"
 
 // Canonical operation counts from docs/SPEC.md (AGENTS.md rule 6).
 const (
-	cpapiOperationCount  = 115
+	cpapiOperationCount  = 123
 	ibRESTOperationCount = 70
 	totalOperationCount  = cpapiOperationCount + ibRESTOperationCount
 )
@@ -56,7 +57,7 @@ func TestIBRESTCoverage(t *testing.T) {
 }
 
 // TestAllOperationsCoverage asserts the combined CPAPI + IB REST surface has
-// zero unrouted operations and that docs/SPEC.md still declares 185.
+// zero unrouted operations and that docs/SPEC.md still declares 193.
 func TestAllOperationsCoverage(t *testing.T) {
 	cpapi := parseSpecSurface(t, "CPAPI")
 	rest := parseSpecSurface(t, "IB REST")
@@ -95,6 +96,139 @@ func assertCoverage(t *testing.T, surface string, specOps []specOp) {
 			len(missing), len(specOps), surface, strings.Join(missing, "\n  "))
 	}
 	t.Logf("%s coverage: %d/%d operations routed", surface, len(specOps), len(specOps))
+}
+
+// pathCollisionOps lists SPEC operations that are deliberately given no route of
+// their own, because another operation's route covers the same normalized method
+// and path and always wins the scoring tie. The value names the operation doing
+// the shadowing, so the reason travels with the data rather than living only in a
+// comment beside the route table.
+//
+// This map exists because the coverage tests above are structurally unable to see
+// this class of gap. They match on normalized method and path, so an operation
+// that shares a path with another one satisfies them through the other one's
+// route: the operation is unroutable, and no test says so. Matching on opId is
+// the only thing that notices, and an unexplained entry here fails the build
+// rather than quietly shrinking the router.
+var (
+	pathCollisionOps = map[string]string{
+		// Both are POST /v1/api/iserver/account/{segment}/orders. The SDK sends a
+		// byte-identical payload for each, so neither a path nor a body predicate can
+		// separate them. See TestModelOrderRouteCollision for the router-level view.
+		OpSubmitModelPortfolioOrder: OpSubmitNewOrder,
+	}
+
+	// sharedOpIDs names operations that docs/SPEC.md labels for more than one
+	// route. The mock gateway keys routes and fixtures by opId, so two endpoints
+	// sharing an opId also share a fixture. The spec does this once, deliberately,
+	// so it is listed here with its route count rather than left implicit.
+	sharedOpIDs = map[string]int{
+		// Two distinct endpoints: a contract trading schedule and a security
+		// definition schedule. Both routes register under OpGetTradingSchedule.
+		OpGetTradingSchedule: 2,
+	}
+)
+
+// TestEveryOpIDIsRoutedOrExplained is the opId-aware companion to the method+path
+// coverage tests. Every distinct operation in docs/SPEC.md must either be
+// registered in the route table or appear in pathCollisionOps with a reason that
+// this test independently verifies.
+func TestEveryOpIDIsRoutedOrExplained(t *testing.T) {
+	specOps := append(parseSpecSurface(t, "CPAPI"), parseSpecSurface(t, "IB REST")...)
+
+	// Collapse to distinct opIds, tracking how many distinct routes each covers.
+	distinct := make(map[string]specOp, len(specOps))
+	routesPerOp := make(map[string]map[routeKey]bool, len(specOps))
+	for _, op := range specOps {
+		if _, ok := distinct[op.opID]; !ok {
+			distinct[op.opID] = op
+		}
+		if routesPerOp[op.opID] == nil {
+			routesPerOp[op.opID] = make(map[routeKey]bool, 1)
+		}
+		routesPerOp[op.opID][routeKey{method: op.method, path: normalizePath(op.path)}] = true
+	}
+
+	// One opId spanning several routes is surprising enough to be explicit, in
+	// both directions: a new one must be declared, and a declared one that no
+	// longer applies must be removed.
+	for opID, keys := range routesPerOp {
+		if len(keys) > 1 {
+			want, declared := sharedOpIDs[opID]
+			switch {
+			case !declared:
+				t.Errorf("opId %q covers %d routes in %s; declare it in sharedOpIDs if that is intended",
+					opID, len(keys), specPath)
+			case len(keys) != want:
+				t.Errorf("sharedOpIDs says %q covers %d routes, but %s gives it %d",
+					opID, want, specPath, len(keys))
+			}
+		}
+	}
+	for opID, want := range sharedOpIDs {
+		if _, isOp := distinct[opID]; !isOp {
+			t.Errorf("sharedOpIDs lists %q, which is not an operation in %s", opID, specPath)
+			continue
+		}
+		if got := len(routesPerOp[opID]); got != want {
+			t.Errorf("sharedOpIDs says %q covers %d routes, but %s gives it %d",
+				opID, want, specPath, got)
+		}
+	}
+
+	routed := make(map[string]bool)
+	for _, rt := range defaultRoutes() {
+		routed[rt.op] = true
+	}
+
+	// Each exception must be justified, or it is just a hole with a comment on it.
+	var explained []string
+	for opID, shadow := range pathCollisionOps {
+		self, isOp := distinct[opID]
+		if !isOp {
+			t.Errorf("pathCollisionOps lists %q, which is not an operation in %s", opID, specPath)
+			continue
+		}
+		other, isShadow := distinct[shadow]
+		if !isShadow {
+			t.Errorf("pathCollisionOps says %q is shadowed by %q, which is not an operation in %s",
+				opID, shadow, specPath)
+			continue
+		}
+		if !routed[shadow] {
+			t.Errorf("pathCollisionOps says %q is shadowed by %q, but %q has no route either - "+
+				"this entry hides a missing route", opID, shadow, shadow)
+			continue
+		}
+		if self.method != other.method || normalizePath(self.path) != normalizePath(other.path) {
+			t.Errorf("pathCollisionOps says %q collides with %q, but %s %s and %s %s do not",
+				opID, shadow, self.method, self.path, other.method, other.path)
+			continue
+		}
+		explained = append(explained, opID)
+	}
+
+	var unrouted []string
+	for opID, op := range distinct {
+		if routed[opID] {
+			continue
+		}
+		if _, ok := pathCollisionOps[opID]; ok {
+			continue
+		}
+		unrouted = append(unrouted, op.method+" "+op.path+" ("+opID+")")
+	}
+	if len(unrouted) > 0 {
+		sort.Strings(unrouted)
+		t.Fatalf("%d operation(s) have neither a route nor a pathCollisionOps entry:\n  %s\n"+
+			"Add the route, or add the operation to pathCollisionOps with the operation that shadows it.",
+			len(unrouted), strings.Join(unrouted, "\n  "))
+	}
+
+	sort.Strings(explained)
+	t.Logf("opId coverage: %d distinct operations, %d routed, %d explained by a path collision%s",
+		len(distinct), len(distinct)-len(explained), len(explained),
+		map[bool]string{true: ": " + strings.Join(explained, ", "), false: ""}[len(explained) > 0])
 }
 
 // TestRoutesHaveFixtures asserts every routed operation has a fixture, so a
@@ -162,4 +296,59 @@ func normalizeSegments(segments []string) string {
 		out[i] = seg
 	}
 	return "/" + strings.Join(out, "/")
+}
+
+// TestModelOrderRouteCollision pins a known limitation of the path-based mock
+// router. IBKR exposes submitNewOrder
+// (POST /v1/api/iserver/account/{accountId}/orders) and
+// submitModelPortfolioOrder (POST /v1/api/iserver/account/{modelCode}/orders)
+// as separate operations, but once placeholders are normalized the two are
+// indistinguishable: same method, same segment count, same literal count. The
+// router therefore scores them equally and the first-declared route wins.
+//
+// The SDK sends a byte-identical payload for both, so a body predicate cannot
+// separate them either, and submitModelPortfolioOrder is deliberately left
+// unrouted rather than shadowed by a route that could never be selected. The
+// docs/SPEC.md coverage check still passes because it compares normalized
+// method and path. Callers needing the model-portfolio response decoded install
+// the shape on the shared route; see TestModels_SubmitModelPortfolioOrder in
+// pkg/ibkr.
+//
+// This test documents the collision so a future router change that alters which
+// route wins is noticed deliberately rather than by accident.
+func TestModelOrderRouteCollision(t *testing.T) {
+	const modelOrderPath = "/v1/api/iserver/account/U1234567/orders"
+
+	winner, params, ok := matchRoute(defaultRoutes(), "POST", modelOrderPath)
+	if !ok {
+		t.Fatal("no route matched the model order path")
+	}
+	if winner.op != OpSubmitNewOrder {
+		t.Fatalf("winning route = %q, want %q (first-declared wins on a score tie)",
+			winner.op, OpSubmitNewOrder)
+	}
+	if params["accountId"] != "U1234567" {
+		t.Errorf("captured accountId = %q, want %q", params["accountId"], "U1234567")
+	}
+
+	// The model operation is declared for documentation but must not be
+	// registered, because a registered route here could never be selected and
+	// would only add a fixture that is never served.
+	for _, rt := range defaultRoutes() {
+		if rt.op == OpSubmitModelPortfolioOrder {
+			t.Errorf("OpSubmitModelPortfolioOrder is registered at %v but can never be matched",
+				rt.segments)
+		}
+	}
+
+	// Contrast: an operation with a genuinely different path shape still routes
+	// to its own route, so the collision is specific to the shared shape.
+	openOrders, _, ok := matchRoute(defaultRoutes(), "GET", "/v1/api/iserver/account/orders")
+	if !ok {
+		t.Fatal("no route matched the open-orders path")
+	}
+	if openOrders.op != OpGetOpenOrders {
+		t.Errorf("GET /v1/api/iserver/account/orders resolved to %q, want %q",
+			openOrders.op, OpGetOpenOrders)
+	}
 }

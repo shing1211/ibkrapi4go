@@ -35,6 +35,7 @@ type Limiter struct {
 	Logger *slog.Logger
 
 	metrics Metrics
+	clock   *Clock
 }
 
 // NewLimiter builds a limiter. rps<=0 disables per-endpoint limiting;
@@ -44,6 +45,7 @@ func NewLimiter(rps float64, burst int, globalRPS float64) *Limiter {
 		buckets:  map[string]*rate.Limiter{},
 		lastUsed: map[string]time.Time{},
 		Logger:   NopLogger(),
+		clock:    &Clock{},
 	}
 	if rps > 0 {
 		if burst <= 0 {
@@ -75,6 +77,46 @@ func (l *Limiter) SetMetrics(m Metrics) {
 	l.metrics = m
 }
 
+// SetAuthRateLimit replaces the fixed 1 req/s auth bucket. rps<=0 disables auth
+// pacing entirely. It is safe to call after construction and before concurrent
+// use.
+//
+// The default is unchanged - 1 req/s, burst 1 - so nothing moves for a caller who
+// does nothing. It exists because the bucket is a client-side precaution rather
+// than a measured gateway property, and a short-lived process pays for it on every
+// invocation: a CLI that initialises a session and exits spent ~1s waiting for a
+// token before its auth status poll, for no informational gain, since the poll
+// succeeds first try against a local gateway.
+func (l *Limiter) SetAuthRateLimit(rps float64, burst int) {
+	if l == nil {
+		return
+	}
+	if rps <= 0 {
+		l.auth = nil
+		return
+	}
+	if burst < 1 {
+		burst = 1
+	}
+	l.mu.Lock()
+	l.auth = rate.NewLimiter(rate.Limit(rps), burst)
+	l.mu.Unlock()
+}
+
+// SetClock installs a clock. Nil uses the real clock. It is safe to call after
+// construction and before concurrent use.
+func (l *Limiter) SetClock(c *Clock) {
+	if l == nil {
+		return
+	}
+	l.mu.Lock()
+	if c == nil {
+		c = &Clock{}
+	}
+	l.clock = c
+	l.mu.Unlock()
+}
+
 // Wait blocks until the request is permitted by the applicable buckets or the
 // context is done. Waits longer than 100ms are logged at Debug.
 func (l *Limiter) Wait(ctx context.Context, method, path string) error {
@@ -82,9 +124,9 @@ func (l *Limiter) Wait(ctx context.Context, method, path string) error {
 		return nil
 	}
 	needsWait := l.needsWait(method, path)
-	start := time.Now()
+	start := l.clock.Now()
 	err := l.wait(ctx, method, path)
-	waited := time.Since(start)
+	waited := l.clock.Now().Sub(start)
 	if needsWait {
 		incrCounter(ctx, l.metrics, MetricRateLimitWaits, 1)
 		observeHistogram(ctx, l.metrics, MetricRateLimitWaitMS, float64(waited.Nanoseconds())/1e6)
@@ -106,7 +148,7 @@ func (l *Limiter) needsWait(method, path string) bool {
 	if l.global != nil && l.global.Tokens() < 1 {
 		return true
 	}
-	if isAuthPath(path) {
+	if l.auth != nil && isAuthPath(path) {
 		return l.auth.Tokens() < 1
 	}
 	if l.rps <= 0 {
@@ -121,7 +163,7 @@ func (l *Limiter) wait(ctx context.Context, method, path string) error {
 			return err
 		}
 	}
-	if isAuthPath(path) {
+	if l.auth != nil && isAuthPath(path) {
 		return l.auth.Wait(ctx)
 	}
 	if l.rps <= 0 {
@@ -132,7 +174,7 @@ func (l *Limiter) wait(ctx context.Context, method, path string) error {
 
 func (l *Limiter) endpoint(method, path string) *rate.Limiter {
 	key := EndpointKey(method, path)
-	now := time.Now()
+	now := l.clock.Now()
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -197,15 +239,21 @@ func isDynamicSegment(s string) bool {
 }
 
 // isAuthPath reports whether the path is a session/auth endpoint paced at 1 rps.
+//
+// /v1/api/logout is deliberately not here. Session.Close documents its logout as
+// best-effort and discards the result, so pacing it bought nothing while blocking
+// process exit: a logout issued right after a session init waited ~997ms for a
+// token, on every process that used the SDK. It touches no credential, and a 429 on
+// a call whose result is thrown away costs nothing, so it uses the ordinary
+// per-endpoint bucket and WithRateLimit governs it.
 func isAuthPath(path string) bool {
 	return strings.Contains(path, "/iserver/auth/") ||
 		strings.Contains(path, "/v1/api/tickle") ||
-		strings.Contains(path, "/v1/api/logout") ||
 		strings.Contains(path, "/sso/validate")
 }
 
 // RateLimit returns a middleware that waits on l before dispatching.
-func RateLimit(l *Limiter) func(http.RoundTripper) http.RoundTripper {
+func RateLimit(l RateLimiter) func(http.RoundTripper) http.RoundTripper {
 	return func(base http.RoundTripper) http.RoundTripper {
 		if l == nil {
 			return base

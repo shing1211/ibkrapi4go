@@ -13,8 +13,14 @@ quantities are **never `float64`**.
 | Percentage | `string` | e.g. `"1.23"` |
 | Counts (pages, ids) | `int` | non-monetary only |
 
-Public fields use `string` by default. `json.Number` is used internally where a
-value may be numeric or string in JSON.
+Public fields use `string` by default. `json.Number` is used internally in two
+cases: where a value may be numeric or string in JSON, and where a field is
+always numeric but a generated binary float would round it. The tax voucher's
+`divAmount`, `withHeldAmount`, `fee` and `quantity` are the second case: the
+gateway sends them as bare JSON numbers, so retyping them to `string` would make
+the decode fail outright, and a `float32` mantissa is 24 bits - it silently
+rounds anything above 2^24 (16777216), which an aggregate withholding figure can
+exceed. `json.Number` accepts the number and preserves the gateway's own digits.
 
 ## Why strings
 
@@ -25,7 +31,7 @@ into `float64` can alter it. For order prices and quantities that is unacceptabl
 ## Helpers (not yet provided)
 
 Money and quantities are currently carried as raw `string` values and compared by
-the caller; the SDK does not ship arithmetic helpers yet. If/when they are added,
+the caller; the SDK does not ship arithmetic helpers. If/when they are added,
 the intended shape is:
 
 ```go
@@ -49,13 +55,37 @@ If arbitrary-precision decimal math is needed, it is implemented over
 decimal library may be evaluated via ADR if the standard library proves
 insufficient.
 
+> Arithmetic helpers are not yet implemented. For now, callers should use
+> `strconv.ParseDecimal` from the standard library or a decimal package for
+> calculations.
+
 ## Codegen enforcement
 
 - Where the spec would generate `float64` for a monetary field, add an
   `x-go-type` override to `string` (recorded in `scripts/patch_spec.py` or
-  `oapi-codegen.yaml`).
-- A review checklist item: any `float64` on a money/price/quantity field is a bug.
-- `scripts/check_money.py` (run by `make check`) enforces this on `pkg/ibkr`.
+  `oapi-codegen.yaml`). Where the gateway sends the field as a bare JSON number,
+  the override is `json.Number` instead: `string` would fail to decode, because
+  Go cannot unmarshal a number into a string.
+- `scripts/check_money.py` (run by `make check` and in CI) enforces this on
+  `pkg/ibkr` and `internal` with two rules.
+
+  **No exported money field is a binary float.** Any exported field on an
+  exported struct that is `float32`/`float64` fails the build, with a short
+  allowlist for the observability aggregates and one non-monetary request field.
+  There is no name matching: every exported float field has to be justified.
+
+  **Money is not rendered through a float.** The field rule inspects
+  declarations, so it cannot see function bodies - and that is where the
+  tax-voucher defect lived, where a decoded `float32` was re-rendered with
+  `strconv.FormatFloat` and the cents silently vanished above 2^24. The gate
+  therefore also rejects `strconv.FormatFloat` in production `pkg/ibkr` code, and
+  any helper that takes a binary float and returns a string, which is how the
+  same defect returns once the direct call is removed. The only sanctioned
+  sources of a money string are a quoted `string` field and `json.Number` via
+  `rawToString`/`jsonNumberToStr`; both preserve the gateway's own digits.
+
+  A genuine need for float formatting is an explicit entry in
+  `ALLOWED_FLOAT_FORMATS` in that script, which has to say why.
 
 ## Formatting vs. value
 

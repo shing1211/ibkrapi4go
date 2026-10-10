@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -70,7 +71,7 @@ func TestTransport_RequestID(t *testing.T) {
 	var idCounter atomic.Int64
 	tp := NewClientTransport(srv.Client().Transport, TransportConfig{
 		RequestID: func() string {
-			return "req-" + string(rune('0'+idCounter.Add(1)))
+			return "req-" + strconv.FormatInt(idCounter.Add(1), 10)
 		},
 	})
 

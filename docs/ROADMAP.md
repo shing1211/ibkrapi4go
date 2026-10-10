@@ -3,7 +3,7 @@
 Phased plan for ibkrapi4go. Phases are gated by **exit criteria**, not calendar
 time. The v1 effort originally targeted the CPAPI (`ssoBearer`) surface only
 (see the superseded [ADR 0005](./adr/0005-v1-scope.md)); Phases 5–7 added the
-`oauth2Bearer` surface, so all 185 operations are now implemented.
+`oauth2Bearer` surface, so all 193 operations are now implemented.
 
 ## Scope
 
@@ -20,8 +20,8 @@ time. The v1 effort originally targeted the CPAPI (`ssoBearer`) surface only
 | 8 | In-repo mock gateway (test/development) | Both |
 | — | Non-goals | — |
 
-The spec contains 185 operations: 115 on CPAPI (`ssoBearer`) and 70 on IB REST
-(`oauth2Bearer`). All 185 are now implemented.
+The spec contains 193 operations: 123 on CPAPI (`ssoBearer`) and 70 on IB REST
+(`oauth2Bearer`). All 193 are now implemented.
 
 ## Phase 0 — Truth, licensing, codegen *(complete)*
 
@@ -181,7 +181,7 @@ Notes:
 
 ## Phase 7 — Remaining CPAPI surface *(complete)*
 
-Deliverables (~81 CPAPI ops to reach 185/185 total):
+Deliverables (the remaining CPAPI ops to reach 193/193 total):
 
 **PR 1 — Trading Accounts (complete):**
 - [x] `pkg/ibkr/trading_accounts.go` — `TradingAccountManager` (9 ops): `GetAccountOwners`, `SetActiveAccount`, `GetDynamicAccounts`, `GetFundSummary`, `GetBalanceSummary`, `GetMarginSummary`, `GetAccountMarketSummary`, `GetBrokerageAccounts`, `SetDynamicAccount`.
@@ -214,8 +214,8 @@ Deliverables (~81 CPAPI ops to reach 185/185 total):
 
 Notes:
 
-- All 115 CPAPI (ssoBearer) ops now implemented.
-- Total coverage: 185/185 operations (115 CPAPI + 70 IB REST).
+- All 123 CPAPI (ssoBearer) ops now implemented.
+- Total coverage: 193/193 operations (123 CPAPI + 70 IB REST).
 - All managers registered in `Client` with accessor methods.
 - All checks pass: `make check`, `make test-race`, `make docs-check`, `make license-check`.
 
@@ -227,7 +227,7 @@ recorded in [ADR 0014](./adr/0014-mock-gateway.md).
 Deliverables:
 
 - [x] `internal/mockgateway` — dependency-free mock of both API surfaces
-  (185/185 operations), the OAuth2 token endpoint, scriptable fault injection,
+  (193/193 operations), the OAuth2 token endpoint, scriptable fault injection,
   request recording, and a scripted WebSocket hub.
 - [x] `cmd/ibkr-mock-gateway` — standalone binary serving CPAPI, IB REST,
   OAuth2, and streaming on a single port, with scenario/latency/seed/TLS flags
@@ -250,23 +250,186 @@ Exit criteria:
 
 ## Post-release maintenance
 
-The feature roadmap is complete: all 185 operations are implemented, the mock
+The feature roadmap is complete: all 193 operations are implemented, the mock
 gateway, benchmarks, fuzz tests, metrics, and logging are shipped, and tagged
 releases are published on GitHub and mirrored to Gitee. Latest release:
-**`v0.2.0`**.
+**`v1.1.30`**.
+
+The `v1.1.30` release gives `ForecastManager` the five methods it has been documented
+as having since v1.0.0. The type was exported, wired into `Client.Forecast()`, and
+listed in `MIGRATION.md` and `ROADMAP.md` as five operations, none of which existed —
+`Client.Forecast()` returned a struct with no methods on it. It also repairs a
+documentation gate that had quietly stopped checking most of what it claimed:
+`check_design` compared 5 manager method counts out of 15, and three of those five
+passed only because two independent omissions cancelled — an undocumented method and
+a file missing from a hand-maintained map. All 15 are verified now, a missing doc row
+fails the build, and the CI lint job, red on `main` for six unused `//nolint:gosec`
+directives, is green. `pkg/ibkr` coverage reaches 62.0%, the first time that package
+has cleared the floor CI measures it against.
+
+The `v1.1.29` patch removes two things that were shipped but could not work. The
+`--rest` global flag and its `rest` config key carried a REST gateway URL that
+`pkg/ibkr` had no option to receive, so the value was parsed, stored, printed,
+settable, and then never used by anything that issues a request — an override that
+looked real and was inert. An existing `config.json` keeps working, because
+`loadConfig` ignores unknown fields. And `internal/fake`, seven files at 0% coverage
+with no importer, went with it: it had drifted out of usefulness when `internal.Clock`
+changed from an interface to a struct, and sat on the `check_internal_refs` exemption
+list for five runs. `LedgerCurrency` also gains the explicit `json` tags every other
+struct in `portfolio.go` already had, so `ibkr portfolio ledger` prints the lowercase
+wire field names rather than Go field names. No public Go API, generated-code, or
+dependency change.
+
+The `v1.1.28` patch is test and tooling work — no production code, no generated
+code, no dependency change, and no public API change. It covers the last two
+unmeasured parts of the CLI: `ibkr-mock-gateway` was at 0.0% coverage and the
+`config` subcommand at 0%, the latter being the only command that writes to the
+user's own filesystem. Both were uncovered for the same reason the rest of the CLI
+once was — they read process state — so the mock gateway now parses its flags
+into a local `FlagSet` and the serve loop takes its context as a parameter.
+Coverage reaches 90.4% and 84.3%. Two real defects are fixed along the way:
+`ibkr config set` wrote its confirmation past the output writer, and the mock
+gateway's startup banner advertised the *requested* port rather than the bound
+one, so `-addr 127.0.0.1:0` printed a URL nothing was listening on.
+
+Earlier entries follow. The `v1.1.7` patch is documentation and tooling only — no
+production code, no
+generated code, no dependency change. Its subject is a guardrail that existed but
+was not enforced. `check_design` compares each design document against the code it
+describes, and until now it ran only when a maintainer typed `make docs-check`:
+neither CI nor the pre-PR `make check` invoked it, so 7 of the 9 design documents
+were verified by nothing and could drift freely. It is now a `make check` target
+and a `docs` CI step, so a document that disagrees with the code stops the build.
+Widening it is the other half: it now verifies 8 of 9 documents, up from 2, with
+25 new checks — client composition, the generated-code import and
+exported-type boundaries, the streaming surface and limits, `RetryPolicy` defaults
+and the ADR 0009 no-retry rule, the redaction and TLS-warning claims, the OAuth
+generation counter, and the whole order-confirmation surface. Each new check was
+observed failing when its claim is broken, and a 232-subtest mutation harness
+holds that property, including two negative controls that swap a strict branch for
+a naive one. `07-money-and-numbers.md` stays unverified on purpose:
+`check_money.py` already enforces its main claim tree-wide. The new checks found
+**five false statements in the design documents**, all corrected in favour of the
+code — most seriously `09-orders-and-confirmation.md`, which documented
+`Reply.Message string` where the code declares `Messages []string`, so a caller
+following the document got a compile error. The patch also clears the 8 lint
+findings in `scripts/` (now 0 uncapped) and adds the missing SPDX headers to the
+two shell scripts, so `addlicense -check` passes. Known and deliberately unchanged:
+the `lint & security` job is still red with 733 findings uncapped in library code,
+and `.golangci.yml` still fails `golangci-lint config verify`, so its linter
+settings are silently discarded. Both are recorded in the run artifacts.
+
+The `v1.1.6` patch closes a gap in the mock gateway's own guardrail. Its
+fixture-shape check set `DisallowUnknownFields` on a decoder whose target was
+`var js any`, and `any` has no fields, so the option could never fire: the check
+only ever tested JSON well-formedness and could not detect a wrong-key fixture —
+the one class of defect it existed to catch. That class was live twice. The
+`createSsoSessions` fixture spelled its token keys camelCase where the generated
+type tags them `access_token` and `token_type`, and non-strict decoding dropped
+them, so the SSO access token was permanently `""`. The `getRequestsStatus`
+fixture sent `executedAt`, a key belonging to a different operation, leaving
+`RESTRequestInfo.ExecutedAt` permanently nil; its test asserted that nil as
+though it were correct. The check now resolves each operation's real response
+type and key-checks the body against it, deriving from `pkg/ibkr` call sites
+which operations production actually decodes through the generated type at all —
+113 of the 184 it reaches are not, and for those the comparison was invalid. The
+twelve further fixtures that check exposed are corrected, three helpers with no
+production caller are deleted, and a redundant token fetch on
+`TradeConfirmations.ListAvailable` is removed. Four banking payloads are pinned
+byte for byte so the blocked `rest_banking.go` wire-contract decisions — the
+bulk-cancel `Reason`, the V2 quantity number/string divergence, and the ignored
+`AssetTransferRequest.Quantity` — can be taken with a provable before and after.
+No exported API changed.
+
+The `v1.1.5` patch repairs two precision and error-propagation defects on the
+REST surface, both surfaced by the new end-to-end coverage. Three banking
+acknowledgements rendered `instructionSetId` through a 32-bit float, so any ID
+above 2^24 was rounded — the spec's own documented example, `1988905739`, came
+back as `1988905700`, and a caller reconciling by that ID addressed the wrong
+instruction. And `wrapOp` buried the status code and error code of every typed
+REST error one level down, so the `errors.As` idiom documented in
+`docs/ERRORS.md` read zero across all 79 status-guard call sites. The patch also
+populates `RESTRequestInfo.ExecutedAt` from the spec's only timestamp for that
+operation, and deletes five dead response types in `rest.go`. Two documentation
+claims are corrected: `TradeConfirmationRequest.Gzip` is not sent because the
+upstream schema has no such property, and `ActiveCountries` returns display
+names such as "United States" rather than ISO codes. The same patch takes CI
+coverage to 58.7% against a 58% floor, the third step of a ratchet that started
+at 35% in v1.1.3.
+
+The `v1.1.4` patch repairs three defects in the connection-management and
+request-encoding paths, all found by extending REST test coverage. REST
+connection reuse had been broken outright: the per-request timeout cancelled
+its context before the caller could read the body, and `net/http` responds to
+an already-cancelled request context by closing the connection rather than
+returning it to the keep-alive pool, so 24 sequential REST calls opened 24
+connections. That is 0 now. Separately, the logout response body was never
+drained or closed, and `UpdateTasks` dropped an explicit `isCompleted: false`
+because `omitempty` cannot represent a false boolean — on a `PATCH`, where
+absence means "leave unchanged", that made marking a task not-completed
+impossible to express. The same patch takes CI coverage to 50.0% against a 48%
+floor, raised from 35% in the previous release.
+
+The `v1.1.3` patch fixes a real goroutine leak in the mock gateway. Each parked
+WebSocket handler blocked on a read that no context could cancel, so handlers
+outlived the test server that started them; `go test ./internal/ -count=2`
+reproduced it reliably, where `-count=1` passed. Closing a parked handler
+required closing its socket, which is now what `Server.Close` does. The same
+patch corrects four inaccurate claims in the run records, including a coverage
+figure taken from a two-day-stale profile.
+
+The `v1.1.2` patch closed the last verification gap: the model-portfolio order
+response decode is now asserted end to end, and the mock gateway's inability to
+route that operation separately is pinned by a test rather than left as a
+comment. The integration suite stays read-only, so the mutating model endpoints
+remain mock-only.
+
+The `v1.1.1` patch repairs two defects found while closing the test gaps: streamed
+`Update.Status` was unreachable because field `6509` was filtered before delivery,
+and `check_design` compared an always-empty middleware order, so it could not
+detect drift between the code and the transport diagram. It also makes
+`make codegen` and `make codegen-verify` work on Windows.
+
+The `v1.1.0` release closed the last coverage gap: eight model-portfolio and
+allocation operations that existed in the v2.40 spec but had no public wrapper
+or mock route are now implemented, bringing the documented surface to 193
+operations and 451 schemas.
+
+The `v1.0.8` patch corrects the reconnect notification order so a resubscribe is
+issued before `ErrWSReconnected` reaches the consumer, and adds a
+`.gitattributes` that keeps line endings LF so a Windows checkout cannot make
+`gofmt` or the codegen drift check report files that are stored correctly.
+
+The `v1.0.7` patch repairs three build/CI defects: the coverage gate, which
+compared an empty parsed value and therefore never enforced anything; the
+`codegen drift` job, which failed on every run because the committed generated
+client used CRLF line endings while Linux CI generates LF; and
+`patch_spec.py`, which crashed on Windows when writing the patched spec. It also
+adds `patch_spec.py` defect 8, which retypes money and quantity fields declared
+inline under `paths`.
+
+A follow-up hardening run (2026-09-23) tightened correctness/security, made the
+CI gates real, and closed the remaining feature gaps — order state machine,
+bracket/OCA orders, typed WebSocket events, WS gap detection, delayed-data
+flags, `ClientOrderID` round-trip, and account/portfolio streaming. See
+[docs/runs/2026-09-23-blueprint-hardening](./runs/2026-09-23-blueprint-hardening/).
 
 All known correctness defects are closed, including the generated-client
 nil-`interface{}` panic class, which is now fixed at the spec level
 (`scripts/patch_spec.py` defect 4) and shipped in `v0.1.1`; see
-[docs/runs/2026-09-17-d1-root-cause](./runs/2026-09-17-d1-root-cause/).
+[docs/runs/2026-09-17-d1-root-cause](./archive/runs/2026-09-17-d1-root-cause/).
 
 ## Backlog (not scheduled)
 
-No feature items are pending. Candidate forward-looking work (v1.0.0 readiness
-and API stabilization, upstream spec drift watch, real-world examples, community
-sustainment) is proposed in the latest
-[`next-phase.md`](./runs/2026-09-17-d1-root-cause/next-phase.md). See individual
-run reports in [docs/runs/](./runs/index.md).
+No public feature items are pending. Candidate forward-looking work (a unified
+streaming event API and spec drift watch) is proposed in the latest
+[`next-phase.md`](./runs/2026-09-24-ws-shutdown/next-phase.md). P3 public
+OAuth2 token refresh is now implemented and shipped in `v1.0.6`; the WebSocket
+shutdown regression and `money-check` scope cleanup shipped in `v1.0.4`, and the
+`v1.0.5` patch fixes the release workflow's detached-tag Gitee mirror. See the
+[`ws-shutdown` run](./runs/2026-09-24-ws-shutdown/report.md). See individual
+run reports in [docs/runs/](./runs/index.md) (current) and the archived
+[`runs index`](./archive/runs/index.md).
 
 ---
 

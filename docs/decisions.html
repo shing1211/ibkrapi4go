@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ibkrapi4go — Architecture Decision Records</title>
+  <link rel="stylesheet" href="css/api.css">
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="logo">ibkr<span>api4</span>go</div>
+    <p class="tagline">Architecture Decision Records — design rationale</p>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="api.html">API Reference</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="decisions.html" class="active">Decisions</a>
+      <a href="https://pkg.go.dev/github.com/shing1211/ibkrapi4go/pkg/ibkr">pkg.go.dev</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <h1>Architecture Decision Records</h1>
+  <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1.5rem;">
+    Short, dated records of decisions that shape the project. Each records the context, the decision, and its consequences. Superseding a decision means adding a new ADR, not editing the old one.
+  </p>
+
+  <div class="adr-list">
+
+    <!-- ADR 0001 -->
+    <div class="adr-card">
+      <h3>ADR-0001 — Treat the CPAPI and IB REST surfaces as distinct</h3>
+      <p>The single OpenAPI document describes 185 operations that belong to two different API surfaces: <code>/v1/api/*</code> (CPAPI, ssoBearer) and <code>/gw/api/*</code> (IB REST, oauth2Bearer). Model them as distinct with surface-specific clients.</p>
+      <a href="adr/0001-two-api-surfaces.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0002 -->
+    <div class="adr-card">
+      <h3>ADR-0002 — Two auth models: <code>ssoBearer</code> and <code>oauth2Bearer</code></h3>
+      <p>Model authentication per surface with a common <code>CredentialProvider</code> interface. v1 implements only ssoBearer; the SDK never accepts or stores a username/password.</p>
+      <a href="adr/0002-auth-models.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0003 -->
+    <div class="adr-card">
+      <h3>ADR-0003 — Generate types/client with oapi-codegen + spec patching</h3>
+      <p>Hand-writing ~443 schema types is infeasible. Generate with oapi-codegen, apply deterministic patches via <code>scripts/patch_spec.py</code>, commit generated code, verify reproducibility.</p>
+      <a href="adr/0003-openapi-codegen.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0004 -->
+    <div class="adr-card">
+      <h3>ADR-0004 — Minimal dependency set</h3>
+      <p>An SDK is imported transitively by its users. Keep the runtime dependency set minimal and justified: <code>coder/websocket</code>, <code>x/time/rate</code>, <code>oapi-codegen/runtime</code>. No web frameworks, no DI frameworks.</p>
+      <a href="adr/0004-minimal-dependencies.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0005 (superseded) -->
+    <div class="adr-card superseded">
+      <h3>ADR-0005 — v1 targets the CPAPI surface only</h3>
+      <p>v1 implemented only CPAPI (ssoBearer). As of commit <code>48bdde6</code>, all 185 operations are implemented. Superseded by ADR-0011 which added the OAuth2 surface.</p>
+      <a href="adr/0005-v1-scope.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0006 -->
+    <div class="adr-card">
+      <h3>ADR-0006 — Context-aware, channel-based API; use <code>coder/websocket</code></h3>
+      <p>Use <code>github.com/coder/websocket</code> for streaming — first-class context.Context, safe concurrent writes. Expose streaming as channel-based <code>Subscription</code> values with <code>Updates()</code> and <code>Errors()</code> channels.</p>
+      <a href="adr/0006-context-channel-api.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0007 -->
+    <div class="adr-card">
+      <h3>ADR-0007 — License under Apache-2.0 with DCO</h3>
+      <p>Apache License 2.0 with full canonical text. SPDX headers on all files. DCO sign-off on every commit (<code>git commit -s</code>); no CLA.</p>
+      <a href="adr/0007-license-apache-2.0.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0008 -->
+    <div class="adr-card">
+      <h3>ADR-0008 — Money and quantities are never <code>float64</code></h3>
+      <p>IBKR returns monetary values as JSON strings to preserve precision. Represent money, prices, and quantities as <code>string</code> or <code>json.Number</code> — never float64.</p>
+      <a href="adr/0008-numeric-precision.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0009 -->
+    <div class="adr-card">
+      <h3>ADR-0009 — Never auto-retry order mutations</h3>
+      <p>IBKR order endpoints are not idempotent. Resubmitting after timeout can create duplicate orders. Retry only safe methods (GET/HEAD/OPTIONS); order mutations are never retried automatically.</p>
+      <a href="adr/0009-no-auto-retry-orders.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0010 -->
+    <div class="adr-card">
+      <h3>ADR-0010 — Project naming and module path</h3>
+      <p>Module path: <code>github.com/shing1211/ibkrapi4go</code>. Go package: <code>ibkr</code>. Display name: <code>ibkrapi4go</code> everywhere in docs.</p>
+      <a href="adr/0010-naming.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0011 -->
+    <div class="adr-card">
+      <h3>ADR-0011 — OAuth2 / IB REST surface</h3>
+      <p>Add an OAuth2 token source supporting <code>client_credentials</code> and <code>refresh_token</code> grants. Model as a distinct composed client <code>Client.REST()</code>. No new runtime dependency.</p>
+      <a href="adr/0011-oauth2-surface.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0012 -->
+    <div class="adr-card">
+      <h3>ADR-0012 — Test-only dependencies</h3>
+      <p>Add <code>go.uber.org/goleak</code> for goroutine leak detection in tests. Test-only, not included in production binaries.</p>
+      <a href="adr/0012-test-dependencies.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0013 -->
+    <div class="adr-card">
+      <h3>ADR-0013 — Dependency-free metrics interface</h3>
+      <p>Define an OTel-shaped <code>Metrics</code> interface with <code>Counter.Add</code>, <code Histogram.Record</code>, and <code>Gauge.Record</code>. Ship <code>InMemoryMetrics</code> for tests. Zero metric dependencies.</p>
+      <a href="adr/0013-metrics.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0014 -->
+    <div class="adr-card">
+      <h3>ADR-0014 — In-repo mock IBKR gateway</h3>
+      <p><code>internal/mockgateway</code> serves both API surfaces from a single handler. Covers all 185 operations. Scriptable faults, deterministic values, request recording. Ships as standalone binary.</p>
+      <a href="adr/0014-mock-gateway.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0015 -->
+    <div class="adr-card">
+      <h3>ADR-0015 — Public API surface and stability contract</h3>
+      <p>The public API is all exported symbols in <code>pkg/ibkr/</code>. Stability levels: Stable, Experimental, Internal. Pre-1.0 semver rules apply until v1.0.0.</p>
+      <a href="adr/0015-stability.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0016 -->
+    <div class="adr-card">
+      <h3>ADR-0016 — Error handling philosophy</h3>
+      <p><code>*ibkr.Error</code> for remote API failures; <code>*ibkr.ConfigError</code> for invalid configuration. 11 sentinel errors. Errors wrap with <code>%w</code> for <code>errors.Is</code>/<code>errors.As</code>.</p>
+      <a href="adr/0016-error-taxonomy.md">Read full ADR →</a>
+    </div>
+
+    <!-- ADR 0017 -->
+    <div class="adr-card">
+      <h3>ADR-0017 — Logging interface</h3>
+      <p>Use stdlib <code>log/slog</code>. Seven subsystems with distinct keys. Credentials and request bodies are never logged. <code>DebugInfo()</code> returns a safe snapshot.</p>
+      <a href="adr/0017-logging.md">Read full ADR →</a>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p>ibkrapi4go &mdash; Apache License 2.0 &mdash; &copy; 2026 shing1211</p>
+  </div>
+</footer>
+
+</body>
+</html>
