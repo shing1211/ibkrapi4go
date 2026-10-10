@@ -16,6 +16,9 @@ go.work.sum
 # IDE
 .idea/
 .vscode/
+.cursor/
+.omo/
+.opencode/
 *.swp
 *.swo
 *~
