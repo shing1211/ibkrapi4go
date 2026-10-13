@@ -83,6 +83,8 @@ make license-check   # verify SPDX headers
 - Docs updated; numbers match `docs/SPEC.md`.
 - Commit messages use Conventional Commits and are DCO-signed (`git commit -s`).
 
+<!-- global-playbook: See ~/.config/opencode/AGENTS.md — Phase 0 (session start), Phase 1–6 (SDLC lifecycle), Tool reference (GitNexus MCP, GitHub MCP, etc.) -->
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
@@ -115,15 +117,4 @@ This project is indexed by GitNexus as **ibkrapi4go** (6037 symbols, 17095 relat
 | `gitnexus://repo/ibkrapi4go/processes` | All execution flows |
 | `gitnexus://repo/ibkrapi4go/process/{name}` | Step-by-step execution trace |
 
-## CLI
-
-| Task | Read this skill file |
-| --- | --- |
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
+<!-- global-playbook: See `~/.config/opencode/AGENTS.md` → **GitNexus MCP** section for the canonical tool reference. -->
