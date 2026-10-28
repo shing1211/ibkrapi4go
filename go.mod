@@ -4,7 +4,7 @@ go 1.26.8
 
 require (
 	github.com/coder/websocket v1.8.15
-	github.com/oapi-codegen/runtime v1.7.0
+	github.com/oapi-codegen/runtime v1.8.0
 	go.uber.org/goleak v1.3.0
 	golang.org/x/time v0.16.0
 )
